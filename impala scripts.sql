@@ -1609,3 +1609,11 @@ ORDER BY on_shelf_hour;
 
 
 
+--- 7月大陆仓作业时长
+select depot_id
+    ,avg(receipt_quality_duration + quality_onshelf_duration + picking_duration + package_duration + shipping_duration) as LT2
+from zydb.rpt_depot_daily_report
+where depot_id in (4, 5)
+ and data_date >= '2017-07-01'
+ and data_date <= '2017-07-31'
+group by depot_id;
