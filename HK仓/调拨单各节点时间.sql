@@ -76,17 +76,18 @@ t02 AS
         ,p.pay_time
         ,p.order_check_time
         ,p.lock_check_time
-        ,a.demand_gmt_created AS allocate_demand_start
-        ,a.allocate_gmt_created AS allocate_order_start
-        ,a.out_time AS allocate_order_out
-        ,a.deli_gmt_created AS allocate_order_start_onself
-        ,a.finish_time AS allocate_order_finish_onself
+        ,t01.demand_gmt_created AS allocate_demand_start    -- 调拨需求开始时间
+        ,t01.allocate_gmt_created AS allocate_order_start    -- 订单需求所在调拨单开始生成时间
+        ,t01.out_time AS allocate_order_out    -- 调拨单出库时间
+        ,t01.deli_gmt_created AS allocate_order_start_onself    -- 订单需求所在调拨单开始入库时间
+        ,t01.finish_time AS allocate_order_finish_onself    -- 订单需求所在调拨单完成入库时间
         ,p.lock_last_modified_time
         ,p.no_problems_order_uptime
         ,p.outing_stock_time
         ,p.picking_time
         ,p.order_pack_time
         ,p.shipping_time
+        ,t01.allocate_num
         ,p4.oos_num
         ,p4.type
         ,FROM_UNIXTIME(p4.create_time) AS create_time
@@ -96,26 +97,28 @@ LEFT JOIN t01
 LEFT JOIN jolly.who_wms_order_oos_log p4 
              ON p.order_id = p4.order_id
 WHERE 1=1
-     AND p.pay_time >= '2017-07-01 00:00:00'  
-     AND p.pay_time < '2017-08-01 00:00:00'
+     AND p.pay_time >= '2017-04-01 00:00:00'  
+     AND p.pay_time < '2017-10-01 00:00:00'
 --  >= date_sub(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),7)
 --  < date_sub(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),0)
      AND p.depot_id = 6 --只取6
 ),
 
-t2 AS
+t03 AS
 (SELECT order_sn
-        ,to_date(pay_time) AS pay_date
+        ,TO_DATE(pay_time) AS pay_date
+        ,SUBSTR(CAST(pay_time AS string), 1, 7) AS pay_month
+        ,allocate_num
         ,allocate_demand_start
         ,allocate_order_start
         ,allocate_order_out
         ,allocate_order_start_onself
         ,allocate_order_finish_onself
-        ,(unix_timestamp(allocate_order_start) - unix_timestamp(allocate_demand_start)) / 3600 AS 调拨需求响应时长
-        ,(unix_timestamp(allocate_order_out) - unix_timestamp(allocate_order_start)) / 3600 AS 调出仓作业时长
-        ,(unix_timestamp(allocate_order_start_onself) - unix_timestamp(allocate_order_out)) / 3600 AS 调拨在途时长
-        ,(unix_timestamp(allocate_order_finish_onself) - unix_timestamp(allocate_order_start_onself)) / 3600 AS 调拨单上架时长
-FROM t1
+        ,((unix_timestamp(allocate_order_start) - unix_timestamp(allocate_demand_start)) / 3600) AS allocate_response_duration    -- 调拨需求响应时长 = 调拨单生成时间 - 调拨需求生成时间
+        ,((unix_timestamp(allocate_order_out) - unix_timestamp(allocate_order_start)) / 3600) AS allocate_work_duration    -- 调出仓作业时长 = 出库时间 - 调拨单生成时间
+        ,((unix_timestamp(allocate_order_start_onself) - unix_timestamp(allocate_order_out)) / 3600) AS allocate_onway_duration    -- 调拨在途时长 = 开始入库时间 - 出库时间
+        ,((unix_timestamp(allocate_order_finish_onself) - unix_timestamp(allocate_order_start_onself)) / 3600) AS allocate_onshelf_duration    -- 调拨单上架时长 = 入库完成时间 - 开始入库时间
+FROM t02
 WHERE allocate_demand_start IS NOT NULL
 AND allocate_order_start IS NOT NULL
 AND allocate_order_out IS NOT NULL
@@ -123,6 +126,30 @@ AND allocate_order_start_onself IS NOT NULL
 AND allocate_order_finish_onself IS NOT NULL
 AND allocate_order_start > allocate_demand_start
 )
+
+-- 每天调拨各节点平均时长
+SELECT pay_date
+        ,AVG(allocate_response_duration) AS 调拨需求平均响应时长
+        ,AVG(allocate_work_duration) AS 调出仓平均作业时长
+        ,AVG(allocate_onway_duration) AS 调拨单平均在途时长
+        ,AVG(allocate_onshelf_duration) AS 调拨单平均上架时长
+        ,SUM(allocate_num) AS 调拨数量
+        ,COUNT(order_sn) AS 订单数量
+FROM t03
+GROUP BY pay_date
+ORDER BY pay_date;
+
+-- 每月调拨各节点平均时长
+SELECT pay_month
+        ,AVG(allocate_response_duration) AS 调拨需求平均响应时长
+        ,AVG(allocate_work_duration) AS 调出仓平均作业时长
+        ,AVG(allocate_onway_duration) AS 调拨单平均在途时长
+        ,AVG(allocate_onshelf_duration) AS 调拨单平均上架时长
+        ,SUM(allocate_num) AS 调拨数量
+        ,COUNT(order_sn) AS 订单数量
+FROM t03
+GROUP BY pay_month
+ORDER BY pay_month;
 
 
 
