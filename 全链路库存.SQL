@@ -28,8 +28,10 @@ t101 AS
         ,p1.allocate_order_onway_num
         ,p1.pur_shiped_order_onway_num
         ,p2.in_price
+        ,p3.cat_level1_name
 FROM jolly.who_wms_goods_stock_onway_total p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
+LEFT JOIN zydb.dim_jc_goods p3 ON p2.goods_id = p3.goods_id
 WHERE depot_id in (4, 5, 6, 7)
 ),
 -- 采购/调拨在途
@@ -239,7 +241,7 @@ FROM jolly.who_order_info p1
 LEFT JOIN jolly.who_order_shipping_tracking p0 
              ON p0.order_id = p1.order_id AND (p0.shipping_state = 0 OR p0.shipping_state = 5)
 INNER JOIN t4000 
-                 ON p1.order_id = t4000.order_id
+                 ON p1.order_id = t4000.order_id AND t4000.destination_days >=21
 INNER JOIN jolly.who_order_goods p3
                 ON p1.order_id = p3.order_id
 LEFT JOIN jolly.who_order_user_info p2
@@ -253,7 +255,6 @@ WHERE P1.pay_id = 41
 AND p1.depot_id IN (4, 5, 6, 7)
 AND P1.cod_check_status = 1
 AND p1.real_shipping_id NOT IN (170, 172, 174, 176)
-AND t4000.destination_days >=21
 GROUP BY p1.order_id
         ,p1.order_sn
         ,p1.invoice_no
@@ -297,7 +298,7 @@ t4202 AS
 FROM jolly.who_order_info p1
 LEFT JOIN jolly.who_order_shipping_tracking p0 
              ON p0.order_id = p1.order_id AND (p0.shipping_state = 0 OR p0.shipping_state = 5)
-INNER JOIN t4000 ON p1.order_id = t4000.order_id
+INNER JOIN t4000 ON p1.order_id = t4000.order_id AND t4000.destination_days >=14
 INNER JOIN jolly.who_order_goods p3
                 ON p1.order_id = p3.order_id
 LEFT JOIN jolly.who_order_user_info p2
@@ -311,7 +312,6 @@ WHERE P1.pay_id = 41
 AND p1.depot_id IN (4, 5, 6, 7)
 AND P1.cod_check_status = 1
 AND p1.real_shipping_id IN (170, 172, 174, 176)
-AND t4000.destination_days >=14
 GROUP BY p1.order_id
         ,p1.order_sn
         ,p1.invoice_no
@@ -479,6 +479,7 @@ t301 AS
         ,t300.country_name
         ,t300.shipping_name
         ,t300.shiped_days
+        ,t300.destination_days
         ,COUNT(DISTINCT t300.order_id) AS order_num
         ,SUM(p3.goods_send_num) AS deliver_onway_num
         ,SUM(p3.goods_send_num * p3.in_price) AS deliver_onway_cost
@@ -491,6 +492,7 @@ GROUP BY t300.depot_id
         ,t300.country_name
         ,t300.shipping_name
         ,t300.shiped_days
+        ,t300.destination_days
 ),
 -- 分仓库统计
 t302 AS
