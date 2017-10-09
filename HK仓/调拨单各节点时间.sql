@@ -98,7 +98,7 @@ LEFT JOIN jolly.who_wms_order_oos_log p4
              ON p.order_id = p4.order_id
 WHERE 1=1
      AND p.pay_time >= '2017-04-01 00:00:00'  
-     AND p.pay_time < '2017-10-01 00:00:00'
+-- AND p.pay_time < '2017-10-01 00:00:00'
 --  >= date_sub(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),7)
 --  < date_sub(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),0)
      AND p.depot_id = 6 --只取6

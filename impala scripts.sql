@@ -918,6 +918,24 @@ FROM jolly.who_wms_goods_stock_onway_total
 WHERE depot_id in (4, 5, 6)
 GROUP BY depot_id;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
 -- 在库库存
 -- cn仓 jolly.who_wms_goods_stock_total_detail
@@ -1640,3 +1658,85 @@ AND pay_status IN (1, 3)
 AND shipping_time >= '2017-09-01'
 AND shipping_time < '2017-10-01'
 ORDER BY shipping_time;
+
+
+-- 寿元，对比2万个商品的销售
+
+WITH 
+-- 订单和商品明细
+t1 AS
+(SELECT p1.order_id
+        ,p1.pay_time
+        ,TO_DATE(CAST(p1.pay_time AS STRING)) AS pay_date
+        ,SUBSTR(CAST(p1.pay_time AS STRING), 12, 2) AS pay_hour
+        ,p2.goods_id
+        ,SUM(p2.original_goods_number) AS org_goods_num
+        ,SUM(p2.original_goods_number * p2.goods_price) AS org_goods_amount
+FROM zydb.dw_order_node_time p1
+LEFT JOIN jolly.who_order_goods p2 ON p1.order_id = p2.order_id
+WHERE p1.pay_time >= FROM_UNIXTIME(UNIX_TIMESTAMP('2017-09-29'))
+     AND p1.pay_time < FROM_UNIXTIME(UNIX_TIMESTAMP('2017-10-01'))
+     AND p1.pay_status IN (1, 3)
+     -- AND p1.order_status = 1
+GROUP BY p1.order_id
+        ,p1.pay_time
+        ,TO_DATE(CAST(p1.pay_time AS STRING)) 
+        ,SUBSTR(CAST(p1.pay_time AS STRING), 12, 2)
+        ,p2.goods_id
+),
+t2 AS
+(SELECT goods_id
+        ,pay_date
+        ,pay_hour
+        ,COUNT(order_id ) AS order_num
+        ,SUM(org_goods_num) AS org_goods_num
+        ,SUM(org_goods_amount) AS org_goods_amount
+FROM t1
+GROUP BY goods_id
+        ,pay_date
+        ,pay_hour
+)
+SELECT * 
+FROM t2;
+
+
+
+
+
+
+SELECT * 
+FROM t2
+LIMIT 10;
+ORDER BY goods_id
+        ,pay_date
+        ,pay_hour;
+
+
+
+
+
+
+SELECT pay_date
+        ,COUNT(DISTINCt goods_id)
+        ,SUM(org_goods_num)
+        ,SUM(org_goods_amount)
+FROM t2
+GROUP BY pay_date;
+
+
+-- 检查who_order_info表和who_order_shipping_tracking表的订单状态
+SELECT p1.pay_id
+        ,p1.cod_check_status
+        ,p2.shipping_state
+        ,count(p1.order_id)
+FROM jolly.who_order_info p1
+             ,jolly.who_order_shipping_tracking p2
+WHERE p1.order_id = p2.order_id
+GROUP BY p1.pay_id
+        ,p1.cod_check_status
+        ,p2.shipping_state
+ORDER BY p1.pay_id
+        ,p1.cod_check_status
+        ,p2.shipping_state;
+
+

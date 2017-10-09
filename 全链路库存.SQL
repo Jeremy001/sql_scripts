@@ -18,15 +18,16 @@ sql脚本类型：impala
 -- 1.采购/调拨在途库存
 -- jolly.who_wms_goods_stock_onway_total
 -- jolly.who_sku_relation
+-- 找时间与秋瑾确认在途数据是否这样取
 */
 -- 商品数量 & 成本金额
 WITH 
--- 各sku的库存和成本金额(人民币)
+-- 各sku的采购调拨在途数量和成本金额(人民币)
 t101 AS
 (SELECT p1.depot_id
         ,p1.sku_id
-        ,p1.allocate_order_onway_num
-        ,p1.pur_shiped_order_onway_num
+        ,p1.allocate_order_onway_num    -- 调拨在途数量
+        ,p1.pur_shiped_order_onway_num      -- 采购在途数量
         ,p2.in_price
         ,p3.cat_level1_name
 FROM jolly.who_wms_goods_stock_onway_total p1
@@ -215,7 +216,7 @@ ORDER BY shipping_date;
     -- real_shipping_id in (40, 168) then 21天
     -- real_shipping_id in (170, 172, 174, 176) then 14天
 
--- 40Aramex/168or171SMSA:到达目的国超过21天且仍未签收的订单
+-- 40Aramex / 168or171SMSA / Others: 到达目的国超过21天且仍未签收的订单
 t4201 AS
 (SELECT p1.order_id
         ,p1.order_sn
@@ -253,7 +254,7 @@ LEFT JOIN (SELECT region_id, region_name
             ON p2.country = p4.region_id                
 WHERE P1.pay_id = 41
 AND p1.depot_id IN (4, 5, 6, 7)
-AND P1.cod_check_status = 1
+AND P1.cod_check_status NOT IN (3, 4, 5, 6)
 AND p1.real_shipping_id NOT IN (170, 172, 174, 176)
 GROUP BY p1.order_id
         ,p1.order_sn
@@ -310,7 +311,7 @@ LEFT JOIN (SELECT region_id, region_name
             ON p2.country = p4.region_id                    
 WHERE P1.pay_id = 41
 AND p1.depot_id IN (4, 5, 6, 7)
-AND P1.cod_check_status = 1
+AND P1.cod_check_status NOT IN (3, 4, 5, 6)
 AND p1.real_shipping_id IN (170, 172, 174, 176)
 GROUP BY p1.order_id
         ,p1.order_sn
@@ -482,7 +483,7 @@ t301 AS
         ,t300.destination_days
         ,COUNT(DISTINCT t300.order_id) AS order_num
         ,SUM(p3.goods_send_num) AS deliver_onway_num
-        ,SUM(p3.goods_send_num * p3.in_price) AS deliver_onway_cost
+        ,SUM(p3.goods_send_num * p3.in_price) AS deliver_onway_cost     -- 成本金额，人民币
         ,SUM(p3.goods_send_num * p3.goods_price * 6.6775) AS deliver_onway_amount    -- 销售金额，* 6.6775，转成人民币
 FROM t300 
 LEFT JOIN jolly.who_order_goods p3 
