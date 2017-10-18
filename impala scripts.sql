@@ -790,6 +790,12 @@ LIMIT 10;
 -- jolly.who_wms_depot_shelf_area
 -- 去了解：
 -- 1.货位具体是什么？
+-- 回答：货位是存放商品的地方，以东莞仓为例：
+
+
+
+
+
 SELECT * 
 FROM jolly_wms.who_wms_depot_shelf_area
 LIMIT 10;
@@ -821,6 +827,11 @@ shelf_row：列数
 shelf_line：层数
  */
 
+SELECT * 
+FROM jolly.who_wms_depot_shelf
+LIMIT 10;
+
+
 # 沙特仓一共1549个货架
 SELECT COUNT(shelf_id)
 FROM jolly_wms.who_wms_depot_shelf;
@@ -848,6 +859,9 @@ FROM jolly.who_wms_goods_stock_total_detail
 LIMIT 10;
 
 
+-- 出入库日志
+-- SA仓：jolly_wms.who_wms_goods_stock_detail_log
+-- 国内仓：jolly.who_wms_goods_stock_detail_log
 
 # change_type 变更类型 1:采购入库,2:收货异常入库,3:销售退货入库,4:盘盈入库, 5:销售订单出库,6:盘亏出库,7:货位转移,8:移库,9:手动入库,10: 移库到亚马逊,11:fba商品入库,12:库存退货,13:调拨出库,14:上架异常入库,15:调拨入库,16-批发订单入库,17-批发订单出库
 
@@ -874,7 +888,43 @@ WHERE change_time >= UNIX_TIMESTAMP('2017-08-01', 'yyyy-MM-dd')
 GROUP BY FROM_UNIXTIME(change_time, 'yyyy-MM-dd')
 ORDER BY change_date;
 
+-- HK仓入库来源
+SELECT (CASE WHEN change_type = 1 THEN '采购入库'
+                            WHEN change_type = 2 THEN '收货异常入库'
+                            WHEN change_type = 3 THEN '销售退货入库'
+                            WHEN change_type = 4 THEN '盘盈入库'
+                            WHEN change_type = 9 THEN '手动入库'
+                            WHEN change_type = 11 THEN 'FBA商品入库'
+                            WHEN change_type = 14 THEN '上架异常入库'
+                            WHEN change_type = 15 THEN '调拨入库'
+                            WHEN change_type = 16 THEN '批发订单入库'
+                            WHEN change_type = 18 THEN '无订单退货入库'
+                            ELSE '其他'
+                END) AS change_type2
+        ,FROM_UNIXTIME(change_time, 'yyyy-MM') AS change_month
+        ,sum(change_num) as goods_num
+FROM jolly.who_wms_goods_stock_detail_log
+WHERE change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18)
+     AND depot_id = 6
+     AND change_time >= UNIX_TIMESTAMP('2017-08-01')
+GROUP BY (CASE WHEN change_type = 1 THEN '采购入库'
+                            WHEN change_type = 2 THEN '收货异常入库'
+                            WHEN change_type = 3 THEN '销售退货入库'
+                            WHEN change_type = 4 THEN '盘盈入库'
+                            WHEN change_type = 9 THEN '手动入库'
+                            WHEN change_type = 11 THEN 'FBA商品入库'
+                            WHEN change_type = 14 THEN '上架异常入库'
+                            WHEN change_type = 15 THEN '调拨入库'
+                            WHEN change_type = 16 THEN '批发订单入库'
+                            WHEN change_type = 18 THEN '无订单退货入库'
+                            ELSE '其他'
+                END)
+        ,FROM_UNIXTIME(change_time, 'yyyy-MM')
+;
 
+
+
+change_type
 
 # 库存快照表：zydb.ods_who_wms_goods_stock_detail
 # 每天一个快照，几点的？
@@ -1149,8 +1199,9 @@ SELECT * FROM t2
 WITH 
 -- 库存明细
 t1 AS
-(SELECT concat(d.depot_sn,'-',c.depot_area_sn,b.shelf_sn,'-',a.shelf_area_sn) AS shelf_area_sn
+(SELECT e.depot_id
         ,e.sku_id
+        ,concat(d.depot_sn,'-',c.depot_area_sn,b.shelf_sn,'-',a.shelf_area_sn) AS shelf_area_sn
         ,(e.stock_num - e.order_lock_num - e.lock_allocate_num - e.return_lock_num) AS free_num
 FROM jolly.who_wms_depot_shelf_area a
         ,jolly.who_wms_depot_shelf b
@@ -1162,7 +1213,7 @@ WHERE a.depot_shelf_id = b.shelf_id
      AND c.depot_id = d.depot_id 
      AND a.shelf_area_id = e.shelf_area_id 
      AND e.stock_num >0 
-     AND e.depot_id = 6
+     AND e.depot_id IN (4, 5, 6)
 ),
 --  sku与货位号的数量，看是否有sku在多个货位上
 t2 AS
@@ -1176,7 +1227,9 @@ SELECT COUNT (sku_id)
 FROM t2
 WHERE shelf_num >=2;
 -- 有8000多个sku
-
+SELECT * 
+FROM t1
+LIMIT 10;
 
 
 /*
@@ -1394,8 +1447,8 @@ t1 as
 FROM jolly.who_order_info
 WHERE is_shiped = 1
     AND depot_id = 7
-    AND shipping_time >= unix_timestamp('2017-07-15', 'yyyy-MM-dd')
-    AND shipping_time <= unix_timestamp('2017-07-19', 'yyyy-MM-dd')
+    AND shipping_time >= UNIX_TIMESTAMP('2017-07-15', 'yyyy-MM-dd')
+    AND shipping_time <= UNIX_TIMESTAMP('2017-07-19', 'yyyy-MM-dd')
 ),
 -- 获取每个城市的名称
 t2 as
@@ -1471,7 +1524,7 @@ WHERE p1.order_status = 1
 SELECT FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') AS real_pay_date
         ,SUM(goods_num) AS goods_num
 FROM t1
-WHERE t1.real_pay_time >= unix_timestamp('2017-04-01')
+WHERE t1.real_pay_time >= UNIX_TIMESTAMP('2017-04-01')
 GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') 
 ORDER BY real_pay_date;
 
@@ -1483,8 +1536,8 @@ SELECT FROM_UNIXTIME(shipping_time, 'yyyy-MM-dd') AS ship_date
 FROM jolly.who_order_info
 WHERE is_shiped = 1
     AND depot_id = 7
-    AND shipping_time >= unix_timestamp('2017-06-01', 'yyyy-MM-dd')
-    AND shipping_time <= unix_timestamp('2017-08-28', 'yyyy-MM-dd')
+    AND shipping_time >= UNIX_TIMESTAMP('2017-06-01', 'yyyy-MM-dd')
+    AND shipping_time <= UNIX_TIMESTAMP('2017-08-28', 'yyyy-MM-dd')
 GROUP BY FROM_UNIXTIME(shipping_time, 'yyyy-MM-dd')
         ,FROM_UNIXTIME(shipping_time, 'HH')
 ORDER BY ship_date
@@ -1505,8 +1558,8 @@ t2 AS
         ,FROM_UNIXTIME(real_pay_time, 'HH') AS hour_BeiJing
         ,COUNT(order_id) AS order_num
 FROM t
-WHERE real_pay_time >= unix_timestamp('2017-06-01', 'yyyy-MM-dd')
-    AND real_pay_time <= unix_timestamp('2017-08-29', 'yyyy-MM-dd')
+WHERE real_pay_time >= UNIX_TIMESTAMP('2017-06-01', 'yyyy-MM-dd')
+    AND real_pay_time <= UNIX_TIMESTAMP('2017-08-29', 'yyyy-MM-dd')
 GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd')
         ,FROM_UNIXTIME(real_pay_time, 'HH')
 ORDER BY date_BeiJing
@@ -1520,8 +1573,8 @@ t3 AS
         ,COUNT(DISTINCT order_id) AS order_num
 FROM jolly_wms.who_wms_outing_stock_detail
 WHERE depot_id = 7
-    AND gmt_created >= unix_timestamp('2017-06-01', 'yyyy-MM-dd')
-    AND gmt_created <= unix_timestamp('2017-08-29', 'yyyy-MM-dd')
+    AND gmt_created >= UNIX_TIMESTAMP('2017-06-01', 'yyyy-MM-dd')
+    AND gmt_created <= UNIX_TIMESTAMP('2017-08-29', 'yyyy-MM-dd')
 GROUP BY FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
         ,FROM_UNIXTIME(gmt_created, 'HH') 
 ORDER BY date_BeiJing
@@ -1555,8 +1608,8 @@ t2 AS
 (SELECT FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') AS date_BeiJing
         ,COUNT(order_id) AS order_num
 FROM t1
-WHERE real_pay_time >= unix_timestamp('2017-08-01', 'yyyy-MM-dd')
-    AND real_pay_time <= unix_timestamp('2017-09-04', 'yyyy-MM-dd')
+WHERE real_pay_time >= UNIX_TIMESTAMP('2017-08-01', 'yyyy-MM-dd')
+    AND real_pay_time <= UNIX_TIMESTAMP('2017-09-04', 'yyyy-MM-dd')
 GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd')
 ORDER BY date_BeiJing
 ),
@@ -1567,8 +1620,8 @@ t3 AS
         ,COUNT(DISTINCT order_id) AS order_num
 FROM jolly_wms.who_wms_outing_stock_detail
 WHERE depot_id = 7
-    AND gmt_created >= unix_timestamp('2017-08-01', 'yyyy-MM-dd')
-    AND gmt_created <= unix_timestamp('2017-09-04', 'yyyy-MM-dd')
+    AND gmt_created >= UNIX_TIMESTAMP('2017-08-01', 'yyyy-MM-dd')
+    AND gmt_created <= UNIX_TIMESTAMP('2017-09-04', 'yyyy-MM-dd')
 GROUP BY FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
 ORDER BY date_BeiJing
 )
@@ -1595,7 +1648,7 @@ WITH t AS
         ,on_shelf_finish_time
         ,on_shelf_num
         ,shipping_time
-        ,(unix_timestamp(on_shelf_finish_time) - unix_timestamp(finish_check_time)) AS onshelf_duration
+        ,(UNIX_TIMESTAMP(on_shelf_finish_time) - UNIX_TIMESTAMP(finish_check_time)) AS onshelf_duration
 FROM zydb.dw_order_sub_order_fact a
 LEFT JOIN zydb.dw_demAND_pur b
 ON a.order_id=b.order_id
@@ -1739,4 +1792,104 @@ ORDER BY p1.pay_id
         ,p1.cod_check_status
         ,p2.shipping_state;
 
+
+-- =========================================================================================================
+/*
+上架相关数据库表
+-- 上架单表：jolly.who_wms_on_shelf_info
+
+ */
+
+-- 上架单表：jolly.who_wms_on_shelf_info
+-- gmt_created：创建时间
+-- status：上架单状态：1-待上架,2-上架中,3-上架完成
+-- source_type：来源类型:1-批发订单作业单,2-普通采购单(非供应商备货的),3-调拨入库单,4-供应商备货采购单
+SELECT * 
+FROM jolly.who_wms_on_shelf_info
+LIMIT 10;
+
+SELECT depot_id
+        ,FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd') AS 创建日期
+        ,status
+        ,(CASE WHEN status = 1 THEN '待上架'
+                      WHEN status = 2 THEN '上架中'
+                      WHEN status = 3 THEN '上架完成'
+                      ELSE '其他' END) AS 上架状态
+        ,COUNT(on_shelf_sn) AS 上架单数量
+        ,SUM(total_num) AS 上架商品数量
+FROM jolly.who_wms_on_shelf_info
+WHERE gmt_created >= UNIX_TIMESTAMP('2017-10-16')
+     AND gmt_created < UNIX_TIMESTAMP('2017-10-17')
+GROUP BY depot_id
+        ,FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
+        ,status
+        ,(CASE WHEN status = 1 THEN '待上架'
+                      WHEN status = 2 THEN '上架中'
+                      WHEN status = 3 THEN '上架完成'
+                      ELSE '其他' END)
+ORDER BY depot_id
+        ,FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
+        ,status;
+
+-- 查询指定日期以前生成的，当前仍未完成上架的上架单
+-- 1.汇总上架单数和上架商品数量
+SELECT depot_id
+        ,(CASE WHEN status = 1 THEN '待上架'
+                      WHEN status = 2 THEN '上架中'
+                      WHEN status = 3 THEN '上架完成'
+                      ELSE '其他' END) AS 上架状态
+        ,COUNT(on_shelf_sn) AS 上架单数量
+        ,SUM(total_num) AS 上架商品数量
+FROM jolly.who_wms_on_shelf_info
+WHERE gmt_created <= UNIX_TIMESTAMP(DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]', 'yyyyMMdd')), 0))    -- 0/1/2/3...:设置几天前
+     AND (status = 1 OR status  = 2)    -- 1/2：待上架和上架中
+GROUP BY depot_id
+        ,(CASE WHEN status = 1 THEN '待上架'
+                      WHEN status = 2 THEN '上架中'
+                      WHEN status = 3 THEN '上架完成'
+                      ELSE '其他' END)
+ORDER BY depot_id;
+-- 2.上架单list
+SELECT p1.on_shelf_sn
+        ,p1.depot_id
+        ,FROM_UNIXTIME(p1.gmt_created) AS 创建时间
+        ,(CASE WHEN p1.status = 1 THEN '待上架'
+                      WHEN p1.status = 2 THEN '上架中'
+                      WHEN p1.status = 3 THEN '上架完成'
+                      ELSE '其他' END) AS 上架状态
+        ,(CASE WHEN p1.source_type = 1 THEN '批发订单作业单' 
+                      WHEN p1.source_type = 2 THEN '普通采购单(非供应商备货)' 
+                      WHEN p1.source_type = 3 THEN '调拨入库单' 
+                      WHEN p1.source_type = 4 THEN '供应商备货采购单'
+                      ELSE '其他' END) AS 来源类型
+        ,p1.on_shelf_admin_id AS 上架员ID
+        ,p2.user_name
+        ,p1.total_num
+FROM jolly.who_wms_on_shelf_info p1
+LEFT JOIN jolly.who_rbac_user p2 ON p2.user_id = p1.on_shelf_admin_id
+WHERE p1.gmt_created <= UNIX_TIMESTAMP(DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]', 'yyyyMMdd')), 0))    -- 0/1/2/3...:设置几天前
+     AND (p1.status = 1 OR status  = 2)    -- 1/2：待上架和上架中
+ORDER BY p1.depot_id;
+
+-- 每天上架单数量和商品数量
+SELECT FROM_UNIXTIME(on_shelf_finish_time, 'yyyy-MM-dd') AS 上架完成日期
+        ,COUNT(on_shelf_sn) AS 上架单数量
+        ,SUM(total_num) AS 上架商品数量
+FROM jolly.who_wms_on_shelf_info p1
+WHERE depot_id = 5
+     AND on_shelf_finish_time >= UNIX_TIMESTAMP('2017-04-01')
+     
+GROUP BY FROM_UNIXTIME(on_shelf_finish_time, 'yyyy-MM-dd')
+ORDER BY FROM_UNIXTIME(on_shelf_finish_time, 'yyyy-MM-dd');
+
+
+
+
+-- ==========================================================================================================
+
+-- 后台登录用户表（登录执御的各个系统的用户列表）
+-- jolly.who_rbac_user
+SELECT * 
+FROM jolly.who_rbac_user
+LIMIT 10;
 
