@@ -51,6 +51,8 @@ GROUP BY p2.pur_order_sn
 ), 
 t01 AS
 (SELECT p1.order_id
+        ,p1.from_depot_id
+        ,p1.allocate_order_sn
         ,MAX(demand_gmt_created) AS demand_gmt_created
         ,MAX(allocate_gmt_created) AS allocate_gmt_created
         ,MAX(out_time) AS out_time
@@ -62,13 +64,16 @@ LEFT JOIN t00
              ON p1.allocate_order_sn=t00.pur_order_sn 
 WHERE 1=1
      AND p1.to_depot_id = 6     -- 调往HK
---AND p1.demand_gmt_created  >= date_sub(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),7)
---AND p1.demand_gmt_created < date_sub(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),0)
+     AND p1.allocate_gmt_created  >= DATE_SUB(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),60)
+     AND p1.allocate_gmt_created < DATE_SUB(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),0)
 GROUP BY p1.order_id
+        ,p1.from_depot_id
+        ,p1.allocate_order_sn
 ),
 t02 AS
 (SELECT p.order_id
         ,p.order_sn
+        ,t01.from_depot_id
         ,p.goods_number
         ,p.original_goods_number
         ,p.depot_id
@@ -99,13 +104,14 @@ LEFT JOIN jolly.who_wms_order_oos_log p4
 WHERE 1=1
      AND p.pay_time >= '2017-04-01 00:00:00'  
 -- AND p.pay_time < '2017-10-01 00:00:00'
---  >= date_sub(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),7)
---  < date_sub(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),0)
+--  >= DATE_SUB(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),7)
+--  < DATE_SUB(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),0)
      AND p.depot_id = 6 --只取6
 ),
 
 t03 AS
 (SELECT order_sn
+        ,from_depot_id
         ,TO_DATE(pay_time) AS pay_date
         ,SUBSTR(CAST(pay_time AS string), 1, 7) AS pay_month
         ,allocate_num
@@ -148,6 +154,7 @@ SELECT pay_month
         ,SUM(allocate_num) AS 调拨数量
         ,COUNT(order_sn) AS 订单数量
 FROM t03
+WHERE pay_date < TO_DATE(DATE_SUB(NOW(), 5))  -- 取6天以前的支付订单
 GROUP BY pay_month
 ORDER BY pay_month;
 

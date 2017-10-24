@@ -3,18 +3,17 @@ with t as
 (select to_date(a.shipping_time) data_date,
                   a.order_sn,
                   a.depot_id,
-                  case
+                  (case
                     when a.pay_id = 41 then
                      a.pay_time
                     else
                      a.result_pay_time
-                  end pay_time,
-                  a.shipping_time,
+                  end) AS pay_time,
                   a.no_problems_order_uptime,
+                  from_unixtime(定时任务时间) AS 可拣货时间,
+                  from_unixtime(拣货完成时间) AS 拣货完成时间,
                   a.order_pack_time,
-                  定时任务时间,
-                  拣货完成时间,
-                  定时任务时间 可拣货时间,
+                  a.shipping_time,
                   a.is_shiped,
                   a.is_check,
                   a.order_status,
