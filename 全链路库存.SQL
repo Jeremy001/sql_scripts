@@ -139,6 +139,8 @@ LEFT JOIN (SELECT region_id, region_name
                     WHERE region_type = 0
                     AND region_status = 1) p4
             ON p3.country = p4.region_id
+LEFT JOIN jolly.who_order_shipping_tracking p5
+             ON p1.order_id = p5.order_id AND p5.shipping_state IN (3, 6, 8, 13)    -- 与在途待签收区分，避免重复计算
 LEFT JOIN t4000 ON p1.order_id = t4000.order_id
 WHERE p1.shipping_time < UNIX_TIMESTAMP(TRUNC(NOW(), 'DD'))
     AND p1.pay_id = 41 
@@ -454,14 +456,14 @@ t300 AS
         ,t4000.destination_days
 FROM jolly.who_order_shipping_tracking p1
 LEFT JOIN jolly.who_order_info p2 
-             ON p1.order_id = p2.order_id AND P2.depot_id IN (4, 5, 6, 7)
+             ON p1.order_id = p2.order_id AND P2.depot_id IN (4, 5, 6, 7) AND p2.order_status = 1
 LEFT JOIN t4000 
              ON t4000.order_id = p1.order_id
 LEFT JOIN jolly.who_order_user_info p4 
              ON p1.order_id = p4.order_id
 LEFT JOIN jolly.who_region p5 
              ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1 
-WHERE p1.shipping_state = 0 OR p1.shipping_state = 5
+WHERE p1.shipping_state NOT IN (3, 6, 8, 13)    -- 不是已签收、已退回、已拒收和已丢失中的任何一项，就是还在途的
 GROUP BY p1.order_id 
         ,p2.depot_id
         ,p5.region_name

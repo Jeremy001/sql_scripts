@@ -877,6 +877,17 @@ GROUP BY depot_id
         ,change_type
 ORDER BY change_type;
 
+-- SA仓每月入库商品数
+SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM') AS in_month
+        ,SUM(p1.change_num) AS in_num
+FROM jolly_wms.who_wms_goods_stock_detail_log p1
+WHERE p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18)
+GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM')
+ORDER BY in_month;
+
+
+
+
 -- 每天采购入库
 SELECT FROM_UNIXTIME(change_time, 'yyyy-MM-dd') AS change_date
         ,SUM(change_num) AS change_num
@@ -1571,7 +1582,7 @@ WHERE is_shiped = 1
 t2 as
 (SELECT region_id
         ,region_name
-FROM jolly.who_regiON 
+FROM jolly.who_region 
 WHERE region_type = 2
     AND region_status = 1
 ),
@@ -2106,6 +2117,8 @@ ORDER BY to_depot_id;
 
 
 
+-- zydb.dw_goods_on_sale
+-- 在售商品每天的售价: prst_price
 
 
 
@@ -2113,3 +2126,136 @@ ORDER BY to_depot_id;
 
 
 
+
+-- zydb.ods_who_wms_goods_stock_total_detail & zydb.ods_who_wms_goods_stock_detail
+
+SELECT data_date
+        ,count(1)
+from zydb.ods_who_wms_goods_stock_total_detail
+GROUP BY data_date
+ORDER BY data_date
+;
+
+
+SELECT *
+FROM jolly_tms_center.tms_order_info
+WHERE shipped_time >0
+LIMIT 10
+;
+
+
+with t1 as
+(SELECT p1.customer_order_id
+        ,count(1) AS num
+from jolly_tms_center.tms_order_info p1
+GROUP BY p1.customer_order_id
+)
+select customer_order_id
+        ,num
+from t1
+ORDER BY num desc
+LIMIT 10;
+
+
+
+
+SELECT tms_order_id
+        ,customer_order_id
+        ,tracking_no
+        ,shipping_status
+        ,depot_id
+        ,from_unixtime(shipped_time) AS shipping_time
+        ,from_unixtime(gmt_modified) AS gmt_modified
+FROM jolly_tms_center.tms_order_info
+WHERE customer_order_id = 25181391
+;
+
+
+SELECT * 
+from jolly.who_order_info
+where order_id  = 25892073
+;
+
+
+
+
+
+WITH t1 AS
+(SELECT p1.customer_order_id
+        ,p1.shipping_status
+        ,p2.cod_check_status        
+from jolly_tms_center.tms_order_info p1
+LEFT JOIN jolly.who_order_info p2
+on p1.customer_order_id = p2.order_id
+WHERE p1.shipped_time > 0
+)
+
+select shipping_status
+        ,cod_check_status
+        ,count(customer_order_id) AS order_num
+from t1
+GROUP BY shipping_status
+        ,cod_check_status
+
+;
+
+
+SELECT * 
+from jolly_tms_center.tms_order_info p1
+LIMIT 10;
+
+
+SELECT *
+        ,from_unixtime(gmt_created)
+from jolly.who_wms_on_shelf_goods_price
+where delivered_order_sn = 'GZ2DB171022092806186Y94IF'
+limit 10;
+
+
+SELECT * 
+from jolly.who_wms_on_shelf_info
+LIMIT 10;
+
+SELECT *
+from zydb.dw_goods_on_sale
+WHERE goods_id = 374404
+LIMIT 10;
+
+
+
+-- HK仓每天发运订单数和商品数
+SELECT SUBSTR(shipping_time, 1, 10) AS ship_date
+        ,COUNT(DISTINCT order_sn) AS order_num
+        ,SUM(goods_number) AS goods_num
+FROM zydb.dw_order_node_time p1
+WHERE p1.depot_id = 6
+     AND p1.is_shiped = 1
+     AND p1.order_status = 1
+     AND p1.pay_status IN (1, 3)
+GROUP BY SUBSTR(shipping_time, 1, 10)
+ORDER BY ship_date;
+
+-- HK仓每天库存总量
+SELECT data_date
+        ,SUM(total_stock_num) AS total_stock_num
+FROM zydb.ods_who_wms_goods_stock_total_detail_aws
+WHERE depot_id = 6
+GROUP BY data_date
+ORDER BY data_date;
+
+
+-- 11天销售数量，用前10天销售额预测当天销售数量
+WITH t1 AS
+(SELECT SUBSTR(p1.pay_time, 1, 10) AS pay_date
+        ,p2.sku_id
+        ,SUM(p2.goods_number) AS sales
+FROM zydb.dw_order_node_time p1
+LEFT JOIN jolly.who_order_goods p2 ON p1.order_id = p2.order_id
+WHERE p1.pay_time >= '2017-10-01'
+     AND p1.pay_time < '2017-10-12'
+GROUP BY SUBSTR(p1.pay_time, 1, 10)
+        ,p2.sku_id
+)
+
+SELECT *
+FROM t1;
