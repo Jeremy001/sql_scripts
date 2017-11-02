@@ -1,26 +1,26 @@
 select *
-from jolly.who_wms_delivered_receipt_info
+FROM jolly.who_wms_delivered_receipt_info
 limit 10;
 
 
-select from_unixtime(min(gmt_created))
-from jolly.who_wms_delivered_receipt_info;
+select FROM_unixtime(min(gmt_created))
+FROM jolly.who_wms_delivered_receipt_info;
 
 
 select * 
-from jolly.who_wms_pur_deliver_receipt
+FROM jolly.who_wms_pur_deliver_receipt
 limit 10;
 
 
-select from_unixtime(max(gmt_created))
-from jolly.who_wms_pur_deliver_receipt;
+select FROM_unixtime(max(gmt_created))
+FROM jolly.who_wms_pur_deliver_receipt;
 
 select * 
-from zydb.dw_delivered_order_info
+FROM zydb.dw_delivered_order_info
 limit 10;
 
 select * 
-from zydb.dw_delivered_receipt_onself
+FROM zydb.dw_delivered_receipt_onself
 limit 10;
 
 
@@ -31,7 +31,5 @@ FROM zydb.dw_delivered_receipt_onself p1
 WHERE p1.depot_id = 6
 GROUP BY SUBSTR(on_shelf_finish_time, 1, 10)
 ORDER BY on_shelf_date;
-
-
 
 

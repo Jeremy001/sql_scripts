@@ -779,8 +779,8 @@ LIMIT 10;
 
 -- =============================================== 库存相关数据（顶） ===================================================
 /* 
- 1.库存快照
- 2.库存变化
+ 1.库存快照（每天库存记录）
+ 2.库存变化（出入库记录）
  3.库存位置
  4.库存结构
  */ 
@@ -790,10 +790,10 @@ LIMIT 10;
 -- jolly.who_wms_depot_shelf_area
 -- 去了解：
 -- 1.货位具体是什么？
--- 回答：货位是存放商品的地方，以东莞仓为例：
-
-
-
+-- 回答：货位是存放商品的地方，以东莞仓为例：DG1-A01-0101
+-- DG1：表示东莞1仓
+-- A01：A表示A货区，01表示第一排货架
+-- 0101：第一个01表示第一列，第二个01表示第一层，即最下面一层
 
 
 SELECT * 
@@ -835,10 +835,6 @@ LIMIT 10;
 # 沙特仓一共1549个货架
 SELECT COUNT(shelf_id)
 FROM jolly_wms.who_wms_depot_shelf;
-
-
-
-
 
 
 # 商品库存明细
@@ -903,7 +899,6 @@ ORDER BY change_date;
 # change_type 变更类型 1:采购入库,2:收货异常入库,3:销售退货入库,4:盘盈入库, 5:销售订单出库,6:盘亏出库,7:货位转移,8:移库,9:手动入库,10: 移库到亚马逊,11:fba商品入库,12:库存退货,13:调拨出库,14:上架异常入库,15:调拨入库,16-批发订单入库,17-批发订单出库
 
 WITH 
--- HK仓出入库
 t1 AS
 (SELECT (CASE WHEN p1.change_type = 1 THEN '采购入库'
                             WHEN p1.change_type = 2 THEN '收货异常入库'
@@ -926,11 +921,12 @@ t1 AS
                       ELSE 'Others' END) AS change_type1
         ,p2.cat_level1_name
         ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM') AS change_month
+        ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS change_date
         ,SUM(p1.change_num) AS change_num
-FROM jolly.who_wms_goods_stock_detail_log p1
+FROM jolly_wms.who_wms_goods_stock_detail_log p1
 LEFT JOIN zydb.dim_jc_goods p2 
              ON p1.goods_id = p2.goods_id
-WHERE p1.depot_id = 6
+WHERE p1.depot_id = 7
      AND p1.change_time >= UNIX_TIMESTAMP('2017-07-01')
      AND p1.change_time < UNIX_TIMESTAMP('2017-10-01')
 GROUP BY (CASE WHEN p1.change_type = 1 THEN '采购入库'
@@ -954,14 +950,18 @@ GROUP BY (CASE WHEN p1.change_type = 1 THEN '采购入库'
                       ELSE 'Others' END)
         ,p2.cat_level1_name
         ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM')
+        ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
 )
--- 每月出库量
+-- 每月每天出库量
 SELECT change_month
+        ,change_date
         ,SUM(change_num) AS change_num
 FROM t1
 WHERE change_type1 = 'OUT'
 GROUP BY change_month
-ORDER BY change_month;
+        ,change_date
+ORDER BY change_month
+        ,change_date;
 -- 各一级类目的出入库商品数量
 SELECT *
 FROM t1
@@ -1091,6 +1091,18 @@ WHERE p1.data_date >= '20170701'
 GROUP BY SUBSTR(p1.data_date, 1, 6)
         ,p1.data_date
 ;
+
+-- SA仓每天总库存数量和成本金额
+SELECT ds
+        ,SUM(p1.total_stock_num) AS total_stock_num
+        ,SUM(p1.total_stock_num * p2.in_price) AS totck_stock_cost
+FROM jolly_wms.who_wms_goods_stock_total_detail_daily p1
+LEFT JOIN zydb.dim_jc_goods p2 ON p1.goods_id = p2.goods_id
+WHERE ds >= '20170501'
+     AND depot_id = 7
+GROUP BY ds
+ORDER BY ds;
+
 
 
 
@@ -1836,8 +1848,8 @@ AND is_shiped = 1
 AND is_problems_order IN (0, 2)
 AND order_status = 1
 AND pay_status IN (1, 3)
-AND shipping_time >= '2017-09-01'
-AND shipping_time < '2017-10-01'
+AND shipping_time >= '2017-10-01'
+AND shipping_time < '2017-10-31'
 ORDER BY shipping_time;
 
 
@@ -2179,9 +2191,10 @@ where order_id  = 25892073
 
 
 
-
+-- 检查订单的shipping_status vs cod_check_status
 WITH t1 AS
 (SELECT p1.customer_order_id
+        ,p2.order_sn
         ,p1.shipping_status
         ,p2.cod_check_status        
 from jolly_tms_center.tms_order_info p1
@@ -2189,17 +2202,22 @@ LEFT JOIN jolly.who_order_info p2
 on p1.customer_order_id = p2.order_id
 WHERE p1.shipped_time > 0
 )
-
+-- 各状态对应的订单数
 select shipping_status
         ,cod_check_status
         ,count(customer_order_id) AS order_num
 from t1
 GROUP BY shipping_status
-        ,cod_check_status
+        ,cod_check_status;
+-- 核查两个状态异常的订单
+SELECT * 
+FROM t1
+WHERE cod_check_status = 0
+     AND shipping_status = 3
+LIMIT 5;
 
-;
 
-
+-- tms_order_info
 SELECT * 
 from jolly_tms_center.tms_order_info p1
 LIMIT 10;
@@ -2259,3 +2277,40 @@ GROUP BY SUBSTR(p1.pay_time, 1, 10)
 
 SELECT *
 FROM t1;
+
+
+
+
+
+-- 特定sku销量
+WITH t1 AS
+(SELECT p1.sku_id
+        ,p2.depot_id 
+        ,SUM(CASE WHEN p2.pay_time < '2017-10-20' THEN p1.goods_number ELSE NULL END) AS sales_num_19
+        ,SUM(CASE WHEN p2.pay_time >= '2017-10-20' THEN p1.goods_number ELSE NULL END) AS sales_num_26
+FROM jolly.who_order_goods p1
+RIGHT JOIN zydb.dw_order_node_time p2 ON p1.order_id = p2.order_id
+WHERE p2.pay_time >= '2017-10-12'
+     AND p2.pay_time < '2017-10-27'
+GROUP BY p1.sku_id
+        ,p2.depot_id 
+)
+SELECT * 
+FROM t1
+WHERE sku_id IN ()
+;
+
+
+
+
+
+
+
+SELECT *
+FROM jolly.who_wms_goods_stock_detail_log
+WHERE depot_id IN (4, 5, 6)
+AND change_type = 12
+AND change_time >= unix_timestamp()
+LIMIT 10;
+
+

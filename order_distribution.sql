@@ -104,7 +104,7 @@ ORDER BY data_date
         ,assign_duration_class
         ,ship_duration_class;
 
--- 1. 四仓订单配货&发货时长简报所需数据 ==========================================================================
+--  =============================1. 四仓订单配货&发货时长简报所需数据（底）=============================================
 
 -- 确定订单是否完成配货及配货时间
 -- 看看分组情况
@@ -786,3 +786,28 @@ where depot_id in (4, 5)
 --  and data_date >= '2017-07-01'
 --  and data_date <= '2017-07-31'
 group by depot_id;
+
+
+-- 对duration进行分组（按天）
+t6 AS
+(SELECT t5.*
+        ,(CASE WHEN ship_duration IS NULL THEN 'No'
+                     WHEN ship_duration <= 24 THEN '1天'
+                     WHEN ship_duration <= 48 THEN '2天'
+                     WHEN ship_duration <= 72 THEN '3天'
+                     WHEN ship_duration <= 96 THEN '4天'
+                     WHEN ship_duration <= 120 THEN '5天'
+                     WHEN ship_duration <= 144 THEN '6天'
+                     WHEN ship_duration <= 168 THEN '7天'
+                     WHEN ship_duration <= 192 THEN '8天'
+                     WHEN ship_duration <= 216 THEN '9天'
+                     WHEN ship_duration <= 240 THEN '10天'
+                     WHEN ship_duration <= 264 THEN '11天'
+                     WHEN ship_duration <= 288 THEN '12天'
+                     WHEN ship_duration <= 312 THEN '13天'
+                     WHEN ship_duration <= 336 THEN '14天'
+                     WHEN ship_duration <= 360 THEN '15天'
+                     ELSE '15+天'
+          END) AS ship_duration_class
+FROM t5
+),

@@ -39,6 +39,7 @@ t2 AS
         ,cat_level2_name
         ,sku_id
         ,prop_price    -- sku售价
+        ,shelf_area_sn_total
         ,SUM(stock_num) AS stock_num
 FROM t
 WHERE cat_level1_name IS NOT NULL
@@ -49,6 +50,7 @@ GROUP BY goods_sn
         ,cat_level2_name
         ,sku_id
         ,prop_price    -- sku售价
+        ,shelf_area_sn_total
 )
 SELECT COUNT(*)
 FROM t2
