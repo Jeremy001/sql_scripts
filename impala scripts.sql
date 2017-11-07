@@ -1481,7 +1481,7 @@ LIMIT 10;
 1.1个拣货单中可以包含多张订单的商品
 2.1个订单的商品可能分散到多个拣货单中进行拣货
 3.关联关系：jolly.who_wms_picking_info.picking_id = jolly.who_wms_picking_goods_detail.picking_id
-4.拣货完成时间：jolly.who_wms_picking_info.finish_time
+4.picking_finish_time：jolly.who_wms_picking_info.finish_time
 5.当一张订单中的商品拆成多张拣货单来拣货时，最后完成拣货的那个时间才是该订单的完成拣货时间
 */
 
@@ -1839,7 +1839,7 @@ SELECT order_sn
         ,no_problems_order_uptime AS 标非时间
         ,lock_last_modified_time AS 配货完成时间
         ,outing_stock_time AS 可拣货时间
-        ,picking_finish_time AS 拣货完成时间
+        ,picking_finish_time AS picking_finish_time
         ,order_pack_time AS 打包完成时间
         ,shipping_time AS 发运时间
 FROM zydb.dw_order_node_time
@@ -2313,4 +2313,112 @@ AND change_type = 12
 AND change_time >= unix_timestamp()
 LIMIT 10;
 
+
+-- 东莞仓每月订单内商品数量的分布
+SELECT SUBSTR(shipping_time, 1, 7) AS month
+        ,(CASE WHEN goods_number <= 4 THEN '<=4件' 
+                      WHEN goods_number <= 8 THEN '5-8件'
+                      WHEN goods_number >=9 THEN '>=9件'
+                      ELSE '其他' END) AS goods_num_class
+        ,COUNT(order_sn) AS order_num
+FROM zydb.dw_order_node_time 
+WHERE depot_id = 4
+     AND goods_number >=1
+GROUP BY SUBSTR(shipping_time, 1, 7) 
+        ,(CASE WHEN goods_number <= 4 THEN '<=4件' 
+                      WHEN goods_number <= 8 THEN '5-8件'
+                      WHEN goods_number >=9 THEN '>=9件'
+                      ELSE '其他' END)
+;
+
+
+
+WITH 
+-- outing_stock_time
+k AS
+(select k.order_sn 
+        ,max(k.gmt_created) outing_stock_time
+from jolly.who_wms_outing_stock_detail   k
+where gmt_created > unix_timestamp(to_date(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),29)), 'yyyy-MM-dd')  
+    and gmt_created < unix_timestamp(to_date(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)), 'yyyy-MM-dd')  
+group by k.order_sn
+), 
+-- picking_finish_time
+m AS
+(select m.order_sn
+        ,max(l.finish_time) picking_finish_time
+from jolly.who_wms_picking_info  l
+inner join  jolly.who_wms_picking_goods_detail   m
+on l.picking_id = m.picking_id
+where unix_timestamp(to_date(from_unixtime(l.finish_time)))<=unix_timestamp(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))), 'yyyy-MM-dd') 
+group by m.order_sn
+), 
+t as
+(select to_date(a.shipping_time) data_date,
+                  a.order_sn,
+                  a.depot_id,
+                  (case when a.pay_id = 41 then a.pay_time else a.result_pay_time end) AS pay_time,
+                  a.no_problems_order_uptime,
+                  from_unixtime(outing_stock_time) AS outing_stock_time,
+                  from_unixtime(picking_finish_time) AS picking_finish_time,
+                  a.order_pack_time,
+                  a.shipping_time,
+                  a.is_shiped,
+                  a.is_check,
+                  a.order_status,
+                  (case
+                    when outing_stock_time <=
+                    unix_timestamp(concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00'))
+                         and
+                         (   a.is_shiped != 1 or
+                             a.shipping_time >=
+                             concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
+                          ) and
+                         (
+                             (a.is_shiped in (7, 8) and picking_finish_time is null) or
+                             picking_finish_time >=
+                             unix_timestamp(concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59'))
+                         ) then
+                     1
+                    when outing_stock_time <=
+                        unix_timestamp(concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00')) --picking_finish_time小于当天18：00
+                           and
+                         (   a.is_shiped != 1 or
+                             a.shipping_time >=
+                             concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
+                         ) and
+                         (a.is_shiped in (6) 
+                            or
+                            (  a.is_shiped in (1, 3) 
+                                and
+                            a.order_pack_time >= concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
+                            )
+                         ) then
+                     2
+                    when outing_stock_time <=
+                        unix_timestamp(concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00'))
+                          and
+                         (a.is_shiped != 1 or
+                         a.shipping_time >=
+                         concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')) and
+                         (a.is_shiped in (3) or
+                         (a.is_shiped in (1) and
+                         a.shipping_time >=
+                         concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59'))) then
+                     3
+                    else
+                     0
+                  end) AS is_status
+from zydb.rpt_depot_order_tmp a
+left join  k on a.order_sn = k.order_sn
+left join  m on a.order_sn = m.order_sn
+where a.pay_status in (1, 3)
+and a.is_check = 1
+and a.order_status = 1
+and a.is_shiped in (1, 3, 6, 7, 8)
+)
+
+select * 
+from t 
+where is_status >= 1;
 

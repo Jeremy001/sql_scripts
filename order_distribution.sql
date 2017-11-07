@@ -23,7 +23,7 @@ WHERE pay_status IN (1, 3)
 t2 AS
 (SELECT *
 FROM t1
-WHERE pay_time >= unix_timestamp('2017-04-01', 'yyyy-MM-dd')
+WHERE pay_time >= unix_timestamp('2016-01-01', 'yyyy-MM-dd')
     AND pay_time <= unix_timestamp(FROM_UNIXTIME(unix_timestamp(), 'yyyy-MM-dd'))
 ),
 

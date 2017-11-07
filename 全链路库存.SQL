@@ -26,7 +26,7 @@ t100 AS
         ,SUM(p1.pur_shiped_order_onway_num * p2.in_price) AS purchase_onway_cost    --采购在途成本金额（人民币）
 FROM jolly.who_wms_goods_stock_onway_total p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
-WHERE p1.depot_id in (4, 5, 6, 7)
+WHERE p1.depot_id IN (4, 5, 6, 7)
 GROUP BY p1.depot_id
 ),
 
@@ -48,7 +48,7 @@ LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
 WHERE p1.depot_id in (4, 5, 6)
 GROUP BY p1.depot_id
 ),
--- SA仓
+-- SA仓在库库存
 t202 AS
 (SELECT p1.depot_id
         ,SUM(p1.stock_num) AS instock_num
@@ -530,7 +530,6 @@ LEFT JOIN t100 ON t200.depot_id = t100.depot_id
 LEFT JOIN t300 ON t200.depot_id = t300.depot_id
 LEFT JOIN t400 ON t200.depot_id = t400.depot_id
 ORDER BY t200.depot_id;
-
 
 
 -- ================================================================
