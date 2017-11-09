@@ -1021,7 +1021,7 @@ GROUP BY depot_id;
 国内仓，求总库存表：   (hadoop) zydb.ods_who_wms_goods_stock_detail       stock_num          (可以查：当前最新和历史每天快照)
 
 
-国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail ( data from 201704)  (可以查：当前最新和历史每天快照) 
+国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail ( data FROM 201704)  (可以查：当前最新和历史每天快照) 
 --ZYDB.ODS_WHO_WMS_GOODS_STOCK_TOTAL_DETAIL表中20170813 - 20170822的库存数据可能不太准确 
                                         free_num = total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
           
@@ -1041,12 +1041,12 @@ GROUP BY depot_id;
 -- 库存
 --每日各仓某时刻 自由库存统计
 select t.depot_id,count(distinct t.goods_id), sum(t.free_num)
-from 
+FROM 
 (--  CN仓
 select depot_id,goods_id,sku_id,
 sum(total_stock_num) total_stock_num,
 sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num 
-from  jolly.who_wms_goods_stock_total_detail s  -- 历史自由库存  201704开始 -zydb.ods_who_wms_goods_stock_total_detail 
+FROM  jolly.who_wms_goods_stock_total_detail s  -- 历史自由库存  201704开始 -zydb.ods_who_wms_goods_stock_total_detail 
 where 1=1
 and depot_id in (4,5,6)
 and total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
@@ -1055,12 +1055,12 @@ group by depot_id, goods_id,sku_id
 group by t.depot_id
 union all
 select t.depot_id,count(distinct t.goods_id), sum(t.free_num)
-from 
+FROM 
 (--  SA仓
 select depot_id,goods_id,sku_id,
 sum(total_stock_num) total_stock_num,
 sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num 
-from  jolly_wms.who_wms_goods_stock_total_detail s --历史自由库存 ？jolly_wms.who_wms_goods_stock_total_detail_daily 
+FROM  jolly_wms.who_wms_goods_stock_total_detail s --历史自由库存 ？jolly_wms.who_wms_goods_stock_total_detail_daily 
 where 1=1
 and depot_id =7 
 and total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
@@ -1069,15 +1069,15 @@ group by depot_id, goods_id,sku_id
 group by t.depot_id
 
 ----各仓库每日进出
-select to_date(from_unixtime(change_time)) data_date,
+select to_date(FROM_UNIXTIME(change_time)) data_date,
 sum(case when  change_type=1 then change_num end) 备货入库件数,
 sum(case when  change_type=3 then change_num end) 退货入库件数 ,
 sum(case when  change_type=5 then change_num end) 销售出库件数 
-from jolly_wms.who_wms_goods_stock_detail_log  a
+FROM jolly_wms.who_wms_goods_stock_detail_log  a
 where 1=1 
-and from_unixtime(change_time,'yyyyMMdd')>='20170701'
-and from_unixtime(change_time,'yyyyMMdd')< '20170717'
-group by to_date(from_unixtime(change_time)) 
+and FROM_UNIXTIME(change_time,'yyyyMMdd')>='20170701'
+and FROM_UNIXTIME(change_time,'yyyyMMdd')< '20170717'
+group by to_date(FROM_UNIXTIME(change_time)) 
 
 
 -- 仓库每天总库存
@@ -1823,7 +1823,7 @@ ORDER BY on_shelf_hour;
 --- 7月大陆仓作业时长
 select depot_id
     ,avg(receipt_quality_duration + quality_onshelf_duration + picking_duration + package_duration + shipping_duration) as LT2
-from zydb.rpt_depot_daily_report
+FROM zydb.rpt_depot_daily_report
 where depot_id in (4, 5)
  AND data_date >= '2017-07-01'
  AND data_date <= '2017-07-31'
@@ -1955,7 +1955,7 @@ LIMIT 10;
 -- status：上架单状态：1-待上架,2-上架中,3-上架完成
 -- user_id：猜测是上架员ID
 -- finish_time：上架完成时间
--- from_type：来源类型：1-批发订单作业单,2-普通采购单(非供应商备货的),3-调拨入库单,4-供应商备货采购单
+-- FROM_type：来源类型：1-批发订单作业单,2-普通采购单(非供应商备货的),3-调拨入库单,4-供应商备货采购单
 SELECT * 
 FROM jolly.who_wms_pur_deliver_info
 LIMIT 10;
@@ -2091,7 +2091,7 @@ LIMIT 10;
 -- 查询调拨单的签收时间
 WITH t1 AS
 (SELECT p1.allocate_order_sn
-        ,p1.from_depot_id
+        ,p1.FROM_depot_id
         ,p1.to_depot_id
         ,FROM_UNIXTIME(p1.gmt_created) AS 调拨单创建时间
         ,FROM_UNIXTIME(p1.off_shelf_time) AS 下架时间
@@ -2143,7 +2143,7 @@ ORDER BY to_depot_id;
 
 SELECT data_date
         ,count(1)
-from zydb.ods_who_wms_goods_stock_total_detail
+FROM zydb.ods_who_wms_goods_stock_total_detail
 GROUP BY data_date
 ORDER BY data_date
 ;
@@ -2159,12 +2159,12 @@ LIMIT 10
 with t1 as
 (SELECT p1.customer_order_id
         ,count(1) AS num
-from jolly_tms_center.tms_order_info p1
+FROM jolly_tms_center.tms_order_info p1
 GROUP BY p1.customer_order_id
 )
 select customer_order_id
         ,num
-from t1
+FROM t1
 ORDER BY num desc
 LIMIT 10;
 
@@ -2176,15 +2176,15 @@ SELECT tms_order_id
         ,tracking_no
         ,shipping_status
         ,depot_id
-        ,from_unixtime(shipped_time) AS shipping_time
-        ,from_unixtime(gmt_modified) AS gmt_modified
+        ,FROM_UNIXTIME(shipped_time) AS shipping_time
+        ,FROM_UNIXTIME(gmt_modified) AS gmt_modified
 FROM jolly_tms_center.tms_order_info
 WHERE customer_order_id = 25181391
 ;
 
 
 SELECT * 
-from jolly.who_order_info
+FROM jolly.who_order_info
 where order_id  = 25892073
 ;
 
@@ -2197,7 +2197,7 @@ WITH t1 AS
         ,p2.order_sn
         ,p1.shipping_status
         ,p2.cod_check_status        
-from jolly_tms_center.tms_order_info p1
+FROM jolly_tms_center.tms_order_info p1
 LEFT JOIN jolly.who_order_info p2
 on p1.customer_order_id = p2.order_id
 WHERE p1.shipped_time > 0
@@ -2206,7 +2206,7 @@ WHERE p1.shipped_time > 0
 select shipping_status
         ,cod_check_status
         ,count(customer_order_id) AS order_num
-from t1
+FROM t1
 GROUP BY shipping_status
         ,cod_check_status;
 -- 核查两个状态异常的订单
@@ -2219,23 +2219,23 @@ LIMIT 5;
 
 -- tms_order_info
 SELECT * 
-from jolly_tms_center.tms_order_info p1
+FROM jolly_tms_center.tms_order_info p1
 LIMIT 10;
 
 
 SELECT *
-        ,from_unixtime(gmt_created)
-from jolly.who_wms_on_shelf_goods_price
+        ,FROM_UNIXTIME(gmt_created)
+FROM jolly.who_wms_on_shelf_goods_price
 where delivered_order_sn = 'GZ2DB171022092806186Y94IF'
 limit 10;
 
 
 SELECT * 
-from jolly.who_wms_on_shelf_info
+FROM jolly.who_wms_on_shelf_info
 LIMIT 10;
 
 SELECT *
-from zydb.dw_goods_on_sale
+FROM zydb.dw_goods_on_sale
 WHERE goods_id = 374404
 LIMIT 10;
 
@@ -2338,19 +2338,19 @@ WITH
 k AS
 (select k.order_sn 
         ,max(k.gmt_created) outing_stock_time
-from jolly.who_wms_outing_stock_detail   k
-where gmt_created > unix_timestamp(to_date(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),29)), 'yyyy-MM-dd')  
-    and gmt_created < unix_timestamp(to_date(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)), 'yyyy-MM-dd')  
+FROM jolly.who_wms_outing_stock_detail   k
+where gmt_created > unix_timestamp(to_date(date_sub(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd')),29)), 'yyyy-MM-dd')  
+    and gmt_created < unix_timestamp(to_date(date_add(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd')),1)), 'yyyy-MM-dd')  
 group by k.order_sn
 ), 
 -- picking_finish_time
 m AS
 (select m.order_sn
         ,max(l.finish_time) picking_finish_time
-from jolly.who_wms_picking_info  l
+FROM jolly.who_wms_picking_info  l
 inner join  jolly.who_wms_picking_goods_detail   m
 on l.picking_id = m.picking_id
-where unix_timestamp(to_date(from_unixtime(l.finish_time)))<=unix_timestamp(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))), 'yyyy-MM-dd') 
+where unix_timestamp(to_date(FROM_UNIXTIME(l.finish_time)))<=unix_timestamp(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))), 'yyyy-MM-dd') 
 group by m.order_sn
 ), 
 t as
@@ -2359,8 +2359,8 @@ t as
                   a.depot_id,
                   (case when a.pay_id = 41 then a.pay_time else a.result_pay_time end) AS pay_time,
                   a.no_problems_order_uptime,
-                  from_unixtime(outing_stock_time) AS outing_stock_time,
-                  from_unixtime(picking_finish_time) AS picking_finish_time,
+                  FROM_UNIXTIME(outing_stock_time) AS outing_stock_time,
+                  FROM_UNIXTIME(picking_finish_time) AS picking_finish_time,
                   a.order_pack_time,
                   a.shipping_time,
                   a.is_shiped,
@@ -2368,48 +2368,48 @@ t as
                   a.order_status,
                   (case
                     when outing_stock_time <=
-                    unix_timestamp(concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00'))
+                    unix_timestamp(concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00'))
                          and
                          (   a.is_shiped != 1 or
                              a.shipping_time >=
-                             concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
+                             concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
                           ) and
                          (
                              (a.is_shiped in (7, 8) and picking_finish_time is null) or
                              picking_finish_time >=
-                             unix_timestamp(concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59'))
+                             unix_timestamp(concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59'))
                          ) then
                      1
                     when outing_stock_time <=
-                        unix_timestamp(concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00')) --picking_finish_time小于当天18：00
+                        unix_timestamp(concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00')) --picking_finish_time小于当天18：00
                            and
                          (   a.is_shiped != 1 or
                              a.shipping_time >=
-                             concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
+                             concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
                          ) and
                          (a.is_shiped in (6) 
                             or
                             (  a.is_shiped in (1, 3) 
                                 and
-                            a.order_pack_time >= concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
+                            a.order_pack_time >= concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')
                             )
                          ) then
                      2
                     when outing_stock_time <=
-                        unix_timestamp(concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00'))
+                        unix_timestamp(concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 18:00:00'))
                           and
                          (a.is_shiped != 1 or
                          a.shipping_time >=
-                         concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')) and
+                         concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59')) and
                          (a.is_shiped in (3) or
                          (a.is_shiped in (1) and
                          a.shipping_time >=
-                         concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59'))) then
+                         concat(to_date(FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd'))),' 23:59:59'))) then
                      3
                     else
                      0
                   end) AS is_status
-from zydb.rpt_depot_order_tmp a
+FROM zydb.rpt_depot_order_tmp a
 left join  k on a.order_sn = k.order_sn
 left join  m on a.order_sn = m.order_sn
 where a.pay_status in (1, 3)
@@ -2419,6 +2419,90 @@ and a.is_shiped in (1, 3, 6, 7, 8)
 )
 
 select * 
-from t 
+FROM t 
 where is_status >= 1;
+
+
+-- 新仓库日报，提货订单数
+
+select depod_id depot_id,count(*) pickup_orders from 
+    zydb.dw_order_shipping_tracking_node a
+    left join  
+    zydb.dw_order_sub_order_fact b
+    on a.order_id=b.order_id
+    where lading_time>=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
+    and lading_time<date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
+    group by depod_id
+
+-- 根据 jolly.who_wms_lading_order 
+WITH t1 AS
+(SELECT p1.lading_sn
+        ,p1.depot_id
+        ,FROM_UNIXTIME(p1.create_time, 'yyyy-MM-dd') AS create_date
+        ,FROM_UNIXTIME(p1.create_time) AS create_time
+        ,FROM_UNIXTIME(p1.operate_time, 'yyyy-MM-dd') AS operate_date
+        ,FROM_UNIXTIME(p1.operate_time) AS operate_time
+        ,COUNT(p2.order_sn) AS order_num
+FROM jolly.who_wms_lading_order p1
+LEFT JOIN jolly.who_wms_lading_order_detail p2
+             ON p1.id = p2.lading_order_id
+WHERE p1.operate_time >= unix_timestamp('2017-11-01', 'yyyy-MM-dd')
+     AND p1.operate_time < unix_timestamp('2017-11-08', 'yyyy-MM-dd')
+     AND p1.lading_status = 2
+GROUP BY p1.lading_sn
+        ,p1.depot_id
+        ,FROM_UNIXTIME(p1.create_time, 'yyyy-MM-dd')
+        ,FROM_UNIXTIME(p1.create_time) 
+        ,FROM_UNIXTIME(p1.operate_time, 'yyyy-MM-dd') 
+        ,FROM_UNIXTIME(p1.operate_time) 
+)
+SELECT operate_date
+        ,create_date
+        ,depot_id
+        ,SUM(order_num) AS order_num
+FROM t1
+WHERE depot_id = 4
+GROUP BY operate_date
+        ,create_date
+        ,depot_id
+;
+
+-- 印度尼西亚订单中商品数量的分布
+-- jolly.who_region, region_id = 1788, region_name = 'Indonesia'
+-- 指导改善订单包裹大小
+WITH t1 AS
+(SELECT p2.goods_num AS total_goods_num
+        ,p3.cat_level1_name
+        ,p3.cat_level2_name
+        ,(CASE WHEN p5.region_id = 1788 THEN 'Indonesia' ELSE 'Others' END) AS country
+        ,COUNT(DISTINCT p2.order_sn) AS order_num
+        ,SUM(p1.goods_number) AS goods_num
+FROM jolly.who_order_info p2 
+LEFT JOIN jolly.who_order_goods p1 
+             ON p1.order_id = p2.order_id
+LEFT JOIN zydb.dim_jc_goods p3 
+             ON p3.goods_id = p1.goods_id
+LEFT JOIN jolly.who_order_user_info p4 
+             ON p2.order_id = p4.order_id 
+          --AND p4.country = 1788
+LEFT JOIN jolly.who_region p5 
+             ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
+WHERE p5.region_id IS NOT NULL
+     AND P2.shipping_time >= UNIX_TIMESTAMP('2017-08-01')
+     AND P2.shipping_time < UNIX_TIMESTAMP('2017-11-01')
+     AND p2.goods_num <=5
+     AND p2.goods_num >=1
+     AND p2.order_status = 1
+     AND p2.is_shiped = 1
+GROUP BY p2.goods_num
+        ,p3.cat_level1_name
+        ,p3.cat_level2_name
+        ,(CASE WHEN p5.region_id = 1788 THEN 'Indonesia' ELSE 'Others' END)
+)
+SELECT *
+FROM t1;
+
+
+
+
 

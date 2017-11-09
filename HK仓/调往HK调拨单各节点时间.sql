@@ -157,19 +157,3 @@ FROM t03
 WHERE pay_date < TO_DATE(DATE_SUB(NOW(), 5))  -- 取6天以前的支付订单
 GROUP BY pay_month
 ORDER BY pay_month;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

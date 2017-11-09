@@ -14,6 +14,52 @@ sql脚本类型：impala
 - 4.客户拒收+退货在途（已退回，尚未进入仓库库存）
 */
 
+-- 1.历史数据一周环比
+-- zybiro.neo_all_chain_stock_daily
+WITH t1 AS 
+(SELECT SUBSTR(data_date, 1, 7) AS month
+        ,data_date
+        ,SUM(purchase_onway_num) AS purchase_onway_num
+        ,SUM(instock_num) AS instock_num
+        ,SUM(deliver_onway_num) AS deliver_onway_num
+        ,SUM(return_onway_num) AS return_onway_num
+        ,SUM(purchase_onway_cost) AS purchase_onway_cost
+        ,SUM(instock_cost) AS instock_cost
+        ,SUM(deliver_onway_cost) AS deliver_onway_cost
+        ,SUM(return_onway_cost) AS return_onway_cost
+        ,SUM(deliver_onway_amount) AS deliver_onway_amount
+        ,SUM(return_onway_amount) AS return_onway_amount
+FROM zybiro.neo_all_chain_stock_daily
+GROUP BY SUBSTR(data_date, 1, 7) 
+        ,data_date
+)
+SELECT month
+        ,AVG(purchase_onway_num) AS purchase_onway_num
+        ,AVG(instock_num) AS instock_num
+        ,AVG(deliver_onway_num) AS deliver_onway_num
+        ,AVG(return_onway_num) AS return_onway_num
+        ,AVG(purchase_onway_cost) AS purchase_onway_cost
+        ,AVG(instock_cost) AS instock_cost
+        ,AVG(deliver_onway_cost) AS deliver_onway_cost
+        ,AVG(return_onway_cost) AS return_onway_cost
+        ,AVG(deliver_onway_amount) AS deliver_onway_amount
+        ,AVG(return_onway_amount) AS return_onway_amount
+FROM t1
+GROUP BY month 
+ORDER BY month;
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ================================= 1.采购在途（顶） =====================================
 -- 1.采购在途商品数量 & 成本金额（人民币）
 -- jolly.who_wms_goods_stock_onway_total（包含所有仓库的在途数据）

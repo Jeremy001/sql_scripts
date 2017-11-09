@@ -21,7 +21,7 @@ CREATE TABLE zybiro.neo_all_chain_stock_daily
 ,return_onway_cost double
 ,deliver_onway_amount double
 ,return_onway_amount double
-,data_date varchar(10));
+,data_date string);
 
 -- 插入数据 =================================================
 WITH 
@@ -238,22 +238,90 @@ INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
 -- 汇总！汇总！汇总！
 -- 全链路库存结构汇总表
 SELECT t200.depot_id
-        ,t100.purchase_onway_num
-        ,t200.instock_num
-        ,t300.deliver_onway_num
-        ,t400.return_onway_num
-        ,t100.purchase_onway_cost
-        ,t200.instock_cost
-        ,t300.deliver_onway_cost
-        ,t400.return_onway_cost
-        ,t300.deliver_onway_amount
-        ,t400.return_onway_amount
+        ,NVL(t100.purchase_onway_num, 0) AS purchase_onway_num
+        ,NVL(t200.instock_num, 0) AS instock_num
+        ,NVL(t300.deliver_onway_num, 0) AS deliver_onway_num
+        ,NVL(t400.return_onway_num, 0) AS return_onway_num
+        ,NVL(t100.purchase_onway_cost, 0) AS purchase_onway_cost
+        ,NVL(t200.instock_cost, 0) AS instock_cost
+        ,NVL(t300.deliver_onway_cost, 0) AS deliver_onway_cost
+        ,NVL(t400.return_onway_cost, 0) AS return_onway_cost
+        ,NVL(t300.deliver_onway_amount, 0) AS deliver_onway_amount
+        ,NVL(t400.return_onway_amount, 0) AS return_onway_amount
         ,current_date() AS data_date
 FROM t200
 LEFT JOIN t100 ON t200.depot_id = t100.depot_id
 LEFT JOIN t300 ON t200.depot_id = t300.depot_id
 LEFT JOIN t400 ON t200.depot_id = t400.depot_id
 ORDER BY t200.depot_id;
+
+
+-- 插入之前查询到的数据 ==========================================
+
+-- 8-25(已导入)
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(4, 59409, 228132, 607695, 0, 1442650.69, 6455796.41, 16921593.45, 0, 45710755.57, 0, '2017-08-25');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(5, 92009, 437405, 1043490, 0, 2201616.16, 13768791.73, 28637146.5, 0, 77251939.44, 0, '2017-08-25');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(6, 29431, 87077, 110326, 91361, 746559.92, 3486438.15, 2975769.39, 2798448.4, 7911004.12, 7600549, '2017-08-25');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(7, 97, 521310, 179309, 1988294, 7812.32, 17338683.42, 5055798.84, 62861954.68, 13148327.27, 173616466, '2017-08-25');
+-- 9-20(已导入)
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(4, 62938, 290673, 626294, 0, 1487903, 8265543, 18074344, 0, 51292721, 0, '2017-09-20');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(5, 97716, 556370, 1049333, 0, 2332419, 16973952, 29805235, 0, 84966323, 0, '2017-09-20');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(6, 42215, 94579, 105562, 115900, 1065660, 3565154, 2906598, 3510060, 8226679, 9451199, '2017-09-20');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(7, 25, 602812, 223944, 1750177, 32957, 21640985, 6016457, 55614815, 16875094, 152621346, '2017-09-20');
+--9-29(已导入)
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(4, 86511, 388067, 802054, 0, 2475939, 10472184, 22369870, 0, 59622936, 0, '2017-09-29');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(5, 138216, 730600, 1304234, 0, 3903853, 21216917, 36013949, 0, 95969675, 0, '2017-09-29');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(6, 32552, 68655, 111889, 126963, 786911, 2739530, 3063740, 3864896, 8084285, 10412356, '2017-09-29');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(7, 345, 640527, 218793, 2031350, 188385, 22904866, 5779697, 63889349, 15333960, 175370383, '2017-09-29');
+--10-09(已导入)
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(4, 48305, 359272, 750115, 0, 1248273, 10382637, 21348846, 0, 56673963, 0, '2017-10-09');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(5, 78591, 680442, 1239093, 0, 2016039, 20776467, 35009730, 0, 92816983, 0, '2017-10-09');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(6, 31309, 64455, 86326, 129181, 791259, 2627924, 2323086, 3910697, 6129900, 10222551, '2017-10-09');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(7, 179, 757874, 272058, 1858236, 176760, 27048493, 6961310, 58930664, 18140497, 157665440, '2017-10-09');
+--10-26(已导入)
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(4, 33525, 310075, 793286, 0, 1005094, 8437716, 22585459, 0, 58871306, 0, '2017-10-26');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(5, 53986, 598701, 1432307, 0, 1663327, 17703999, 40354765, 0, 105092145, 0, '2017-10-26');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(6, 37600, 67618, 91815, 147959, 954289, 2645337, 2586382, 4434269, 6659534, 11630622, '2017-10-26');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(7, 817, 808162, 239897, 1706812, 196005, 29132929, 6331104, 54428979, 16515492, 145730433, '2017-10-26');
+-- 11-3(已导入)
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(4, 22614, 271132, 665765, 0, 610285, 7533608, 19545191, 0, 52324427, 0, '2017-11-03');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(5, 45536, 547418, 1246839, 0, 1213974, 16554134, 36286962, 0, 97777939, 0, '2017-11-03');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(6, 56, 106723, 102235, 154049, 167795, 3602304, 2911352, 4628620, 7840949, 12137601, '2017-11-03');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(7, 813, 811922, 226325, 1677061, 190509, 29088512, 6042465, 53449342, 16015619, 142701623, '2017-11-03');
+-- 11-7(已导入)
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(4, 92337, 349591, 675805, 0, 2024759.39, 9399294.18, 19591228.72, 0, 52459397.35, 0, '2017-11-07');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(5, 167198, 666090, 1233651, 0, 3798816.62, 19255281.9, 35556093.08, 0, 95824256.59, 0, '2017-11-07');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(6, 168, 95857, 115699, 158108, 11448, 3395917.69, 3272168.99, 4750803.01, 8812943.533, 12466195.44, '2017-11-07');
+INSERT INTO TABLE zybiro.neo_all_chain_stock_daily
+VALUES(7, 627, 813030, 243109, 1629857, 164780.4, 29136346.85, 6432316.29, 52204447.23, 16967725.75, 139258044.4, '2017-11-07');
+
 
 -- 查询数据 ==================================================
 SELECT * 
