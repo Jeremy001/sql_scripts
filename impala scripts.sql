@@ -2415,3 +2415,57 @@ FROM t1;
 
 
 
+SELECT * 
+FROM zydb.dw_delivered_order_info
+WHERE start_onself_time >= '2017-11-01'
+LIMIT 100;
+
+SELECT *
+FROM zydb.dw_delivered_receipt_onself p1
+WHERE p1.delivered_order_sn = 'GZ2FHD201711071801481083'
+;
+
+SELECT pur_order_sn
+        ,goods_id
+        ,from_unixtime(gmt_created)
+from jolly.who_wms_pur_deliver_goods
+WHERE pur_order_sn = 'GZ2FHD201711071801481083'
+;
+
+SELECT from_unixtime(max(gmt_created))
+FROM zydb.ods_wms_pur_deliver_receipt 
+--WHERE pur_order_sn = 'GZ2FHD201711071801481083'
+;
+
+SELECT from_unixtime(gmt_created) 
+        ,pur_order_sn
+FROM jolly.who_wms_pur_deliver_receipt
+WHERE pur_order_sn = 'GZ2FHD201711071801481083'
+;
+
+
+
+WITH t1 AS
+(SELECT p1.depot_id
+        ,p1.delivered_order_sn
+        ,P1.goods_id
+        ,p1.goods_sn
+        ,SUM(p1.delivered_num) AS 签收商品数量
+        ,SUM(p1.checked_num) AS 质检商品数量
+        ,SUM(p1.exp_num) AS 异常商品数量
+        ,MIN(p1.start_receipt_time) AS 质检开始时间
+        ,MAX(p1.finish_check_time) AS 质检结束时间
+FROM zydb.dw_delivered_receipt_onself p1
+WHERE p1.depot_id IN (4, 5, 6, 7)
+GROUP BY p1.depot_id
+        ,p1.delivered_order_sn
+        ,P1.goods_id
+        ,p1.goods_sn
+)
+SELECT depot_id
+        ,sum(质检商品数量)
+FROM t1
+WHERE 质检结束时间 >= '2017-11-09'
+     AND 质检结束时间 < '2017-11-10'
+group by depot_id
+order by depot_id;
