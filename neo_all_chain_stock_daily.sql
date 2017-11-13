@@ -326,8 +326,42 @@ VALUES(7, 627, 813030, 243109, 1629857, 164780.4, 29136346.85, 6432316.29, 52204
 -- 查询数据 ==================================================
 SELECT * 
 FROM zybiro.neo_all_chain_stock_daily
-LIMIT 10;
+WHERE depot_id = 5
+ORDER BY data_date DESC
+;
 
+-- 按月汇总求平均
+WITH t1 AS 
+(SELECT SUBSTR(data_date, 1, 7) AS month
+        ,data_date
+        ,SUM(purchase_onway_num) AS purchase_onway_num
+        ,SUM(instock_num) AS instock_num
+        ,SUM(deliver_onway_num) AS deliver_onway_num
+        ,SUM(return_onway_num) AS return_onway_num
+        ,SUM(purchase_onway_cost) AS purchase_onway_cost
+        ,SUM(instock_cost) AS instock_cost
+        ,SUM(deliver_onway_cost) AS deliver_onway_cost
+        ,SUM(return_onway_cost) AS return_onway_cost
+        ,SUM(deliver_onway_amount) AS deliver_onway_amount
+        ,SUM(return_onway_amount) AS return_onway_amount
+FROM zybiro.neo_all_chain_stock_daily
+GROUP BY SUBSTR(data_date, 1, 7) 
+        ,data_date
+)
+SELECT month
+        ,AVG(purchase_onway_num) AS purchase_onway_num
+        ,AVG(instock_num) AS instock_num
+        ,AVG(deliver_onway_num) AS deliver_onway_num
+        ,AVG(return_onway_num) AS return_onway_num
+        ,AVG(purchase_onway_cost) AS purchase_onway_cost
+        ,AVG(instock_cost) AS instock_cost
+        ,AVG(deliver_onway_cost) AS deliver_onway_cost
+        ,AVG(return_onway_cost) AS return_onway_cost
+        ,AVG(deliver_onway_amount) AS deliver_onway_amount
+        ,AVG(return_onway_amount) AS return_onway_amount
+FROM t1
+GROUP BY month 
+ORDER BY month;
 
 
 
