@@ -73,6 +73,7 @@ GROUP BY p1.order_id
 t02 AS
 (SELECT p.order_id
         ,p.order_sn
+        ,t01.allocate_order_sn
         ,t01.from_depot_id
         ,p.goods_number
         ,p.original_goods_number
@@ -111,6 +112,7 @@ WHERE 1=1
 
 t03 AS
 (SELECT order_sn
+        ,allocate_order_sn
         ,from_depot_id
         ,TO_DATE(pay_time) AS pay_date
         ,SUBSTR(CAST(pay_time AS string), 1, 7) AS pay_month
@@ -144,6 +146,15 @@ SELECT pay_date
 FROM t03
 GROUP BY pay_date
 ORDER BY pay_date;
+
+-- 查询某一天的订单
+SELECT * 
+FROM t03
+WHERE pay_date IN ('2017-11-08', '2017-11-09')
+     AND allocate_work_duration < 0
+;
+
+
 
 -- 每月调拨各节点平均时长
 SELECT pay_month

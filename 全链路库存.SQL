@@ -1176,10 +1176,68 @@ WHERE shiped_days >= 90
 LIMIT 10;
 
 
+-- 每天签收数量
+SELECT FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd') AS data_date
+        ,SUM(p2.goods_number) AS receive_num
+        ,SUM(p2.order_total_amount) AS receive_amount
+FROM jolly.who_order_shipping_tracking p1 
+LEFT JOIN zydb.dw_order_sub_order_fact p2 
+             ON p1.order_id = p2.order_id
+          AND p1.update_time > UNIX_TIMESTAMP(p2.shipping_time)
+WHERE p1.shipping_state=3 
+     AND p1.update_time >= UNIX_TIMESTAMP('2017-08-01')
+     AND p1.update_time < UNIX_TIMESTAMP(TO_DATE(NOW()))
+GROUP BY FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd') 
+;
 
+-- 每天销售数量
+-- zydb.dw_order_sub_order_fact
+SELECT p1.depod_id AS depot_id
+        ,SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10) AS data_date
+        ,SUM(p1.goods_number) AS sale_num
+FROM zydb.dw_order_sub_order_fact p1
+WHERE p1.depod_id IN (4, 5, 6, 7)
+     AND p1.order_status = 1
+     AND p1.pay_status IN (1, 3)
+     AND (CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) >= '2017-08-01'
+GROUP BY p1.depod_id 
+        ,SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10)
+;
 
-
-
-
+-- 各仓每天销售出库数&退货入库数
+WITH 
+-- GZ2 + DG1 + HK
+t1 AS
+(SELECT p1.depot_id
+        ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS data_date
+        ,SUM(CASE WHEN p1.change_type = 5 THEN p1.change_num ELSE 0 END) AS whout_num
+        ,SUM(CASE WHEN p1.change_type = 3 THEN p1.change_num ELSE 0 END) AS return_num
+FROM jolly.who_wms_goods_stock_detail_log p1
+WHERE p1.depot_id IN (4, 5, 6)
+     AND p1.change_time >= unix_timestamp('2017-08-01')
+GROUP BY p1.depot_id
+        ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
+),
+-- SA
+t2 AS
+(SELECT p1.depot_id
+        ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS data_date
+        ,SUM(CASE WHEN p1.change_type = 5 THEN p1.change_num ELSE 0 END) AS whout_num
+        ,SUM(CASE WHEN p1.change_type = 3 THEN p1.change_num ELSE 0 END) AS return_num
+FROM jolly_wms.who_wms_goods_stock_detail_log p1
+WHERE p1.depot_id = 7
+     AND p1.change_time >= unix_timestamp('2017-08-01')
+GROUP BY p1.depot_id
+        ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
+),
+-- UNION
+t3 AS
+(SELECT * FROM t1
+UNION ALL 
+SELECT * FROM t2
+)
+SELECT *
+FROM t3
+LIMIT 10;
 
 

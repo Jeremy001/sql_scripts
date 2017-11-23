@@ -1,3 +1,8 @@
+
+set mapreduce.map.memory.mb=6120;
+set mapreduce.reduce.memory.mb=12000;
+set hive.exec.parallel=true;
+
 --分配订单量、单量占比
 insert overwrite table zydb.rpt_depot_daily_report_new_tmp1
 select 
@@ -298,6 +303,9 @@ on t1.depot_id=t15.depot_id
 ;
 
 
+set mapreduce.map.memory.mb=6120;
+set mapreduce.reduce.memory.mb=12000;
+set hive.exec.parallel=true;
 
 ---------------进销存
 
@@ -327,8 +335,8 @@ full join
 (
 	--采购入库数  调拨入库数
 	select  b.depot_id,
-			sum(case when source_type=2 then a.on_shelf_num end) pur_onself_goods_num,
-			sum(case when source_type=3 then a.on_shelf_num end) allocate_onself_goods_num
+			nvl(sum(case when source_type in(1,2,4) then a.on_shelf_num end),0) pur_onself_goods_num,
+			nvl(sum(case when source_type=3 then a.on_shelf_num end),0) allocate_onself_goods_num
 	from jolly.who_wms_on_shelf_goods_price a
 	left join
   jolly.who_wms_on_shelf_goods b
@@ -347,7 +355,7 @@ full join
 (
 --销售退货入库数   销售退货入库订单数
 	select  b.depot_id,
-				sum(returned_stock_num) return_onself_goods_num,
+				nvl(sum(returned_stock_num),0) return_onself_goods_num,
 				count(distinct a.returned_order_id) return_onself_order_num
 	from jolly.who_wms_returned_order_goods a
 	left join  
@@ -364,8 +372,8 @@ full join
 	--其他出库数
 	--盘盈\盘亏	商品件数
 	select  a.depot_id depot_id,
-			sum(case when change_type in(4,9) then change_num end )  other_onself_goods_num,
-			sum(case when change_type in(6,10) then change_num end )  other_out_goods_num,
+			nvl(sum(case when change_type in(4,9) then change_num end ),0)  other_onself_goods_num,
+			nvl(sum(case when change_type in(6,10) then change_num end ),0)  other_out_goods_num,
 			sum(case when change_type=4 then change_num end) inven_profit_goods_num,   --盘盈
 			sum(case when change_type=6 then change_num end) inven_loss_goods_num  --盘亏	
 	from 
@@ -383,7 +391,7 @@ full join
 
 (
 	--销售出库商品数
-	select depod_id depot_id,sum(goods_send_num)  sale_out_goods_num
+	select depod_id depot_id,nvl(sum(goods_send_num),0)  sale_out_goods_num
 	from zydb.dw_order_sub_order_fact a
 	full join  
 	jolly.who_order_goods b
@@ -413,7 +421,7 @@ full join
 (
 	--调拨出库数
 	select  a.from_depot_id depot_id,
-				sum(total_num) allocate_out_goods_num
+				nvl(sum(total_num),0) allocate_out_goods_num
 	from jolly.who_wms_allocate_out_info a
 	where out_time>=unix_timestamp('${data_date}','yyyyMMdd')
 	and out_time<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') 
@@ -436,7 +444,7 @@ full join
 (
 	--供应商退货出库商品数
 	select  a.depot_id,
-				sum(returned_num)  supp_return_out_goods_num
+				nvl(sum(returned_num),0)  supp_return_out_goods_num
 	from  jolly.who_wms_pur_returned_info a
 	full join  
 	jolly.who_wms_pur_returned_goods b
@@ -475,7 +483,7 @@ full join
 	--供应商退货出库数
 	select 
 		depot_id,
-		count(distinct returned_order_id) supp_return_num
+		nvl(count(distinct returned_order_id),0) supp_return_num
 	from 
 	jolly.who_wms_purchase_returned_info a
 	where a.returned_time>=unix_timestamp('${data_date}','yyyyMMdd')
@@ -487,6 +495,9 @@ on t0.depot_id=t11.depot_id
 
 
 
+set mapreduce.map.memory.mb=6120;
+set mapreduce.reduce.memory.mb=12000;
+set hive.exec.parallel=true;
 ---------------待处理量
 
 insert overwrite table zydb.rpt_depot_daily_report_new_tmp3
@@ -525,7 +536,8 @@ full join
 --（1天前供应商发货未到货）未到货商品数
 --（当天供应商发货未到货）未到货商品数
  select a.depot_id,
-        sum(case when a.gmt_created<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd')  then supp_num end ) unrec_goods_num_before2days,
+        sum(case when a.gmt_created<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd')  
+		and a.gmt_created>=unix_timestamp('2017-10-01','yyyy-MM-dd') then supp_num end ) unrec_goods_num_before2days,
         
 		sum(case when a.gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') and a.gmt_created<unix_timestamp('${data_date}','yyyyMMdd')  then supp_num end )unrec_goods_num_1days,
         
@@ -617,9 +629,10 @@ full join
 	full join  
 	jolly_oms.who_wms_goods_need_lock_detail  b
 	on a.order_id=b.order_id
-	where shipping_time='1970-01-01 08:00:00'
+	where is_shiped=1
 	and order_status<>2
 	and last_modified_time<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') 
+	and last_modified_time>=unix_timestamp('2017-10-01','yyyy-MM-dd') 
 	and last_modified_time>0 
 	and num=0 
 	and oos_num=0
@@ -645,8 +658,12 @@ full join
 		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') and 
 		   gmt_created<unix_timestamp('${data_date}','yyyyMMdd') then a.order_id end) 
 		   prepare_order_num_1days
-	  from 
-	jolly.who_wms_outing_stock_detail a
+	 from 
+	(
+	select * from jolly.who_wms_outing_stock_detail
+	union all 
+	select * from jolly_wms.who_wms_outing_stock_detail
+	)a
 	group by depot_id 
 )t6
 on t0.depot_id=t6.depot_id
@@ -682,25 +699,27 @@ full join
 	--（1天前配货完成仓库未发货）未发货订单数
 	select a.depod_id depot_id,
 		   count(distinct case when 
-		   last_modified_time>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') and 
-		   last_modified_time<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd') then a.order_id end) unship_prepare_order_num_3days,
+		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') and 
+		   gmt_created<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd') then a.order_id end) unship_prepare_order_num_3days,
 		   
 		   count(distinct case when 
-		   last_modified_time>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd') and 
-		   last_modified_time<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') then a.order_id end) unship_prepare_order_num_2days,
+		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd') and 
+		   gmt_created<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') then a.order_id end) unship_prepare_order_num_2days,
 		   
 		   count(distinct case when 
-		   last_modified_time>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') and 
-		   last_modified_time<unix_timestamp('${data_date}','yyyyMMdd') then a.order_id end) unship_prepare_order_num_1days
+		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') and 
+		   gmt_created<unix_timestamp('${data_date}','yyyyMMdd') then a.order_id end) unship_prepare_order_num_1days
 	from 
 	zydb.dw_order_sub_order_fact  a
-	full join  
-	jolly_oms.who_wms_goods_need_lock_detail b
+	inner join  
+	(
+	select distinct order_id,gmt_created from jolly.who_wms_outing_stock_detail
+	union all 
+	select distinct order_id,gmt_created from jolly_wms.who_wms_outing_stock_detail
+	)b
 	on a.order_id=b.order_id
-	where shipping_time='1970-01-01 08:00:00'
+	where is_shiped<>1
 	and order_status<>2
-	and num=0 
-	and oos_num=0
 	group by a.depod_id 
 ) t8
 on t0.depot_id=t8.depot_id
@@ -712,32 +731,38 @@ full join
 	--（1天前配货完成仓库未发货）未发货商品数
 	select a.depod_id depot_id, 
 		   sum( case when 
-		   last_modified_time>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') and 
-		   last_modified_time<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd') then original_goods_number end) unship_prepare_goods_num_3days,
+		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') and 
+		   gmt_created<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd') then goods_number end) unship_prepare_goods_num_3days,
 		   
 		   sum( case when 
-		   last_modified_time>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd') and 
-		   last_modified_time<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') then original_goods_number end) unship_prepare_goods_num_2days,
+		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd') and 
+		   gmt_created<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') then goods_number end) unship_prepare_goods_num_2days,
 		   
 		   sum( case when 
-		   last_modified_time>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') and 
-		   last_modified_time<unix_timestamp('${data_date}','yyyyMMdd') then original_goods_number end) unship_prepare_goods_num_1days
+		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') and 
+		   gmt_created<unix_timestamp('${data_date}','yyyyMMdd') then goods_number end) unship_prepare_goods_num_1days
 		   
 	from zydb.dw_order_sub_order_fact  a
 	full join  
-	jolly_oms.who_wms_goods_need_lock_detail b
+	(
+  	select distinct order_id,gmt_created from jolly.who_wms_outing_stock_detail
+  	union all 
+  	select distinct order_id,gmt_created from jolly_wms.who_wms_outing_stock_detail
+	) b
 	on a.order_id=b.order_id
-	where shipping_time='1970-01-01 08:00:00'
-	and num=0 
-	and oos_num=0
+	where is_shiped<>1
 	and order_status<>2
 	group by a.depod_id 
+	
 )t9
 on t0.depot_id=t9.depot_id
 
 ;
 
 
+set mapreduce.map.memory.mb=6120;
+set mapreduce.reduce.memory.mb=12000;
+set hive.exec.parallel=true;
 ----------------------积压异常
 
 insert overwrite table zydb.rpt_depot_daily_report_new_tmp4
