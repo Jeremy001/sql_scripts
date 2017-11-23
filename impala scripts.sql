@@ -1,20 +1,20 @@
 /*
-????Neo Wang ???
-???ʱ?䣺2017-7-4
-?ű???ͣ?Impala
+作者：Neo Wang 王政鸣
+更新时间：2017-7-4
+脚本类型：Impala
  */
 
 
--- ?Ʒ??
+-- 商品表 
 -- 1.JOLLY.WHO_GOODS
 SELECT *
 FROM JOLLY.WHO_GOODS
 LIMIT 10;
 
--- ??ڼ۸?
--- 1.??λ?ֱ???ô????????ң?????Ԫ??
--- 2.MARKET_PRICE??N_PRICE?ʲô??????ô?󲿷?????????۸????
--- 459043???Ʒ???44613???Ʒ?????۸??
+-- 关于价格：
+-- 1.单位分别是什么？都是人民币？都是美元？
+-- 2.MARKET_PRICE和IN_PRICE是什么关系？怎么大部分商品这两个价格都相等？
+-- 459043件商品中的444613件商品两个价格都相等
 /*
 IS_ON_SALE
 IS_DELETE
@@ -29,108 +29,108 @@ IS_CUSTOMIZATION
 
 SELECT COUNT(*)
 FROM JOLLY.WHO_GOODS;
--- 46????Ʒ(459043)
+-- 46万件商品(459043)
 
--- IS_ON_SALE ?Ʒ??״̬,1??,0???Ĭ?1
+-- IS_ON_SALE 商品销售状态,1销售,0下架,默认1
 SELECT IS_ON_SALE
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 GROUP BY IS_ON_SALE;
--- ???Ʒ??20??????????SKU,???GOODS_ID??
+-- 在售商品近20万件（还不是SKU,而是GOODS_ID）
 -- 1   199401
 -- 0   259642
 
--- IS_DELETE ?Ʒɾ??״̬,1ɾ??,0δɾ??,Ĭ?0
+-- IS_DELETE 商品删除状态,1删除,0未删除,默认0
 SELECT IS_DELETE
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 GROUP BY IS_DELETE;
--- ?????ô????????????״̬Ҳ??ɾ?????
+-- 问题：怎么有的在售商品的删除状态也是已删除呢？
 
--- IS_BEST ?Ʒ??Ʒ״̬,1??Ʒ,0?Ǿ?Ʒ??Ĭ?Ϊ0
+-- IS_BEST 商品精品状态,1精品,0非精品。默认为0
 SELECT IS_BEST
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1
 GROUP BY IS_BEST;
--- ???Ľ?20W???Ʒ????88????Ʒ
--- ?????????Ʒ??
--- 88????Ʒ?86????Ʒ??Ī?Ǿ?Ʒ?Ҫ??????????????????
+-- 在售的近20W件商品中，有88件精品
+-- 问题：何为精品？
+-- 88件精品中86件是新品，莫非精品主要是对新品进行推荐所打的标记？
 
--- IS_NEW ?Ʒ״̬,1Ϊ?Ʒ,0????,Ĭ?1
+-- IS_NEW 新品状态,1为新品,0非新品,默认1
 SELECT IS_NEW
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1
 GROUP BY IS_NEW;
--- ?Ʒ??5???????20%
+-- 新品近5万个，近20%
 
--- IS_HOT ??״̬,1Ϊ??,0Ϊ????,Ĭ?0
+-- IS_HOT 热销状态,1为热销,0为非热销,默认0
 SELECT IS_HOT
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1
 GROUP BY IS_HOT;
--- ????200???Ʒ????????ǧ???һ???
+-- 不到200个商品，即不到千分之一比例
 
--- IS_PROMOTE ??۴??״̬,1Ϊ??۴??,0Ϊ??ؼ۴??,Ĭ?0
+-- IS_PROMOTE 特价促销状态,1为特价促销,0为非特价促销,默认0
 SELECT IS_PROMOTE
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1
 GROUP BY IS_PROMOTE;
--- ??7?????????״̬?????????????һ??
+-- 近7万的商品是促销状态，比例超过三分之一；
 
--- IS_PRESALE  ???????Ʒ(0:????;1:Ԥ?)
+-- IS_PRESALE  是否是预售商品(0:非预售;1:预售)
 SELECT IS_PRESALE
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1
     AND IS_NEW = 1
 GROUP BY IS_PRESALE;
--- Ԥ??Ʒ?????ٵ?
--- ????ʲô?Ԥ??Ʒ??
+-- 预售商品还是很少的
+-- 问题：什么是预售商品？
 
--- PRICE_TYPE???۸???0:?Ʒ?۸?:SKU?۸?
+-- PRICE_TYPE：价格类型,0:商品价格，1:SKU价格
 
--- ADD_TIME????????
+-- ADD_TIME：添加时间
 SELECT FROM_UNIXTIME(ADD_TIME, 'yyyy-MM') AS ADD_MONTH
         ,COUNT(GOODS_ID) AS GOODS_NUM
 FROM JOLLY.WHO_GOODS
 GROUP BY FROM_UNIXTIME(ADD_TIME, 'yyyy-MM')
 ORDER BY ADD_MONTH DESC;
--- 2017??????˺ܶ???ѽ??????-5-6????
+-- 2017上半年添加了很多商品呀，特别是4-5-6三个月
 
 -- PROVIDER_CODE 
 SELECT COUNT(DISTINCT PROVIDER_CODE)
 FROM JOLLY.WHO_GOODS;
--- 3117?????ѽ???ܶ?Ѿ???????˰ɣ?
+-- 3117，有点多呀，很多已经不合作了吧？
 SELECT COUNT(DISTINCT PROVIDER_CODE)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1;
--- 2014??????????
+-- 2014，还是不少。
 
--- GOODS_SEASON ??Ʒ???? 1.?? 2.? 3.? 4.?? 5.??? 6.??? 7.???? 8.?? 9.??? 10.???
+-- GOODS_SEASON 产品季节: 1.春 2.夏 3.秋 4.冬 5.春夏 6.春秋 7.春冬 8.夏秋 9.夏冬 10.秋冬
 SELECT GOODS_SEASON
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1
 GROUP BY GOODS_SEASON
 ORDER BY GOODS_SEASON;
--- ????0????ﶬ???10????ﶬ???ôĿǰ???????????һ??GOODS_SEASON?0???
--- ?0Ҳ?10??????10???????٣?
+-- 问题：0代表秋冬还是10代表秋冬？怎么目前在售的商品中，近一半的GOODS_SEASON是0呢？
+-- 有0也有10，不过10的商品特别少；
 
--- IS_STOCK ?????:0 ???? 1??? 2deals 4 sku???
--- ????2DEALS?ʲô????
+-- IS_STOCK 是否卖库存:0 非卖库存 1卖库存 2deals 4 sku卖库存
+-- 问题：2DEALS是什么类别？
 SELECT IS_STOCK
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1
 GROUP BY IS_STOCK;
--- ?Ҫ?????????20????Ʒ???18.5?????????ģ?
+-- 主要还是非卖库存，20万件商品中近18.5万件是非卖库存的；
 
--- ITEM_CATEGORY_ID ?ƷƷ??D
--- ??? JOLLY.WHO_CATEGORY??
+-- ITEM_CATEGORY_ID 商品品类ID
+-- 关联 JOLLY.WHO_CATEGORY表
 SELECT T1.GOODS_ID
         ,T1.GOODS_SN
         ,T1.GOODS_NAME
@@ -140,7 +140,7 @@ FROM JOLLY.WHO_GOODS T1
 LEFT JOIN JOLLY.WHO_CATEGORY T2 ON T1.ITEM_CATEGORY_ID = T2.CAT_ID
 LIMIT 10;
 
--- ???????????㼶?????
+-- 看看各个类别层级的商品数
 WITH T AS
 (SELECT T1.GOODS_ID
         ,T1.GOODS_SN
@@ -159,11 +159,11 @@ ORDER BY T.CAT_LEVEL;
 
 
 
--- ON_SALE_TIME ?????? FIRST_ON_SALE_TIME ?????ϼ????
--- OFF_SALE_TIME ??????
+-- ON_SALE_TIME 上架时间, FIRST_ON_SALE_TIME 第一次上架时间
+-- OFF_SALE_TIME 下架时间
 
--- LEVEL ?Ʒ?㼶??Ĭ?0, 1??A,2??B,3??C,4??D
--- ????LEVEL?ʲô??????ô?ֵģ?
+-- LEVEL 商品层级，默认0, 1：A,2：B,3：C,4：D
+-- 问题：LEVEL是什么含义？怎么分的？
 SELECT LEVEL
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
@@ -178,15 +178,15 @@ ORDER BY LEVEL;
 4   58525
 */
 
--- ????û??Ʒ?Ϣ??п??????ֶΣ????ֶδ???????˵û??????Σ?
--- ???????ֶΣ??ܶ????ǲ???Ա????????????????
+-- 问题：没在商品信息表中看到性别字段，性别字段存放在哪里？还是说没有这个字段？
+-- 答：没有性别字段，很多品类是不分性别的，比如电器，生活用品等
 
 -- 2.ZYDB.DIM_JC_GOODS
--- ǰʮ????
+-- 前十条记录
 SELECT * 
 FROM ZYDB.DIM_JC_GOODS
 LIMIT 10;
--- һ??????Ʒ?
+-- 一级类目商品数
 SELECT CAT_LEVEL1_NAME
         ,COUNT(GOODS_ID) AS GOODS_NUM
 FROM ZYDB.DIM_JC_GOODS
@@ -211,7 +211,7 @@ FROM ZYDB.DIM_JC_GOODS
 WHERE IS_DELETE = 0
 GROUP BY CAT_LEVEL
 ORDER BY CAT_LEVEL;
--- ???һ???????
+-- 都是一二级类目
 /*
 2   460096
 3   2
@@ -227,22 +227,22 @@ IS_NEW
 IS_CUSTOMIZATION
 */
 
--- ??Թ?Ӧ????Ʒ?
+-- 测试供应商及商品数
 SELECT SUPP_NAME
     ,COUNT(*)
 FROM ZYDB.DIM_JC_GOODS
-WHERE SUPP_NAME LIKE '???'
+WHERE SUPP_NAME LIKE '测试%'
   OR SUPP_NAME LIKE 'Test%'
 GROUP BY SUPP_NAME;
 /*
-??Թ?Ӧ?3  7
-??Թ?Ӧ?1  22
-??Թ?Ӧ?2  26
+测试供应商3  7
+测试供应商1  22
+测试供应商2  26
 Test    47
  */
 
 
--- ?Ʒ??? JOLLY.WHO_CATEGORY
+-- 商品分类表 JOLLY.WHO_CATEGORY
 SELECT * 
 FROM JOLLY.WHO_CATEGORY
 LIMIT 10;
@@ -257,7 +257,7 @@ GROUP BY IS_SHOW;
 0   134
  */
 
--- CAT_LEVEL ?????
+-- CAT_LEVEL 分类层级
 SELECT CAT_LEVEL
         ,COUNT(*)
 FROM JOLLY.WHO_CATEGORY
@@ -270,9 +270,9 @@ ORDER BY CAT_LEVEL;
 3   217
 4   17
  */
--- ????㼶??ô????
+-- 第一层级有这么多个？
 
--- ??˾Ŀǰ?????Ʒ???
+-- 公司目前的所有商品类目
 SELECT CAT_ID
         ,PARENT_ID
         ,CN_CAT_NAME
@@ -280,15 +280,15 @@ SELECT CAT_ID
 FROM JOLLY.WHO_CATEGORY
 WHERE IS_SHOW = 1;
 
--- ?ݹ?ѯ??????????㼶?????????
+-- 递归查询，把商品类目层级建立起来；
 
 
--- ?????һ????????????
+-- 查询各一级类目的商品数量
 
 
 
 
--- ?鿴ÿ??Ʒ???¼??
+-- 查看每天商品的上下架情况
 SELECT * 
 FROM ZYDB.DW_GOODS_ON_SALE 
 WHERE DATA_DATE = '20170717'
@@ -302,25 +302,25 @@ WHERE DATA_DATE = '20170717'
 GROUP BY IS_ON_SALE;
 
 
--- Υ??Ʒ
+-- 违禁品
 /*
 key_id = 728          value_id in (7524, 7526, 7536)
 728 Prohibited Goods    7536    Unprohibited    32353
 728 Prohibited Goods    7526    Fuzzy Prohibited    5169
 728 Prohibited Goods    7524    Completely Prohibited   6162
-7524:?ȫΥ??
-7526:ģ??Υ??
-7536:??Υ??
+7524:完全违禁
+7526:模糊违禁
+7536:不违禁
 */
--- ?ϸ
+-- 明细
 SELECT goods_id
         ,key_id
         ,'Prohibited' AS key_name
         ,value_id
-        ,(CASE WHEN value_id = 7524 THEN '?ȫΥ??' 
-                     WHEN value_id = 7526 THEN 'ģ??Υ??' 
-                     WHEN value_id = 7536 THEN '??Υ??' 
-                     ELSE '??'
+        ,(CASE WHEN value_id = 7524 THEN '完全违禁' 
+                     WHEN value_id = 7526 THEN '模糊违禁' 
+                     WHEN value_id = 7536 THEN '不违禁' 
+                     ELSE '其他'
           END) AS value_name
 FROM jolly.who_pattern_relation
 WHERE key_id = 728;
@@ -346,16 +346,16 @@ GROUP BY key_id
 
 
 
--- ??Ӧ??Ϣ??JOLLY.WHO_ESOLOO_SUPPLIER
+-- 供应商信息表 JOLLY.WHO_ESOLOO_SUPPLIER
 SELECT * 
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
 WHERE ADDRESS IS NOT NULL
 LIMIT 10;
--- ?Щ??Ӧ???ľ????????????????
+-- 这些供应商都木有地址！！！？？？
 
--- GREAT_TIME??Ҳ????ˣ??????ˣ???REATEд???REAT
--- LAST_TIME, ?????ε??ʱ?䣿ʲô?????????ʱ?䣿
--- IS_HIDE????????????0???
+-- GREAT_TIME，也是够了，手又抖了，把CREATE写成了GREAT
+-- LAST_TIME, 最后一次登录时间？什么鬼？登录哪里的时间？
+-- IS_HIDE，是否取消合作，0否；1是
 SELECT IS_HIDE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -364,8 +364,8 @@ GROUP BY IS_HIDE;
 1   1846
 0   1856
  */
--- PRICE_RATE, ?Ӽ?????ʲô?????
--- MONTH_CAPACITY, ????????λ?ʲô??
+-- PRICE_RATE, 加价系数，什么含义？
+-- MONTH_CAPACITY, 月产能，单位是什么？
 SELECT CODE
         ,SUPP_NAME
         ,MONTH_CAPACITY
@@ -374,8 +374,8 @@ WHERE MONTH_CAPACITY IS NOT NULL
 AND IS_HIDE = 0
 ORDER BY MONTH_CAPACITY DESC
 LIMIT 30;
--- NEW_CYCLE, ????
--- ???˵???û??̶?ʱ?䵥λ????????
+-- NEW_CYCLE, 上新周期
+-- 文本说明，没有固定时间单位，不便使用
 SELECT CODE
         ,SUPP_NAME
         ,NEW_CYCLE
@@ -385,20 +385,20 @@ AND IS_HIDE = 0
 ORDER BY NEW_CYCLE DESC
 LIMIT 30;
 /*
-045 ZYСŮ?   ÿ???
-04D ZY N????? ÿ?һ??
-276 JM G??????  ÿ???
-1TV ZY A?±?????  ÿ?
-078 ZY H??ΰ?? ÿ??
-051 ZY P?????ÿ??
-278 JM L????չ?ó?????˾ ÿ?һ??
+045 ZY小女王   每隔2天
+04D ZY N纳丹堡 每月一次
+276 JM G广州羽林箱包  每天上新
+1TV ZY A奥比亚皮具   每天
+078 ZY H胡伟东 每周四
+051 ZY P帕丽达 每周五
+278 JM L龙岩市展宇贸易有限公司 每周一次
  */
--- ADMIN_ID, ?ɹ?ԱID
--- CANCEL_REASON, ȡ????ԭ??????˵???????ű?У?
--- SUPP_DISCOUNT, ?ɹ?????ɹ???
+-- ADMIN_ID, 采购员ID
+-- CANCEL_REASON, 取消合作原因代码，说明文字放在哪张表中？
+-- SUPP_DISCOUNT, 采购折扣(采购价)
 
--- CREDIT_RANK, ???ȼ???ʲô?????Ӧ????????õȼ????
--- ?ȣ???????ˣ??????θ???û????
+-- CREDIT_RANK, 信用等级，什么鬼？供应商在我方的信用等级吗？
+-- 咳，不用看了，这个字段根本没用起来
 SELECT CREDIT_RANK
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -412,8 +412,8 @@ ORDER BY CREDIT_RANK;
     1
  */
 
--- ORDER_PLATFORM, 1:???,2:?è,3:????ƽ̨,4:???ɹ???,5:1688,6:???????0:?? 
--- ??????ʲô???????ѡ??????????ѡ??????ͣ?̫??ˣ?
+-- ORDER_PLATFORM, 1:淘宝,2:天猫,3:独立平台,4:线下采购单,5:1688,6:代拍链接,0:其他 
+-- 这个其他是什么鬼？有了这个选项，绝大多数都选择了这个类型，太坑了！
 SELECT ORDER_PLATFORM
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -431,7 +431,7 @@ ORDER BY ORDER_PLATFORM;
 7   4
  */
 
--- DELIVERY_CYCLE, ????????ʲô??λ?????
+-- DELIVERY_CYCLE, 交货周期，什么单位？天？
 SELECT DELIVERY_CYCLE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -447,9 +447,9 @@ ORDER BY DELIVERY_CYCLE;
 10  1
     102
  */
--- ????2-3?
+-- 多数是2-3天
 
--- RETURNED_DATE, ?????0??,1һ?֮?,2?????,3һ????,4?????,5?????????
+-- RETURNED_DATE, 退货期限0其他,1一周之内,2半月之内,3一个月内,4三个月内,5不允许退换货
 SELECT RETURNED_DATE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -465,7 +465,7 @@ ORDER BY RETURNED_DATE;
     100
  */
 
--- IS_DEPOSIT, ???б?֤??0,??1?)
+-- IS_DEPOSIT, 是否有保证金(0,否,1是)
 SELECT IS_DEPOSIT
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -475,10 +475,10 @@ GROUP BY IS_DEPOSIT;
 1   848
 0   1008
  */
--- DEPOSIT, ??֤????
--- ?????????֤??????֤?????0????û???֤????????
+-- DEPOSIT, 保证金金额
+-- 搞笑嘞，有保证金的，保证金金额为0，跟没有保证金有啥区别嘞
 
--- SETTLEMENT_TYPE, ??㷽ʽ??0????᣻1????᣻2????᣻ 3??Ԥ???4????½᣻5??1.5??᣻6??2??᣻7??3??᣻8???????
+-- SETTLEMENT_TYPE, 结算方式：0：现结；1：周结；2：月结； 3：预付款；4：半月结；5：1.5月结；6：2月结；7：3月结；8：周结现拍
 SELECT SETTLEMENT_TYPE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -495,7 +495,7 @@ ORDER BY SETTLEMENT_TYPE;
 7   3
 8   3
  */
--- ??????Ĺ?Ӧ????????
+-- 不合作的供应商多数是现结的
 SELECT SETTLEMENT_TYPE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -511,11 +511,11 @@ ORDER BY SETTLEMENT_TYPE;
 6   30
 7   3
  */
--- Ŀǰ??????ᣬ???һ????ǰ?½????
+-- 目前多数是月结，还有一部分是半月结和周结
 
--- PROVINCE, CITY, ??Ӧ???ʡ??ı?룬????ر????أ?
+-- PROVINCE, CITY, 供应商所在省市的编码，区域相关表在哪里呢？
 
--- IS_SYSTEM, ?ɹ????ڹ?Ӧ?ϵͳ?????1?,0?? ??Ӧ??????ǵ?MS???
+-- IS_SYSTEM, 采购是否在供应商系统中处理,1是,0否, 供应商是否用我们的WMS吗？
 SELECT IS_SYSTEM
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -525,7 +525,7 @@ GROUP BY IS_SYSTEM;
 0   11
 1   1845
  */
--- ??????????????MSϵͳ
+-- 现在基本都用我方的WMS系统
 SELECT IS_SYSTEM
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -534,9 +534,9 @@ GROUP BY IS_SYSTEM;
 1   1849
 0   1853
  */
--- ?ǰ?Ĺ?Ӧ?????????????Ҳȡ?????ˡ?
+-- 以前的供应商多数都不用，大多也取消合作了。
 
--- SHIPPING_TYPE, ??ѷ?ʽ??1˳?ᵽ????2?????3??? 4??????? 3/4?ô??⣿????????£?
+-- SHIPPING_TYPE, 运费方式：1顺丰到付，2包邮，3现付 4跨越到付 3/4怎么理解？跨越还是跨月？
 SELECT SHIPPING_TYPE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -551,7 +551,7 @@ ORDER BY SHIPPING_TYPE;
 4   776
  */
 
--- OOS_DELAY_TIME ȱ????ʱʱ??h) ????????
+-- OOS_DELAY_TIME 缺货超时时间(h) 用来干嘛的？
 SELECT OOS_DELAY_TIME
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -565,9 +565,9 @@ ORDER BY COUNT(*) DESC;
 40  120
 72  24
  */
--- ?Ҫ?48Сʱ
+-- 主要是48小时
 
--- CHECK_TYPE 0δѡ???1??졢2????3ȫ??
+-- CHECK_TYPE 0未选择、1免检、2抽检、3全检
 SELECT CHECK_TYPE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -580,11 +580,11 @@ ORDER BY CHECK_TYPE;
 2   114
 3   1712
  */
--- ?????????ȫ?죬??????ߣ?Ӧ?ü?????Ҫȫ????
+-- 现在几乎都是全检，卖给消费者，应该几乎都要全检才对
 
 -- BUYER_ADMIN_ID
 
--- PUR_DEMAND_PUSH_TIME, ?ɹ?????ʱ??
+-- PUR_DEMAND_PUSH_TIME, 采购需求推送时间
 SELECT CODE
         ,SUPP_NAME
         ,FROM_UNIXTIME(PUR_DEMAND_PUSH_TIME)
@@ -592,21 +592,21 @@ FROM JOLLY.WHO_ESOLOO_SUPPLIER
 WHERE PUR_DEMAND_PUSH_TIME >0
 LIMIT 30;
 /*
-1PM YT A?????Ʒ    2017-07-06 08:00:00
-1PN ZY M????װ    2017-07-06 08:00:00
-1PP JE X??ֵ??   2017-07-05 09:20:00
-1PQ JE Oŷ??????Ƽ?  2017-07-06 08:00:00
-1PR ZY H???????    2017-07-06 08:00:00
-1PT ZY MMuľľ?Ҿӹ?2017-07-06 08:00:00
+1PM YT A爱豪饰品    2017-07-06 08:00:00
+1PN ZY M妙响服装    2017-07-06 08:00:00
+1PP JE X鑫林电子    2017-07-05 09:20:00
+1PQ JE O欧度利方科技  2017-07-06 08:00:00
+1PR ZY H初韩服饰    2017-07-06 08:00:00
+1PT ZY MMu木木家居馆 2017-07-06 08:00:00
  */
--- ?ӣ??????μ???ľ?Ȼ????һ?βɹ?????????䣡
+-- 坑，这个字段记录的竟然是最近一次采购需求推送的时间！
 SELECT COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
 WHERE PUR_DEMAND_PUSH_TIME > 0
     AND IS_HIDE = 0;
--- 1856?Һ???Ĺ?Ӧ????1850??й??ɹ?????????Ȼ???6?????????Ī????º????ʽ??
--- ????ģ?ORDER_PLATFROM = 4?Ĺ?Ӧ??300??
--- ???һ??ɹ??????????
+-- 1856家合作的供应商中，1850家有过采购需求推送，竟然还有6家没推送过？莫非是线下合作方式？
+-- 不是的，ORDER_PLATFROM = 4的供应商有300多家
+-- 截取一下采购需求推送的时分
 WITH T AS
 (SELECT CODE
         ,CONCAT_WS(':'
@@ -632,8 +632,8 @@ ORDER BY COUNT(*) DESC;
 8:30    1
 14:0    1
  */
--- ???????8:00??
--- ??????????
+-- 几乎都是8:00推送
+-- 截取推送的年月日
 WITH T AS
 (SELECT CODE
         ,FROM_UNIXTIME(PUR_DEMAND_PUSH_TIME, 'yyyy-MM-dd') AS PUSH_TIME
@@ -650,9 +650,9 @@ ORDER BY PUSH_TIME DESC;
 2017-07-06  1826
 2017-07-05  24
  */
--- ????Ŀǰ????Ĺ?Ӧ?????????????ô???
+-- 看来目前合作的供应商的商品都有销售，这么好吗？
 
--- ORDER_TYPE ?ɹ????0-????ɹ?,1-?????ɹ?
+-- ORDER_TYPE 采购类型:0-按需采购,1-备货采购
 SELECT ORDER_TYPE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -662,9 +662,9 @@ GROUP BY ORDER_TYPE;
 1   75
 0   1781
  */
--- ?????ɹ??Ļ????????Ӧ??????????????ɹ????
+-- 备货采购的话，这个供应商所有的商品都备货采购吗？
 
--- IS_POP ????POP???0-??1-?
+-- IS_POP 是否为POP商家:0-否,1-是
 SELECT IS_POP
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -674,9 +674,9 @@ GROUP BY IS_POP;
 1   1
 0   1855
  */
--- ?????????ξ??????????????ҪȥIS_POP=0??K?ˣ?
+-- 看来这个字段就是一个坑呀，以后只要去IS_POP=0就OK了；
 
--- MAIN_CAT_ID????Ӧ??ӪƷ??
+-- MAIN_CAT_ID，供应商主营品类
 SELECT T1.MAIN_CAT_ID
         ,T2.CN_CAT_NAME
         ,COUNT(*) AS SUPP_NUM
@@ -688,14 +688,14 @@ GROUP BY T1.MAIN_CAT_ID
         ,T2.CN_CAT_NAME
 ORDER BY SUPP_NUM DESC;
 /*
-2   Ůװ  164
-59  Ь   127
-35  ??   63
-31  ?Ʒ  53
-179 ??ͯ??Ь???  46
+2   女装  164
+59  鞋   127
+35  包   63
+31  饰品  53
+179 儿童服鞋包饰  46
  */
 
--- SUPPLIER_NATURE ??Ӧ??? 1???????? 2?????? 3??OEM?? ????
+-- SUPPLIER_NATURE 供应商性质 1、自有工厂 2、经销商 3、OEM贴牌 必填项
 SELECT SUPPLIER_NATURE
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
@@ -709,26 +709,26 @@ ORDER BY COUNT(*) DESC;
     13
  */
 
--- IS_REAL_TIME_PUSH_PUR_DEMAND ????ʱ???ɹ???:0-??1-?
+-- IS_REAL_TIME_PUSH_PUR_DEMAND 是否实时推送采购需求:0-否,1-是
 SELECT IS_REAL_TIME_PUSH_PUR_DEMAND
         ,COUNT(*)
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
 WHERE IS_HIDE = 0
 GROUP BY IS_REAL_TIME_PUSH_PUR_DEMAND;
--- ???ʵʱ??ò????????ʵʱ?????ÿ???8:00????
+-- 这个实时推送貌似并不是真正实时，而是每天早上8:00推送？
 
 
--- ??Ӧ??????JOLLY.WHO_ESOLOO_SUPPLIER_ADDRESS
--- ?????????
+-- 供应商地址表 JOLLY.WHO_ESOLOO_SUPPLIER_ADDRESS
+-- 这个表貌似不
 SELECT * 
 FROM JOLLY.WHO_ESOLOO_SUPPLIER_ADDRESS
 LIMIT 10;
 
--- ??Ӧ??Ʒ?????
+-- 供应商商品类目表
 SELECT * 
 FROM JOLLY.WHO_ESOLOO_SUPPLIER_CAT
 LIMIT 10;
--- ??Ӧ?һ?㶼??????????
+-- 供应商一般都有几个类目？
 SELECT AVG(CAT_NUM)
 FROM 
 (SELECT SUPP_ID
@@ -736,7 +736,7 @@ FROM
 FROM JOLLY.WHO_ESOLOO_SUPPLIER_CAT
 GROUP BY SUPP_ID) T;
 -- 3.13
--- ?Ʒ????????Ӧ?TOP30??
+-- 商品类目最多的供应商TOP30；
 SELECT SUPP_ID
         ,COUNT(CAT_ID) AS CAT_NUM
 FROM JOLLY.WHO_ESOLOO_SUPPLIER_CAT
@@ -750,7 +750,7 @@ LIMIT 31;
 1023    41
 2398    40
  */
--- ?ô??????????????????????Ҳ̫??????
+-- 这么多类目，这家企业如果是做生产，这也太。。。
 WITH T1 AS
 (SELECT CODE
         ,SUPP_NAME
@@ -771,60 +771,60 @@ WHERE T2.CAT_NUM IS NOT NULL
 ORDER BY T2.CAT_NUM DESC;
 
 
--- ??Ӧ???ڱ?WHO_ESOLOO_SUPPLIER_HOLIDAY
+-- 供应商假期表 WHO_ESOLOO_SUPPLIER_HOLIDAY
 SELECT *
 FROM JOLLY.WHO_ESOLOO_SUPPLIER_HOLIDAY
 LIMIT 10;
 
 
--- =============================================== ???????ݣ????? ===================================================
+-- =============================================== 库存相关数据（顶） ===================================================
 /* 
- 1.????գ?ÿ????????
- 2.???仯???????¼??
- 3.??λ?
- 4.???ṹ
+ 1.库存快照（每天库存记录）
+ 2.库存变化（出入库记录）
+ 3.库存位置
+ 4.库存结构
  */ 
 
--- ?ֿ?λ??============================================
+-- 仓库货位表 ============================================
 -- jolly_wms.who_wms_depot_shelf_area  
 -- jolly.who_wms_depot_shelf_area
--- ȥ?˽⣺
--- 1.??λ?????ô??
--- ?ش𣺻?λ????Ʒ?ĵط??????ݸ???????DG1-A01-0101
--- DG1???????ݸ1??
--- A01??A???A?????01???????????
--- 0101???????01???????У??ڶ???01???????㣬?????һ??
+-- 去了解：
+-- 1.货位具体是什么？
+-- 回答：货位是存放商品的地方，以东莞仓为例：DG1-A01-0101
+-- DG1：表示东莞1仓
+-- A01：A表示A货区，01表示第一排货架
+-- 0101：第一个01表示第一列，第二个01表示第一层，即最下面一层
 
 
 SELECT * 
 FROM jolly_wms.who_wms_depot_shelf_area
 LIMIT 10;
-/* ?????
-shelf_area_id: ???, ??λid
-shelf_area_sn: ??λ?ţ??????ҵ??˵?Ļ?λ?Ų???ָ??????????? - ??λ - ????
-depot_shelf_id??????d
-stock_num??????ܿ?
+/* 字段说明
+shelf_area_id: 主键, 货位id
+shelf_area_sn: 货位号，但是我们业务上说的货位号并不指这个，而是库区 - 货位 - 货架
+depot_shelf_id：货架id
+stock_num：货架总库存
  */
 
-# ɳ??????51970????λ
+# 沙特仓一共51970个货位
 SELECT COUNT(shelf_area_id)
 FROM jolly_wms.who_wms_depot_shelf_area;
-# CN??ֹ?519011????λ???ô???
+# CN三仓共519011个货位，这么多吗？
 SELECT COUNT(shelf_area_id)
 FROM jolly.who_wms_depot_shelf_area;
 
--- ?ֿ??ܱ?=============================================
+-- 仓库货架表 =============================================
 -- jolly_wms.who_wms_depot_shelf
 -- jolly.who_wms_depot_shelf
 SELECT * 
 FROM jolly_wms.who_wms_depot_shelf
 LIMIT 10;
-/* ?????
-shelf_id: ???, ????d
-shelf_sn: ???ܺ?
-depot_area_id?????id
-shelf_row?????
-shelf_line?????
+/* 字段说明
+shelf_id: 主键, 货架id
+shelf_sn: 货架号
+depot_area_id：货区id
+shelf_row：列数
+shelf_line：层数
  */
 
 SELECT * 
@@ -832,14 +832,14 @@ FROM jolly.who_wms_depot_shelf
 LIMIT 10;
 
 
-# ɳ??????1549??????
+# 沙特仓一共1549个货架
 SELECT COUNT(shelf_id)
 FROM jolly_wms.who_wms_depot_shelf;
 
 
-# ?Ʒ???ϸ
-# ???????????Ŀ??????ô????
-# ??????ΪʲôҪ????ʼ???ʱ?䣿
+# 商品库存明细
+# 有点诡异，这个表的库存数据是怎么存的？
+# 查询总库存为什么要设置开始结束时间？
 SELECT * 
 FROM jolly.who_wms_goods_stock_detail
 WHERE stock_num > 0
@@ -855,39 +855,25 @@ FROM jolly.who_wms_goods_stock_total_detail
 LIMIT 10;
 
 
--- ???????
--- SA?֣?jolly_wms.who_wms_goods_stock_detail_log
--- ????֣?jolly.who_wms_goods_stock_detail_log
+-- 出入库日志
+-- SA仓：jolly_wms.who_wms_goods_stock_detail_log
+-- 国内仓：jolly.who_wms_goods_stock_detail_log
 
-# change_type ?????1:?ɹ????2:?????????3:????????4:?ӯ??? 5:??????????6:???????7:??λת?,8:???9:??????10: ??⵽??ѷ,11:fba?Ʒ???12:?????,13:????????14:???쳣???15:???????16-??????????17-???????????
+# change_type 变更类型 1:采购入库,2:收货异常入库,3:销售退货入库,4:盘盈入库, 5:销售订单出库,6:盘亏出库,7:货位转移,8:移库,9:手动入库,10: 移库到亚马逊,11:fba商品入库,12:库存退货,13:调拨出库,14:上架异常入库,15:调拨入库,16-批发订单入库,17-批发订单出库
 
--- SA??
+-- SA仓
 SELECT depot_id
         ,change_type
         ,SUM(change_num) AS change_num
 FROM jolly_wms.who_wms_goods_stock_detail_log
-WHERE depot_id = 7 
-     AND change_type = 3
-     -- AND change_time >= UNIX_TIMESTAMP('2017-08-01', 'yyyy-MM-dd')
-     AND change_time >= UNIX_TIMESTAMP(DATE_SUB(CURRENT_TIMESTAMP(), 1)) 
-     AND change_time < UNIX_TIMESTAMP(TO_DATE(CURRENT_TIMESTAMP()))
+WHERE change_time >= UNIX_TIMESTAMP('2017-08-01', 'yyyy-MM-dd')
+    AND change_time < UNIX_TIMESTAMP(FROM_UNIXTIME(UNIX_TIMESTAMP(), 'yyyy-MM-dd'))
+    AND depot_id = 7
 GROUP BY depot_id
-        ,change_type;
-
--- CN??
-SELECT depot_id
         ,change_type
-        ,SUM(change_num) AS change_num
-FROM jolly.who_wms_goods_stock_detail_log
-WHERE depot_id IN (4, 5, 6)
-     AND change_type = 3
-     AND change_time >= UNIX_TIMESTAMP(DATE_SUB(CURRENT_TIMESTAMP(), 1)) 
-     AND change_time < UNIX_TIMESTAMP(TO_DATE(CURRENT_TIMESTAMP()))
-GROUP BY depot_id
-        ,change_type;
+ORDER BY change_type;
 
-
--- SA??????????
+-- SA仓每月入库商品数
 SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM') AS in_month
         ,SUM(p1.change_num) AS in_num
 FROM jolly_wms.who_wms_goods_stock_detail_log p1
@@ -895,22 +881,10 @@ WHERE p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18)
 GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM')
 ORDER BY in_month;
 
--- ɳ??ָ?sku??????ɿ?
-WITH t1 AS 
-(SELECT p1.goods_id
-        ,p1.sku_id
-        ,p2.supp_name
-        ,--p1.total_stock_num
-        ,(p1.total_stock_num - p1.total_order_lock_num - p1.total_allocate_lock_num - p1.total_return_lock_num) AS free_stock_num
-FROM jolly_wms.who_wms_goods_stock_total_detail p1
-LEFT JOIN zydb.dim_jc_goods p2
-     ON p1.goods_id = p2.goods_id
-)
-SELECT count(*)
-FROM t1;
 
 
--- ÿ??ɹ????
+
+-- 每天采购入库
 SELECT FROM_UNIXTIME(change_time, 'yyyy-MM-dd') AS change_date
         ,SUM(change_num) AS change_num
 FROM jolly_wms.who_wms_goods_stock_detail_log
@@ -922,26 +896,26 @@ GROUP BY FROM_UNIXTIME(change_time, 'yyyy-MM-dd')
 ORDER BY change_date;
 
 
-# change_type ?????1:?ɹ????2:?????????3:????????4:?ӯ??? 5:??????????6:???????7:??λת?,8:???9:??????10: ??⵽??ѷ,11:fba?Ʒ???12:?????,13:????????14:???쳣???15:???????16-??????????17-???????????
+# change_type 变更类型 1:采购入库,2:收货异常入库,3:销售退货入库,4:盘盈入库, 5:销售订单出库,6:盘亏出库,7:货位转移,8:移库,9:手动入库,10: 移库到亚马逊,11:fba商品入库,12:库存退货,13:调拨出库,14:上架异常入库,15:调拨入库,16-批发订单入库,17-批发订单出库
 
 WITH 
 t1 AS
-(SELECT (CASE WHEN p1.change_type = 1 THEN '?ɹ????
-                            WHEN p1.change_type = 2 THEN '?????????
-                            WHEN p1.change_type = 3 THEN '????????
-                            WHEN p1.change_type = 4 THEN '?ӯ???
-                            WHEN p1.change_type = 9 THEN '??????
-                            WHEN p1.change_type = 11 THEN 'FBA?Ʒ???
-                            WHEN p1.change_type = 14 THEN '???쳣???
-                            WHEN p1.change_type = 15 THEN '???????
-                            WHEN p1.change_type = 16 THEN '??????????
-                            WHEN p1.change_type = 18 THEN '???????????
-                            WHEN p1.change_type = 5 THEN '??????????
-                            WHEN p1.change_type = 6 THEN '???????
-                            WHEN p1.change_type = 12 THEN '?????'
-                            WHEN p1.change_type = 13 THEN '????????
-                            WHEN p1.change_type = 17 THEN '???????????
-                            ELSE '??' END) AS change_type2
+(SELECT (CASE WHEN p1.change_type = 1 THEN '采购入库'
+                            WHEN p1.change_type = 2 THEN '收货异常入库'
+                            WHEN p1.change_type = 3 THEN '销售退货入库'
+                            WHEN p1.change_type = 4 THEN '盘盈入库'
+                            WHEN p1.change_type = 9 THEN '手动入库'
+                            WHEN p1.change_type = 11 THEN 'FBA商品入库'
+                            WHEN p1.change_type = 14 THEN '上架异常入库'
+                            WHEN p1.change_type = 15 THEN '调拨入库'
+                            WHEN p1.change_type = 16 THEN '批发订单入库'
+                            WHEN p1.change_type = 18 THEN '无订单退货入库'
+                            WHEN p1.change_type = 5 THEN '销售订单出库'
+                            WHEN p1.change_type = 6 THEN '盘亏出库'
+                            WHEN p1.change_type = 12 THEN '库存退货'
+                            WHEN p1.change_type = 13 THEN '调拨出库'
+                            WHEN p1.change_type = 17 THEN '批发订单出库'
+                            ELSE '其他' END) AS change_type2
         ,(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN 'IN'
                       WHEN p1.change_type IN (5, 6, 12, 13, 17) THEN 'OUT'
                       ELSE 'Others' END) AS change_type1
@@ -955,22 +929,22 @@ LEFT JOIN zydb.dim_jc_goods p2
 WHERE p1.depot_id = 7
      AND p1.change_time >= UNIX_TIMESTAMP('2017-07-01')
      AND p1.change_time < UNIX_TIMESTAMP('2017-10-01')
-GROUP BY (CASE WHEN p1.change_type = 1 THEN '?ɹ????
-                            WHEN p1.change_type = 2 THEN '?????????
-                            WHEN p1.change_type = 3 THEN '????????
-                            WHEN p1.change_type = 4 THEN '?ӯ???
-                            WHEN p1.change_type = 9 THEN '??????
-                            WHEN p1.change_type = 11 THEN 'FBA?Ʒ???
-                            WHEN p1.change_type = 14 THEN '???쳣???
-                            WHEN p1.change_type = 15 THEN '???????
-                            WHEN p1.change_type = 16 THEN '??????????
-                            WHEN p1.change_type = 18 THEN '???????????
-                            WHEN p1.change_type = 5 THEN '??????????
-                            WHEN p1.change_type = 6 THEN '???????
-                            WHEN p1.change_type = 12 THEN '?????'
-                            WHEN p1.change_type = 13 THEN '????????
-                            WHEN p1.change_type = 17 THEN '???????????
-                            ELSE '??' END)
+GROUP BY (CASE WHEN p1.change_type = 1 THEN '采购入库'
+                            WHEN p1.change_type = 2 THEN '收货异常入库'
+                            WHEN p1.change_type = 3 THEN '销售退货入库'
+                            WHEN p1.change_type = 4 THEN '盘盈入库'
+                            WHEN p1.change_type = 9 THEN '手动入库'
+                            WHEN p1.change_type = 11 THEN 'FBA商品入库'
+                            WHEN p1.change_type = 14 THEN '上架异常入库'
+                            WHEN p1.change_type = 15 THEN '调拨入库'
+                            WHEN p1.change_type = 16 THEN '批发订单入库'
+                            WHEN p1.change_type = 18 THEN '无订单退货入库'
+                            WHEN p1.change_type = 5 THEN '销售订单出库'
+                            WHEN p1.change_type = 6 THEN '盘亏出库'
+                            WHEN p1.change_type = 12 THEN '库存退货'
+                            WHEN p1.change_type = 13 THEN '调拨出库'
+                            WHEN p1.change_type = 17 THEN '批发订单出库'
+                            ELSE '其他' END)
         ,(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN 'IN'
                       WHEN p1.change_type IN (5, 6, 12, 13, 17) THEN 'OUT'
                       ELSE 'Others' END)
@@ -978,7 +952,7 @@ GROUP BY (CASE WHEN p1.change_type = 1 THEN '?ɹ????
         ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM')
         ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
 )
--- ÿ?ÿ??????
+-- 每月每天出库量
 SELECT change_month
         ,change_date
         ,SUM(change_num) AS change_num
@@ -988,7 +962,7 @@ GROUP BY change_month
         ,change_date
 ORDER BY change_month
         ,change_date;
--- ??һ??????ĳ?????????
+-- 各一级类目的出入库商品数量
 SELECT *
 FROM t1
 ORDER BY cat_level1_name
@@ -998,16 +972,16 @@ ORDER BY cat_level1_name
 ;
 
 
-# ????ձ??zydb.ods_who_wms_goods_stock_detail
-# ÿ?һ????գ???????
+# 库存快照表：zydb.ods_who_wms_goods_stock_detail
+# 每天一个快照，几点的？
 
 SELECT * 
 FROM zydb.ods_who_wms_goods_stock_detail
 LIMIT 10;
 
--- ???????????????Ŀ?ռ??
+-- 查询昨天各二级类目的库存占比
 WITH 
--- ÿ???Ʒ?Ŀ?
+-- 每个商品的库存
 t1 AS
 (SELECT p1.data_date
         ,p1.goods_id
@@ -1030,9 +1004,9 @@ ORDER BY t1.data_date
         ,t1.cat1_name;
 
 /*
--- ?ɹ??????;????cn + sa??
+-- 采购调拨在途库存（cn + sa）
 -- jolly.who_wms_goods_stock_onway_total
--- ?????ydb.ods_wms_goods_stock_onway_total????????ata_date = 20170820
+-- 分区表zydb.ods_wms_goods_stock_onway_total，分区字段data_date = 20170820
  */
 SELECT depot_id
         ,SUM(allocate_order_onway_num + pur_shiped_order_onway_num + pur_order_onway_num) AS pur_allocate_onway_num
@@ -1042,37 +1016,37 @@ GROUP BY depot_id;
 
 
 
------------------ ???ֿ???? ??????????ʷ?͵?ǰֵȡ??
+----------------- 各仓库 总库存 和 自由库存，历史和当前值取法
 *******************************************************************
-????֣????????   (hadoop) zydb.ods_who_wms_goods_stock_detail       stock_num          (??Բ飺??ǰ?????ʷÿ????
+国内仓，求总库存表：   (hadoop) zydb.ods_who_wms_goods_stock_detail       stock_num          (可以查：当前最新和历史每天快照)
 
 
-????֣? ???????  (hadoop) zydb.ods_who_wms_goods_stock_total_detail ( data FROM 201704)  (??Բ飺??ǰ?????ʷÿ???? 
---ZYDB.ODS_WHO_WMS_GOODS_STOCK_TOTAL_DETAIL???0170813 - 20170822?Ŀ???ݿ?ܲ?̫׼ȷ 
+国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail ( data FROM 201704)  (可以查：当前最新和历史每天快照) 
+--ZYDB.ODS_WHO_WMS_GOODS_STOCK_TOTAL_DETAIL表中20170813 - 20170822的库存数据可能不太准确 
                                         free_num = total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
           
-                                ?? jolly.who_wms_goods_stock_total_detail             (??Բ飺??ǰ??)
+                                或  jolly.who_wms_goods_stock_total_detail             (可以查：当前最新)
 
 *******************************
-ɳ??֣?????: (hadoop)   jolly_wms.who_wms_goods_stock_detail    stock_num     (??Բ飺??ǰ??)  --????ɳ???ʷĳ????ܿ?   
+沙特仓，求总库存: (hadoop)   jolly_wms.who_wms_goods_stock_detail    stock_num     (可以查：当前最新)  --无法求沙特历史某天快照总库存   
 
-ɳ??֣?????? (hadoop)   jolly_wms.who_wms_goods_stock_total_detail            (??Բ飺??ǰ??)          
+沙特仓，求自由库: (hadoop)   jolly_wms.who_wms_goods_stock_total_detail            (可以查：当前最新)          
                                        free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num   
             
-                             jolly_wms.who_wms_goods_stock_total_detail_daily      (??Բ飺??ǰ?????ʷÿ???? 
+                             jolly_wms.who_wms_goods_stock_total_detail_daily      (可以查：当前最新和历史每天快照) 
                      free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
 
 
 
--- ??
---ÿ??????ʱ??????ͳ??
+-- 库存
+--每日各仓某时刻 自由库存统计
 select t.depot_id,count(distinct t.goods_id), sum(t.free_num)
 FROM 
-(--  CN??
+(--  CN仓
 select depot_id,goods_id,sku_id,
 sum(total_stock_num) total_stock_num,
 sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num 
-FROM  jolly.who_wms_goods_stock_total_detail s  -- ??ʷ????  201704??ʼ -zydb.ods_who_wms_goods_stock_total_detail 
+FROM  jolly.who_wms_goods_stock_total_detail s  -- 历史自由库存  201704开始 -zydb.ods_who_wms_goods_stock_total_detail 
 where 1=1
 and depot_id in (4,5,6)
 and total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
@@ -1082,11 +1056,11 @@ group by t.depot_id
 union all
 select t.depot_id,count(distinct t.goods_id), sum(t.free_num)
 FROM 
-(--  SA??
+(--  SA仓
 select depot_id,goods_id,sku_id,
 sum(total_stock_num) total_stock_num,
 sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num 
-FROM  jolly_wms.who_wms_goods_stock_total_detail s --??ʷ???? ??jolly_wms.who_wms_goods_stock_total_detail_daily 
+FROM  jolly_wms.who_wms_goods_stock_total_detail s --历史自由库存 ？jolly_wms.who_wms_goods_stock_total_detail_daily 
 where 1=1
 and depot_id =7 
 and total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
@@ -1094,11 +1068,11 @@ group by depot_id, goods_id,sku_id
 ) t
 group by t.depot_id
 
-----???ֿ???????
+----各仓库每日进出
 select to_date(FROM_UNIXTIME(change_time)) data_date,
-sum(case when  change_type=1 then change_num end) ????????,
-sum(case when  change_type=3 then change_num end) ??????? ,
-sum(case when  change_type=5 then change_num end) ??????? 
+sum(case when  change_type=1 then change_num end) 备货入库件数,
+sum(case when  change_type=3 then change_num end) 退货入库件数 ,
+sum(case when  change_type=5 then change_num end) 销售出库件数 
 FROM jolly_wms.who_wms_goods_stock_detail_log  a
 where 1=1 
 and FROM_UNIXTIME(change_time,'yyyyMMdd')>='20170701'
@@ -1106,7 +1080,7 @@ and FROM_UNIXTIME(change_time,'yyyyMMdd')< '20170717'
 group by to_date(FROM_UNIXTIME(change_time)) 
 
 
--- ?ֿ??????
+-- 仓库每天总库存
 SELECT SUBSTR(p1.data_date, 1, 6) AS month
         ,p1.data_date
         ,SUM(p1.total_stock_num) AS stock_num
@@ -1118,7 +1092,7 @@ GROUP BY SUBSTR(p1.data_date, 1, 6)
         ,p1.data_date
 ;
 
--- SA???????????ͳɱ???
+-- SA仓每天总库存数量和成本金额
 SELECT ds
         ,SUM(p1.total_stock_num) AS total_stock_num
         ,SUM(p1.total_stock_num * p2.in_price) AS totck_stock_cost
@@ -1133,7 +1107,7 @@ ORDER BY ds;
 
 
 
--- =============================================== ???????ݣ??ף? ===================================================
+-- =============================================== 库存相关数据（底） ===================================================
 
 
 
@@ -1153,13 +1127,13 @@ ORDER BY ds;
 
 
 /*
--- ?????
--- cn??jolly.who_wms_goods_stock_total_detail
--- sa??jolly_wms.who_wms_goods_stock_total_detail
+-- 在库库存
+-- cn仓 jolly.who_wms_goods_stock_total_detail
+-- sa仓 jolly_wms.who_wms_goods_stock_total_detail
  */
--- ???
+-- 总库存
 WITH 
--- cn??ڿ???
+-- cn仓在库库存
 t1 AS
 (SELECT depot_id
         ,SUM(total_stock_num) AS total_stock_num
@@ -1167,7 +1141,7 @@ FROM jolly.who_wms_goods_stock_total_detail
 WHERE depot_id in (4, 5, 6)
 GROUP BY depot_id
 ),
--- sa??
+-- sa仓
 t2 AS
 (SELECT depot_id
         ,SUM(total_stock_num) AS total_stock_num
@@ -1179,9 +1153,9 @@ SELECT t1.* FROM t1
 uniON 
 SELECT t2.* FROM t2;
 
--- ????
+-- 自由库存
 WITH 
--- cn??ڿ???
+-- cn仓在库库存
 t1 AS
 (SELECT depot_id
         ,SUM(total_stock_num - total_order_lock_num - total_allocate_lock_num - total_return_lock_num) AS total_free_stock_num
@@ -1189,7 +1163,7 @@ FROM jolly.who_wms_goods_stock_total_detail
 WHERE depot_id in (4, 5, 6)
 GROUP BY depot_id
 ),
--- sa??
+-- sa仓
 t2 AS
 (SELECT depot_id
         ,SUM(total_stock_num) AS total_stock_num
@@ -1202,8 +1176,8 @@ uniON
 SELECT t2.* FROM t2;
 
 
--- ???
--- ????㷽ʽ??δ???
+-- 退货
+-- 以下计算方式并未核实
 
 SELECT return_status
         ,COUNT(*)
@@ -1212,7 +1186,7 @@ FROM jolly.who_wms_returned_order_info
 GROUP BY return_status
 ORDER BY return_status;
 
--- ????;??㷽ʽһ
+-- 退货在途计算方式一
 SELECT p2.returned_depot_id
     ,COUNT(*)
     ,SUM(p1.returned_num)
@@ -1220,14 +1194,14 @@ FROM jolly.who_wms_returned_order_goods p1
 LEFT JOIN jolly.who_wms_returned_order_info p2 ON p1.returned_rec_id = p2.returned_rec_id
 WHERE p1.stock_END_time = UNIX_TIMESTAMP('1970-01-01 08:00:00')
 GROUP BY p2.returned_depot_id;
--- ?????󣬲?̫???
+-- 数据太大，不太靠谱
 /*
 4   5946345 6447107
 7   1040863 1100934
     10  13
  */
 
--- ??㷽ʽ??
+-- 计算方式二
 SELECT p2.returned_depot_id
         ,SUM(returned_num)
 FROM jolly.who_wms_returned_order_goods p1
@@ -1235,29 +1209,29 @@ LEFT JOIN jolly.who_wms_returned_order_info p2 ON p1.returned_rec_id = p2.return
 WHERE p1.is_stock = 0
 GROUP BY p2.returned_depot_id
 ORDER BY p2.returned_depot_id;
--- ????????????
+-- 数据太大，也不靠谱
 /*
 4   6728369.0
 7   2337678.0
     13.0
  */
 
--- ??㷽ʽ?
+-- 计算方式三
 SELECT returned_depot_id
         ,SUM(returned_goods_num) AS return_onway_num
 FROM jolly.who_wms_returned_order_info
 WHERE return_status = 1 or return_status = 3
 GROUP BY returned_depot_id
 ORDER BY returned_depot_id;
--- û?ô????
+-- 没那么离谱了
 /*
 4   998236.0
 7   908689.0
  */
 
--- ??㷽ʽ?
+-- 计算方式四
 WITH 
--- ????;??˻???
+-- 退货在途的退货单
 t1 AS
 (SELECT returned_rec_id
         ,returned_depot_id
@@ -1285,7 +1259,7 @@ ORDER BY t1.returned_depot_id;
 
 
 
--- ????Ʒcn???ɿ?
+-- 内购商品cn仓自由库存
 WITH 
 t1 AS
 (SELECT p1.sku_id
@@ -1302,14 +1276,14 @@ FROM jolly.who_wms_goods_stock_detail p1
 WHERE p1.depot_id in (4, 5, 6)
     AND p1.sku_id in (118210,309684,344302,1587192,1657288,1802762,1827808,1828072,1853206,1943172,2054688,2081684,2141352,2164894,2240496,2277088,2277684,2320616,2388020,2449794,2485078,2485082,2486374,2501668,2567744,2568776,2578082,2580830,2612404,2653362,2699302,2699322,2742776,2769348,2783792,2784378,2834970,2881580,2892288,2942610,2944058,2944352,2967524,3011176,3034698,3054562,3055138,3100974,3111650,3214758,3227548,799993,800149,807153,857577,1044995,3248202,3302704,1159535,1176017,1201427,1201429,3382184,3598636,3841414,5290654,1813116,1813118,1813120,1813122,1813124,1815044,1858182,2285162,3051878,3124914,1615482,2429186,2431114,1614226,347804,309652)
 ),
--- ????õ?shelf_area_sn
+-- 关联得到shelf_area_sn
 t2 AS
 (SELECT t1.* 
         ,p1.shelf_area_sn
 FROM t1
 LEFT JOIN jolly.who_wms_picking_goods_detail p1 ON t1.shelf_area_id = p1.shelf_area_id
 )
--- ????
+-- 结果表
 SELECT sku_id
         ,depot_id
         ,depot_shelf_id
@@ -1361,9 +1335,9 @@ SELECT * FROM t2
 
 
 
--- ???sku???????λ?ŵĿ?
+-- 查询sku在各个货位号的库存
 WITH 
--- ???ϸ
+-- 库存明细
 t1 AS
 (SELECT e.depot_id
         ,e.sku_id
@@ -1381,36 +1355,36 @@ WHERE a.depot_shelf_id = b.shelf_id
      AND e.stock_num >0 
      AND e.depot_id IN (4, 5, 6)
 ),
---  sku???λ?ŵ????????????ku?????λ?
+--  sku与货位号的数量，看是否有sku在多个货位上
 t2 AS
 (SELECT sku_id
         ,COUNT(shelf_area_sn) AS shelf_num
 FROM t1
 GROUP BY sku_id
 )
--- ??????????ku?????λ????
+-- 结果，看有多少sku在多个货位上有库存
 SELECT COUNT (sku_id)
 FROM t2
 WHERE shelf_num >=2;
--- ?8000??sku
+-- 有8000多个sku
 SELECT * 
 FROM t1
 LIMIT 10;
 
 
 /*
-?????????????????????????????????????״̬??
-?Ҫ??ݱ??
--- ??????????? jolly.who_order_shipping_tracking
--- ??????????Ĺ?ʱ?? jolly.who_prs_cod_order_shipping_time
+以下代码查询物流相关信息，包括承运商信息，订单物流状态等
+主要数据表：
+-- 订单派送跟踪表: jolly.who_order_shipping_tracking
+-- 订单到达目的国时间: jolly.who_prs_cod_order_shipping_time
  */
 
--- ??????????? jolly.who_order_shipping_tracking
+-- 订单派送跟踪表: jolly.who_order_shipping_tracking
 SELECT * 
 FROM jolly.who_order_shipping_tracking
 LIMIT 10;
--- invoice_no: ?????
--- status: ??״̬: polling:?????shutdown:?????abort:?ֹ??updateall????????????????Ϊ?ǩ?ʱstatus=shutdown????messageΪ??3????????????0???仯ʱ??status= abort
+-- invoice_no: 物流编号
+-- status: 监控状态: polling:监控中，shutdown:结束，abort:中止，updateall：重新推送。其中当快递单为已签收时status=shutdown，当message为“3天查询无记录”或“60天无变化时”status= abort
 SELECT status
         ,COUNT(order_id)
 FROM jolly.who_order_shipping_tracking
@@ -1422,12 +1396,12 @@ GROUP BY status;
 4   issEND  2350
 5   updateall   2720
  */
--- shipping_state 0?;???1??????2????3?ǩ???4?ǩ??5ͬ????С?6??أ??ͻ???أ?δǩ?????˻أ?Ͷ?????˻صȣ???7ת????8???ա?13??????????״̬
-3??ǩ?
-6/8?????˻?
-!=3/6/8/13?????
--- ????ʵ?ʲ???????15??ֵ??9-13??110?ĺ???ֱ???ô??
--- ??ȡֵ????¹???δ??????ڿ???????
+-- shipping_state 0在途中、1已揽收、2疑难、3已签收、4退签、5同城派送中、6退回（客户退回，未签收承运商退回，投递失败退回等）、7转单、8已拒收、13货丢了 等9个状态
+3—签收
+6/8—拒收退回
+!=3/6/8/13—挂起
+-- 问题：实际查询出来有15个值，9-13及110的含义分别是什么？
+-- 其余取值可能是新功能暂未上线，后期可以逐一核实
 SELECT shipping_state
         ,COUNT(order_id)
 FROM jolly.who_order_shipping_tracking
@@ -1450,7 +1424,7 @@ ORDER BY shipping_state;
 14  13  257
 15  110 2350
  */
--- result_type: ????ࣺ1???????? 2????????3?????? 4?????????5????
+-- result_type: 结果归类：1、地址不详 2、地址错误 3、派送无人 4、收件人拒收 5、其他
 SELECT result_type
         ,COUNT(order_id)
 FROM jolly.who_order_shipping_tracking
@@ -1467,8 +1441,8 @@ ORDER BY result_type;
 -- tracking_code
 -- result_code
 
--- ??????????Ĺ?ʱ?? jolly.who_prs_cod_order_shipping_time
--- ע???destination_time??????ĵ?????Ĺ?ʱ??
+-- 订单到达目的国时间: jolly.who_prs_cod_order_shipping_time
+-- 注意：destination_time才是真正的到达目的国时间
 SELECT *
 FROM jolly.who_prs_cod_order_shipping_time
 LIMIT 10;
@@ -1479,7 +1453,7 @@ LIMIT 10;
 
 
 
--- ????
+-- 承运商
 SELECT real_shipping_id
         ,real_shipping_name
 FROM jolly.who_order_info
@@ -1489,12 +1463,12 @@ GROUP BY real_shipping_id
 ORDER BY real_shipping_id;
 
 
--- ?ɹ???????Ϣ??
+-- 采购单物流信息表
 -- jolly.who_wms_pur_order_tracking_info
 SELECT *
 FROM jolly.who_wms_pur_order_tracking_info
 LIMIT 10;
--- ????????????ʽtracking_pay_typeȡֵ???
+-- 问题：运费支付方式tracking_pay_type取值含义
 -- 0/1/2/3/4
 
 
@@ -1504,45 +1478,45 @@ LIMIT 10;
 
 
 /*
-1.1?????????԰?????Ŷ???????
-2.1????????????ܷ????????????????
-3.????????jolly.who_wms_picking_info.picking_id = jolly.who_wms_picking_goods_detail.picking_id
-4.picking_finish_time??jolly.who_wms_picking_info.finish_time
-5.??һ??????????????ż???????ʱ??????????Ǹ?ʱ????ö????????ʱ??
+1.1个拣货单中可以包含多张订单的商品
+2.1个订单的商品可能分散到多个拣货单中进行拣货
+3.关联关系：jolly.who_wms_picking_info.picking_id = jolly.who_wms_picking_goods_detail.picking_id
+4.picking_finish_time：jolly.who_wms_picking_info.finish_time
+5.当一张订单中的商品拆成多张拣货单来拣货时，最后完成拣货的那个时间才是该订单的完成拣货时间
 */
 
 /*
-?Ȥ???⣺
-1.һ??????һ???ɶ?ٸ???????
-2.һ??????һ??????ٸ???????
-3.һ??????һ????ټ??Ʒ??
-4.һ??????һ?㻨?೤ʱ?????
-5.һ??????һ?㻨?೤ʱ???????
+有趣的问题：
+1.一个订单一般拆成多少个拣货单？
+2.一个拣货单一般包含多少个订单？
+3.一个拣货单一般拣多少件商品？
+4.一个拣货单一般花多长时间完成？
+5.一个订单一般花多长时间完成拣货？
 */
 
--- ?????Ϣ??
+-- 拣货单信息表
 SELECT * FROM jolly.who_wms_picking_info limit 10;
 
--- ???Ʒ?ϸ??
+-- 拣货商品明细表
 SELECT * FROM jolly.who_wms_picking_goods_detail limit 10;
 
--- ???ĳ??????ļ??Ϣ
+-- 查询某张订单的拣货信息
 SELECT a.order_sn, a.picking_id, b.finish_time
 FROM jolly.who_wms_picking_goods_detail a
 LEFT JOIN jolly.who_wms_picking_info b ON a.picking_id = b.picking_id
 WHERE a.order_sn = 'arsi201612190456301526';
 
--- ???ĳ??????ּ??ηּ?
+-- 查询某张订单分几次分拣
 SELECT COUNT(DISTINCT picking_id) AS pick_num
 FROM jolly.who_wms_picking_goods_detail
 WHERE order_sn = 'arsi201612190456301526';
 
--- ??????ֿ????????
+-- 查询各仓库拣货单数量
 SELECT depot_id, COUNT(picking_id) AS pick_num
 FROM jolly.who_wms_picking_info
 GROUP BY depot_id;
 
--- ???order_COUNT?ļ??????
+-- 查询order_COUNT的拣货单数量
 SELECT order_COUNT, COUNT(picking_id) AS pick_num
 FROM jolly.who_wms_picking_info
 GROUP BY order_COUNT
@@ -1551,8 +1525,8 @@ ORDER BY pick_num desc;
 
 
 
--- ?????Ϣ??ho_order_info
--- prepare_pay_time????????ô??????庬??ʲô??
+-- 订单信息表who_order_info
+-- prepare_pay_time这个字段是怎么存的？具体含义是什么？
 SELECT
 (CASE WHEN pay_id = 41 THEN 'cod' ELSE 'ncod' END) AS pay_id2,
 (CASE WHEN prepare_pay_time = 0 THEN 0 ELSE 1 END) AS prepare_pay_time2,
@@ -1567,7 +1541,7 @@ GROUP BY
 
 SELECT substr(order_sn, 0, 3) AS order_sn
         ,COUNT(order_sn) 
-FROM zydb.dw_order_sub_order_fact
+FROM zybi.dw_order_sub_order_fact
 GROUP BY substr(order_sn, 0, 3)
 ORDER BY COUNT(order_sn) desc;
 
@@ -1575,7 +1549,7 @@ ORDER BY COUNT(order_sn) desc;
 
 
 
--- ????ɹ?????????????
+-- 查询采购单对应的物流单数
 WITH t as
 (SELECT pur_order_sn
     ,COUNT(DISTINCT tracking_no) AS tracking_no
@@ -1588,7 +1562,7 @@ FROM t
 GROUP BY tracking_no
 ORDER BY tracking_no;
 
--- ????????????Ĳɹ????
+-- 查询物流单对应的采购单数
 WITH t as
 (SELECT tracking_no
     ,COUNT(DISTINCT pur_order_sn) AS order_no
@@ -1603,10 +1577,10 @@ ORDER BY order_no;
 
 
 
--- ɳ?????0170719
--- ÿ????????????еĶ????????
+-- 沙特仓需求，20170719
+-- 每天发运到各个城市的订单数量；
 WITH
--- ɳ?????????Ķ????ϸ
+-- 沙特仓每天发运的订单明细
 t1 as
 (SELECT FROM_UNIXTIME(shipping_time, 'yyyy-MM-dd') AS ship_date
         ,order_id
@@ -1616,7 +1590,7 @@ WHERE is_shiped = 1
     AND shipping_time >= UNIX_TIMESTAMP('2017-07-15', 'yyyy-MM-dd')
     AND shipping_time <= UNIX_TIMESTAMP('2017-07-19', 'yyyy-MM-dd')
 ),
--- ???ÿ????е????
+-- 获取每个城市的名称
 t2 as
 (SELECT region_id
         ,region_name
@@ -1624,7 +1598,7 @@ FROM jolly.who_region
 WHERE region_type = 2
     AND region_status = 1
 ),
--- ???jolly.who_order_user_info??2???õ?????????ĳ?????
+-- 关联jolly.who_order_user_info和t2，得到订单发往的城市名称
 t3 AS 
 (SELECT t1.*
         ,t2.region_name AS city_name
@@ -1632,7 +1606,7 @@ FROM t1
 LEFT JOIN jolly.who_order_user_info p1 ON t1.order_id = p1.order_id
 LEFT JOIN t2 ON p1.city = t2.region_id
 ),
--- ????
+-- 结果表
 t as
 (SELECT ship_date
         ,city_name
@@ -1641,23 +1615,23 @@ FROM t3
 GROUP BY ship_date
         ,city_name
 )
--- ??????????
+-- 查询部分数据
 SELECT * 
 FROM t
 ORDER BY ship_date desc
         ,order_num desc;
 
 
--- ???ĳ?????ҵ????????????ʽ)
+-- 查询某个国家的所有城市(子查询方式)
 WITH 
--- ??????ʡ??
+-- 先查询所有省份
 t1 as
 (SELECT region_id
 FROM jolly.who_region
 WHERE parent_id = 1876
     AND region_type = 1
 )
--- ????????
+-- 查询所有城市
 SELECT region_id
         ,region_name
 FROM jolly.who_region
@@ -1679,7 +1653,23 @@ WHERE p1.order_status = 1
     AND p1.is_shiped = 1
 limit 10;
 
--- ɳ?????ÿ??Сʱ????????
+-- 每天销售数量
+WITH t1 as
+(SELECT p1.*
+        ,decode(prepare_pay_time = 0, pay_time, prepare_pay_time) AS real_pay_time
+FROM jolly.who_order_info p1
+WHERE p1.order_status = 1
+    AND p1.pay_status in (1, 3)
+)
+SELECT FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') AS real_pay_date
+        ,SUM(goods_num) AS goods_num
+FROM t1
+WHERE t1.real_pay_time >= UNIX_TIMESTAMP('2017-04-01')
+GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') 
+ORDER BY real_pay_date;
+
+
+-- 沙特仓每天每个小时发运订单数
 SELECT FROM_UNIXTIME(shipping_time, 'yyyy-MM-dd') AS ship_date
         ,FROM_UNIXTIME(shipping_time, 'HH') AS ship_hour
         ,COUNT(order_id) AS order_num
@@ -1694,7 +1684,7 @@ ORDER BY ship_date
         ,ship_hour;
 
 
--- ɳ?????ÿ??Сʱ?ͻ?????
+-- 沙特仓每天每个小时客户下单数
 WITH t AS
 (SELECT *
         ,(CASE WHEN prepare_pay_time = 0 THEN pay_time ELSE prepare_pay_time END) AS real_pay_time
@@ -1716,7 +1706,7 @@ ORDER BY date_BeiJing
         ,hour_BeiJing
 ),
 
--- ɳ?????ÿ??Сʱ?????ɶ???????ɼ???
+-- 沙特仓每天每个小时配货完成订单数（可拣货）
 t3 AS
 (SELECT FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd') AS date_BeiJing
         ,FROM_UNIXTIME(gmt_created, 'HH') AS hour_BeiJing
@@ -1743,9 +1733,9 @@ ORDER BY t2.date_BeiJing
 
 
 
--- ÿ??????????ɼ?????????????????
+-- 每天付款订单数，可拣货订单数，发货订单数
 
--- ɳ??????ͻ?????????
+-- 沙特仓每天客户下单订单数
 WITH t1 AS
 (SELECT *
         ,(CASE WHEN prepare_pay_time = 0 THEN pay_time ELSE prepare_pay_time END) AS real_pay_time
@@ -1764,7 +1754,7 @@ GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd')
 ORDER BY date_BeiJing
 ),
 
--- ɳ??????????ɶ???????ɼ???
+-- 沙特仓每天配货完成订单数（可拣货）
 t3 AS
 (SELECT FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd') AS date_BeiJing
         ,COUNT(DISTINCT order_id) AS order_num
@@ -1787,7 +1777,7 @@ ORDER BY t2.date_BeiJing;
 
 
 -- =====================================================================================
--- ??ܿ?ʼ?ͽ??ʱ??
+-- 上架开始和结束时间
 WITH t AS 
 (SELECT  b.depot_id
         ,b.pur_order_sn
@@ -1811,7 +1801,7 @@ AND on_shelf_finish_time IS NOT NULL
 AND finish_check_time IS NOT NULL
 )
 
--- ÿ???ܽ??ʱ??????ʱ????Ʒ?
+-- 每天上架结束时间比质检结束时间早的商品数
 SELECT to_date(shipping_time) AS ship_date
         ,SUM(CASE WHEN onshelf_duration < 0 THEN 1 ELSE 0 END) AS less_num
         ,COUNT(1) AS total_num
@@ -1819,7 +1809,7 @@ FROM t
 GROUP BY to_date(shipping_time)
 ORDER BY ship_date;
 
--- ???????????ķֲ?
+-- 上架时间为负数的分布
 SELECT floor(onshelf_duration / 3600) AS on_shelf_hour
         ,COUNT(*) AS num
 FROM t 
@@ -1830,7 +1820,7 @@ ORDER BY on_shelf_hour;
 
 
 
---- 7???????ҵʱ??
+--- 7月大陆仓作业时长
 select depot_id
     ,avg(receipt_quality_duration + quality_onshelf_duration + picking_duration + package_duration + shipping_duration) as LT2
 FROM zydb.rpt_depot_daily_report
@@ -1840,18 +1830,18 @@ where depot_id in (4, 5)
 group by depot_id;
 
 
--- HK?ֳ????ϸ
+-- HK仓出库明细
 SELECT order_sn
         ,depot_id
         ,is_shiped
-        ,is_problems_order AS ???쳣????
-        ,pay_time AS ???????
-        ,no_problems_order_uptime AS ??ʱ??
-        ,lock_last_modified_time AS ?????????
-        ,outing_stock_time AS ?ɼ?ʱ??
+        ,is_problems_order AS 是否异常订单
+        ,pay_time AS 付款时间
+        ,no_problems_order_uptime AS 标非时间
+        ,lock_last_modified_time AS 配货完成时间
+        ,outing_stock_time AS 可拣货时间
         ,picking_finish_time AS picking_finish_time
-        ,order_pack_time AS ????????
-        ,shipping_time AS ???ʱ??
+        ,order_pack_time AS 打包完成时间
+        ,shipping_time AS 发运时间
 FROM zydb.dw_order_node_time
 WHERE depot_id = 6
 AND is_shiped = 1
@@ -1863,10 +1853,10 @@ AND shipping_time < '2017-10-31'
 ORDER BY shipping_time;
 
 
--- ?Ԫ???Ա?????Ʒ????
+-- 寿元，对比2万个商品的销售
 
 WITH 
--- ?????????ϸ
+-- 订单和商品明细
 t1 AS
 (SELECT p1.order_id
         ,p1.pay_time
@@ -1927,7 +1917,7 @@ FROM t2
 GROUP BY pay_date;
 
 
--- ??who_order_info???ho_order_shipping_tracking??Ķ???״̬
+-- 检查who_order_info表和who_order_shipping_tracking表的订单状态
 SELECT p1.pay_id
         ,p1.cod_check_status
         ,p2.shipping_state
@@ -1944,99 +1934,99 @@ ORDER BY p1.pay_id
 
 
 
--- =============================================== ??????ݣ????? ===================================================
+-- =============================================== 上架相关数据（顶） ===================================================
 /*
-??????ݿ?
--- ??ܵ????jolly.who_wms_on_shelf_info??ֻ?2017-08-13???????ݣ? -- 2017-08-13?ǰ????ݣ??jolly.who_wms_pur_deliver_info????
--- ????????jolly.who_wms_on_shelf_goods
+上架相关数据库表
+-- 上架单表：jolly.who_wms_on_shelf_info（只有2017-08-13及以后的数据） -- 2017-08-13以前的数据，用jolly.who_wms_pur_deliver_info表查询
+-- 上架商品表：jolly.who_wms_on_shelf_goods
  */
 
--- ??ܵ????jolly.who_wms_on_shelf_info
--- gmt_created??????ʱ??
--- status????ܵ?״̬??1-?????2-????3-????
--- source_type????Դ??ͣ?1-????????ҵ??,2-?ͨ?ɹ???(?ǹ?Ӧ???????,3-??????ⵥ,4-??Ӧ??????ɹ???
+-- 上架单表：jolly.who_wms_on_shelf_info
+-- gmt_created：创建时间
+-- status：上架单状态：1-待上架,2-上架中,3-上架完成
+-- source_type：来源类型：1-批发订单作业单,2-普通采购单(非供应商备货的),3-调拨入库单,4-供应商备货采购单
 SELECT * 
 FROM jolly.who_wms_on_shelf_info
 LIMIT 10;
 
--- ??ϼܵ????jolly.who_wms_pur_deliver_info
--- deliver_sn????ܵ???
--- gmt_created????ܵ?????ʱ??
--- status????ܵ?״̬??1-?????2-????3-????
--- user_id???²??ϼ??ID
--- finish_time??????ʱ??
--- FROM_type????Դ??ͣ?1-????????ҵ??,2-?ͨ?ɹ???(?ǹ?Ӧ???????,3-??????ⵥ,4-??Ӧ??????ɹ???
+-- 老上架单表：jolly.who_wms_pur_deliver_info
+-- deliver_sn：上架单号
+-- gmt_created：上架单创建时间
+-- status：上架单状态：1-待上架,2-上架中,3-上架完成
+-- user_id：猜测是上架员ID
+-- finish_time：上架完成时间
+-- FROM_type：来源类型：1-批发订单作业单,2-普通采购单(非供应商备货的),3-调拨入库单,4-供应商备货采购单
 SELECT * 
 FROM jolly.who_wms_pur_deliver_info
 LIMIT 10;
 
 SELECT depot_id
-        ,FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd') AS ??????
+        ,FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd') AS 创建日期
         ,status
-        ,(CASE WHEN status = 1 THEN '?????
-                      WHEN status = 2 THEN '????
-                      WHEN status = 3 THEN '????'
-                      ELSE '??' END) AS ????̬
-        ,COUNT(on_shelf_sn) AS ??ܵ????
-        ,SUM(total_num) AS ????????
+        ,(CASE WHEN status = 1 THEN '待上架'
+                      WHEN status = 2 THEN '上架中'
+                      WHEN status = 3 THEN '上架完成'
+                      ELSE '其他' END) AS 上架状态
+        ,COUNT(on_shelf_sn) AS 上架单数量
+        ,SUM(total_num) AS 上架商品数量
 FROM jolly.who_wms_on_shelf_info
 WHERE gmt_created >= UNIX_TIMESTAMP('2017-10-16')
      AND gmt_created < UNIX_TIMESTAMP('2017-10-17')
 GROUP BY depot_id
         ,FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
         ,status
-        ,(CASE WHEN status = 1 THEN '?????
-                      WHEN status = 2 THEN '????
-                      WHEN status = 3 THEN '????'
-                      ELSE '??' END)
+        ,(CASE WHEN status = 1 THEN '待上架'
+                      WHEN status = 2 THEN '上架中'
+                      WHEN status = 3 THEN '上架完成'
+                      ELSE '其他' END)
 ORDER BY depot_id
         ,FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
         ,status;
 
 
--- ????????ǰ??ɵģ???ǰ?δ???ϼܵ?ϼܵ?
--- 1.???ϼܵ????ϼ??????
+-- 查询昨天及以前生成的，当前仍未完成上架的上架单
+-- 1.汇总上架单数和上架商品数量
 SELECT depot_id
-        ,(CASE WHEN status = 1 THEN '?????
-                      WHEN status = 2 THEN '????
-                      WHEN status = 3 THEN '????'
-                      ELSE '??' END) AS ????̬
-        ,COUNT(on_shelf_sn) AS ??ܵ????
-        ,SUM(total_num) AS ????????
+        ,(CASE WHEN status = 1 THEN '待上架'
+                      WHEN status = 2 THEN '上架中'
+                      WHEN status = 3 THEN '上架完成'
+                      ELSE '其他' END) AS 上架状态
+        ,COUNT(on_shelf_sn) AS 上架单数量
+        ,SUM(total_num) AS 上架商品数量
 FROM jolly.who_wms_on_shelf_info
 WHERE gmt_created <= UNIX_TIMESTAMP(DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]', 'yyyyMMdd')), 0))
-     AND (status = 1 OR status  = 2)    -- 1/2??????ܺ?ϼ??
+     AND (status = 1 OR status  = 2)    -- 1/2：待上架和上架中
 GROUP BY depot_id
-        ,(CASE WHEN status = 1 THEN '?????
-                      WHEN status = 2 THEN '????
-                      WHEN status = 3 THEN '????'
-                      ELSE '??' END)
+        ,(CASE WHEN status = 1 THEN '待上架'
+                      WHEN status = 2 THEN '上架中'
+                      WHEN status = 3 THEN '上架完成'
+                      ELSE '其他' END)
 ORDER BY depot_id;
--- 2.??ܵ?list
+-- 2.上架单list
 SELECT p1.on_shelf_sn
         ,p1.depot_id
-        ,FROM_UNIXTIME(p1.gmt_created) AS ????ʱ??
-        ,(CASE WHEN p1.status = 1 THEN '?????
-                      WHEN p1.status = 2 THEN '????
-                      WHEN p1.status = 3 THEN '????'
-                      ELSE '??' END) AS ????̬
-        ,(CASE WHEN p1.source_type = 1 THEN '????????ҵ??' 
-                      WHEN p1.source_type = 2 THEN '?ͨ?ɹ???(?ǹ?Ӧ?????)' 
-                      WHEN p1.source_type = 3 THEN '??????ⵥ' 
-                      WHEN p1.source_type = 4 THEN '??Ӧ??????ɹ???'
-                      ELSE '??' END) AS ??Դ???
-        ,p1.on_shelf_admin_id AS ????ID
+        ,FROM_UNIXTIME(p1.gmt_created) AS 创建时间
+        ,(CASE WHEN p1.status = 1 THEN '待上架'
+                      WHEN p1.status = 2 THEN '上架中'
+                      WHEN p1.status = 3 THEN '上架完成'
+                      ELSE '其他' END) AS 上架状态
+        ,(CASE WHEN p1.source_type = 1 THEN '批发订单作业单' 
+                      WHEN p1.source_type = 2 THEN '普通采购单(非供应商备货)' 
+                      WHEN p1.source_type = 3 THEN '调拨入库单' 
+                      WHEN p1.source_type = 4 THEN '供应商备货采购单'
+                      ELSE '其他' END) AS 来源类型
+        ,p1.on_shelf_admin_id AS 上架员ID
         ,p2.user_name
         ,p1.total_num
 FROM jolly.who_wms_on_shelf_info p1
 LEFT JOIN jolly.who_rbac_user p2 ON p2.user_id = p1.on_shelf_admin_id
-WHERE p1.gmt_created <= UNIX_TIMESTAMP(DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]', 'yyyyMMdd')), 0))    -- 0/1/2/3...:?????ǰ??0???????ɵ?ϼܵ?
-     AND (p1.status = 1 OR status  = 2)    -- 1/2??????ܺ?ϼ??
+WHERE p1.gmt_created <= UNIX_TIMESTAMP(DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]', 'yyyyMMdd')), 0))    -- 0/1/2/3...:设置几天前，0表示昨天生成的上架单
+     AND (p1.status = 1 OR status  = 2)    -- 1/2：待上架和上架中
 ORDER BY p1.depot_id;
 
 
 WITH 
--- ?????ÿ????ϼܵ????, ?Ʒ???, ???????????ƽ??????????
+-- 四仓每天每人完成上架单数量, 商品数量, 上架时长（用于求平均上架时长）
 t1 AS
 (SELECT FROM_UNIXTIME(p1.on_shelf_finish_time, 'yyyy-MM-dd') AS onshelf_finish_date
         ,p1.depot_id
@@ -2048,7 +2038,7 @@ t1 AS
 FROM jolly.who_wms_on_shelf_info p1
 LEFT JOIN jolly.who_rbac_user p2 
              ON p1.on_shelf_admin_id = p2.user_id
-WHERE p1.status = 3    -- ???ϼ?
+WHERE p1.status = 3    -- 完成上架
      AND p1.on_shelf_finish_time >= UNIX_TIMESTAMP('2017-04-01')
 GROUP BY FROM_UNIXTIME(p1.on_shelf_finish_time, 'yyyy-MM-dd')
         ,p1.depot_id
@@ -2065,11 +2055,11 @@ ORDER BY onshelf_finish_date
 
 
 
--- =============================================== ??????ݣ??ף? ===================================================
+-- =============================================== 上架相关数据（底） ===================================================
 
 
 
--- ???????????????ִ??ĸ???ϵͳ??û??б??
+-- 后台登录用户表（登录执御的各个系统的用户列表）
 -- jolly.who_rbac_user
 SELECT * 
 FROM jolly.who_rbac_user
@@ -2077,37 +2067,37 @@ LIMIT 10;
 
 
 
--- ============================================== ???????????ݣ????? ===================================================
+-- ============================================== 调拨单相关数据（顶） ===================================================
 /*
--- ˵???????????????
--- ????Neo???
--- ???ʱ?䣺2017-10-19
+-- 说明：调拨单相关数据
+-- 作者：Neo王政鸣
+-- 更新时间：2017-10-19
  */
 
--- ?????????jolly.who_wms_allocate_order_info
--- ??????е?rrive_time??????ʱ????ʲôʱ?䣿
+-- 调拨单表：jolly.who_wms_allocate_order_info
+-- 问题：表中的arrive_time：到货时间是指什么时间？
 SELECT * 
 FROM jolly.who_wms_allocate_order_info
 LIMIT 10;
 
--- ??????ǩ????
--- jolly.who_wms_pur_deliver_receipt  ????????????/???????һ?Զ?ϵ
--- zydb.ods_wms_pur_deliver_receipt  ????????????/???????һ??????
--- ??е?mt_created?ǩ?ʱ?䣻
+-- 到货单签收表：
+-- jolly.who_wms_pur_deliver_receipt  物流单号与采购单/调拨单是一对多关系
+-- zydb.ods_wms_pur_deliver_receipt  物流单号与采购单/调拨单是一对一关系
+-- 表中的gmt_created是签收时间；
 
--- ??????ʱ??????zydb.dw_allocate_out_node
+-- 调拨单时间节点表：zydb.dw_allocate_out_node
 
 
--- ?????????????ʱ??
+-- 查询调拨单的签收时间
 WITH t1 AS
 (SELECT p1.allocate_order_sn
         ,p1.FROM_depot_id
         ,p1.to_depot_id
-        ,FROM_UNIXTIME(p1.gmt_created) AS ??????????ʱ??
-        ,FROM_UNIXTIME(p1.off_shelf_time) AS ??????
-        ,FROM_UNIXTIME(p1.finish_packing_time) AS ????????
-        ,FROM_UNIXTIME(p1.out_time) AS ?????ֳ??????
-        ,FROM_UNIXTIME(p1.arrive_time) AS ??????????
+        ,FROM_UNIXTIME(p1.gmt_created) AS 调拨单创建时间
+        ,FROM_UNIXTIME(p1.off_shelf_time) AS 下架时间
+        ,FROM_UNIXTIME(p1.finish_packing_time) AS 打包完成时间
+        ,FROM_UNIXTIME(p1.out_time) AS 调出仓出库时间
+        ,FROM_UNIXTIME(p1.arrive_time) AS 到达调入仓时间
         ,FROM_UNIXTIME(p2.gmt_created) AS receive_time
 FROM jolly.who_wms_allocate_order_info p1
 LEFT JOIN zydb.ods_wms_pur_deliver_receipt p2 
@@ -2115,12 +2105,12 @@ LEFT JOIN zydb.ods_wms_pur_deliver_receipt p2
 WHERE p1.gmt_created >= UNIX_TIMESTAMP('2017-01-01')
 --     AND p1.gmt_created < UNIX_TIMESTAMP('2017-10-09')
 )
--- ????ϸ
+-- 查询明细
 SELECT * 
 FROM t1
 WHERE receive_time IS NOT NULL
 LIMIT 10;
--- ??????ٵ?????û?ǩ?ʱ??
+-- 查询有多少调拨单没有签收时间
 SELECT to_depot_id
         ,COUNT(allocate_order_sn) AS total_num
         ,COUNT(CASE WHEN receive_time IS NULL THEN 1 ELSE NULL END) AS no_receive_time_num
@@ -2130,7 +2120,7 @@ ORDER BY to_depot_id;
 
 
 
--- ============================================== ???????????ݣ??ף? ===================================================
+-- ============================================== 调拨单相关数据（底） ===================================================
 
 
 
@@ -2140,7 +2130,7 @@ ORDER BY to_depot_id;
 
 
 -- zydb.dw_goods_on_sale
--- ???Ʒÿ???ۼ? prst_price
+-- 在售商品每天的售价: prst_price
 
 
 
@@ -2201,7 +2191,7 @@ where order_id  = 25892073
 
 
 
--- ????????hipping_status vs cod_check_status
+-- 检查订单的shipping_status vs cod_check_status
 WITH t1 AS
 (SELECT p1.customer_order_id
         ,p2.order_sn
@@ -2212,14 +2202,14 @@ LEFT JOIN jolly.who_order_info p2
 on p1.customer_order_id = p2.order_id
 WHERE p1.shipped_time > 0
 )
--- ??״̬????Ķ????
+-- 各状态对应的订单数
 select shipping_status
         ,cod_check_status
         ,count(customer_order_id) AS order_num
 FROM t1
 GROUP BY shipping_status
         ,cod_check_status;
--- ?˲????״̬????Ķ???
+-- 核查两个状态异常的订单
 SELECT * 
 FROM t1
 WHERE cod_check_status = 0
@@ -2251,7 +2241,7 @@ LIMIT 10;
 
 
 
--- HK?????????????????
+-- HK仓每天发运订单数和商品数
 SELECT SUBSTR(shipping_time, 1, 10) AS ship_date
         ,COUNT(DISTINCT order_sn) AS order_num
         ,SUM(goods_number) AS goods_num
@@ -2263,7 +2253,7 @@ WHERE p1.depot_id = 6
 GROUP BY SUBSTR(shipping_time, 1, 10)
 ORDER BY ship_date;
 
--- HK?????????
+-- HK仓每天库存总量
 SELECT data_date
         ,SUM(total_stock_num) AS total_stock_num
 FROM zydb.ods_who_wms_goods_stock_total_detail_aws
@@ -2272,7 +2262,7 @@ GROUP BY data_date
 ORDER BY data_date;
 
 
--- 11?????????ǰ10???????⵱??????
+-- 11天销售数量，用前10天销售额预测当天销售数量
 WITH t1 AS
 (SELECT SUBSTR(p1.pay_time, 1, 10) AS pay_date
         ,p2.sku_id
@@ -2292,7 +2282,7 @@ FROM t1;
 
 
 
--- ???sku???
+-- 特定sku销量
 WITH t1 AS
 (SELECT p1.sku_id
         ,p2.depot_id 
@@ -2324,25 +2314,25 @@ AND change_time >= unix_timestamp()
 LIMIT 10;
 
 
--- ??ݸ??????????Ʒ????ķֲ?
+-- 东莞仓每月订单内商品数量的分布
 SELECT SUBSTR(shipping_time, 1, 7) AS month
-        ,(CASE WHEN goods_number <= 4 THEN '<=4??' 
-                      WHEN goods_number <= 8 THEN '5-8??'
-                      WHEN goods_number >=9 THEN '>=9??'
-                      ELSE '??' END) AS goods_num_class
+        ,(CASE WHEN goods_number <= 4 THEN '<=4件' 
+                      WHEN goods_number <= 8 THEN '5-8件'
+                      WHEN goods_number >=9 THEN '>=9件'
+                      ELSE '其他' END) AS goods_num_class
         ,COUNT(order_sn) AS order_num
 FROM zydb.dw_order_node_time 
 WHERE depot_id = 4
      AND goods_number >=1
 GROUP BY SUBSTR(shipping_time, 1, 7) 
-        ,(CASE WHEN goods_number <= 4 THEN '<=4??' 
-                      WHEN goods_number <= 8 THEN '5-8??'
-                      WHEN goods_number >=9 THEN '>=9??'
-                      ELSE '??' END)
+        ,(CASE WHEN goods_number <= 4 THEN '<=4件' 
+                      WHEN goods_number <= 8 THEN '5-8件'
+                      WHEN goods_number >=9 THEN '>=9件'
+                      ELSE '其他' END)
 ;
 
 
--- ??ֿ?ձ???????????
+-- 新仓库日报，提货订单数
 
 select depod_id depot_id,count(*) pickup_orders from 
     zydb.dw_order_shipping_tracking_node a
@@ -2353,7 +2343,7 @@ select depod_id depot_id,count(*) pickup_orders from
     and lading_time<date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
     group by depod_id
 
--- ????jolly.who_wms_lading_order 
+-- 根据 jolly.who_wms_lading_order 
 WITH t1 AS
 (SELECT p1.lading_sn
         ,p1.depot_id
@@ -2386,9 +2376,9 @@ GROUP BY operate_date
         ,depot_id
 ;
 
--- ӡ???????????Ʒ????ķֲ?
+-- 印度尼西亚订单中商品数量的分布
 -- jolly.who_region, region_id = 1788, region_name = 'Indonesia'
--- ָ????ƶ??????????
+-- 指导改善订单包裹大小
 WITH t1 AS
 (SELECT p2.goods_num AS total_goods_num
         ,p3.cat_level1_name
@@ -2460,11 +2450,11 @@ WITH t1 AS
         ,p1.delivered_order_sn
         ,P1.goods_id
         ,p1.goods_sn
-        ,SUM(p1.delivered_num) AS ǩ??Ʒ???
-        ,SUM(p1.checked_num) AS ????????
-        ,SUM(p1.exp_num) AS ????Ʒ???
-        ,MIN(p1.start_receipt_time) AS ??쿪ʼʱ??
-        ,MAX(p1.finish_check_time) AS ????ʱ??
+        ,SUM(p1.delivered_num) AS 签收商品数量
+        ,SUM(p1.checked_num) AS 质检商品数量
+        ,SUM(p1.exp_num) AS 异常商品数量
+        ,MIN(p1.start_receipt_time) AS 质检开始时间
+        ,MAX(p1.finish_check_time) AS 质检结束时间
 FROM zydb.dw_delivered_receipt_onself p1
 WHERE p1.depot_id IN (4, 5, 6, 7)
 GROUP BY p1.depot_id
@@ -2473,10 +2463,10 @@ GROUP BY p1.depot_id
         ,p1.goods_sn
 )
 SELECT depot_id
-        ,sum(????????)
+        ,sum(质检商品数量)
 FROM t1
-WHERE ????ʱ??>= '2017-11-09'
-     AND ????ʱ??< '2017-11-10'
+WHERE 质检结束时间 >= '2017-11-09'
+     AND 质检结束时间 < '2017-11-10'
 group by depot_id
 order by depot_id;
 
@@ -2581,7 +2571,7 @@ WHERE value_id = 24
 
 
 
--- δ????ǰ????ʱ????
+-- 订单取消时长分布
 WITH t1 AS
 (SELECT p1.returned_order_id
         ,p1.returned_order_sn
@@ -2600,8 +2590,8 @@ WHERE p1.returned_time >= UNIX_TIMESTAMP('2017-11-16')
      AND p1.returned_time < UNIX_TIMESTAMP('2017-11-23')
      AND p2.is_shiped NOT IN (1, 2)
 )
--- is_shiped IN (3, 6, 7, 8)???????????δ????
--- is_shiped IN (0, 4, 5)???δ???
+-- is_shiped IN (3, 6, 7, 8)  已配货未出库
+-- is_shiped IN (0, 4, 5)  已支付未配货
 
 SELECT *
 FROM t1 
@@ -2616,9 +2606,6 @@ FROM t1
 GROUP BY pay_to_return
         --,status
 ;
-
-
-
 
 
 
