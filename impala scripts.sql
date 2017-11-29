@@ -1040,43 +1040,43 @@ GROUP BY depot_id;
 
 -- 库存
 --每日各仓某时刻 自由库存统计
-select t.depot_id,count(distinct t.goods_id), sum(t.free_num)
+SELECT t.depot_id,count(distinct t.goods_id), sum(t.free_num)
 FROM 
 (--  CN仓
-select depot_id,goods_id,sku_id,
+SELECT depot_id,goods_id,sku_id,
 sum(total_stock_num) total_stock_num,
 sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num 
 FROM  jolly.who_wms_goods_stock_total_detail s  -- 历史自由库存  201704开始 -zydb.ods_who_wms_goods_stock_total_detail 
 where 1=1
-and depot_id in (4,5,6)
-and total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
+AND depot_id in (4,5,6)
+AND total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
 group by depot_id, goods_id,sku_id
 ) t
 group by t.depot_id
 union all
-select t.depot_id,count(distinct t.goods_id), sum(t.free_num)
+SELECT t.depot_id,count(distinct t.goods_id), sum(t.free_num)
 FROM 
 (--  SA仓
-select depot_id,goods_id,sku_id,
+SELECT depot_id,goods_id,sku_id,
 sum(total_stock_num) total_stock_num,
 sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num 
 FROM  jolly_wms.who_wms_goods_stock_total_detail s --历史自由库存 ？jolly_wms.who_wms_goods_stock_total_detail_daily 
 where 1=1
-and depot_id =7 
-and total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
+AND depot_id =7 
+AND total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
 group by depot_id, goods_id,sku_id
 ) t
 group by t.depot_id
 
 ----各仓库每日进出
-select to_date(FROM_UNIXTIME(change_time)) data_date,
+SELECT to_date(FROM_UNIXTIME(change_time)) data_date,
 sum(case when  change_type=1 then change_num end) 备货入库件数,
 sum(case when  change_type=3 then change_num end) 退货入库件数 ,
 sum(case when  change_type=5 then change_num end) 销售出库件数 
 FROM jolly_wms.who_wms_goods_stock_detail_log  a
 where 1=1 
-and FROM_UNIXTIME(change_time,'yyyyMMdd')>='20170701'
-and FROM_UNIXTIME(change_time,'yyyyMMdd')< '20170717'
+AND FROM_UNIXTIME(change_time,'yyyyMMdd')>='20170701'
+AND FROM_UNIXTIME(change_time,'yyyyMMdd')< '20170717'
 group by to_date(FROM_UNIXTIME(change_time)) 
 
 
@@ -1495,10 +1495,10 @@ LIMIT 10;
 */
 
 -- 拣货单信息表
-SELECT * FROM jolly.who_wms_picking_info limit 10;
+SELECT * FROM jolly.who_wms_picking_info LIMIT 10;
 
 -- 拣货商品明细表
-SELECT * FROM jolly.who_wms_picking_goods_detail limit 10;
+SELECT * FROM jolly.who_wms_picking_goods_detail LIMIT 10;
 
 -- 查询某张订单的拣货信息
 SELECT a.order_sn, a.picking_id, b.finish_time
@@ -1651,7 +1651,7 @@ LEFT JOIN jolly.who_order_shipping_tracking p2
 WHERE p1.order_status = 1
     AND p1.pay_status = 1
     AND p1.is_shiped = 1
-limit 10;
+LIMIT 10;
 
 -- 每天销售数量
 WITH t1 as
@@ -1821,7 +1821,7 @@ ORDER BY on_shelf_hour;
 
 
 --- 7月大陆仓作业时长
-select depot_id
+SELECT depot_id
     ,avg(receipt_quality_duration + quality_onshelf_duration + picking_duration + package_duration + shipping_duration) as LT2
 FROM zydb.rpt_depot_daily_report
 where depot_id in (4, 5)
@@ -2162,7 +2162,7 @@ with t1 as
 FROM jolly_tms_center.tms_order_info p1
 GROUP BY p1.customer_order_id
 )
-select customer_order_id
+SELECT customer_order_id
         ,num
 FROM t1
 ORDER BY num desc
@@ -2203,7 +2203,7 @@ on p1.customer_order_id = p2.order_id
 WHERE p1.shipped_time > 0
 )
 -- 各状态对应的订单数
-select shipping_status
+SELECT shipping_status
         ,cod_check_status
         ,count(customer_order_id) AS order_num
 FROM t1
@@ -2227,7 +2227,7 @@ SELECT *
         ,FROM_UNIXTIME(gmt_created)
 FROM jolly.who_wms_on_shelf_goods_price
 where delivered_order_sn = 'GZ2DB171022092806186Y94IF'
-limit 10;
+LIMIT 10;
 
 
 SELECT * 
@@ -2334,13 +2334,13 @@ GROUP BY SUBSTR(shipping_time, 1, 7)
 
 -- 新仓库日报，提货订单数
 
-select depod_id depot_id,count(*) pickup_orders from 
+SELECT depod_id depot_id,count(*) pickup_orders FROM 
     zydb.dw_order_shipping_tracking_node a
     left join  
     zydb.dw_order_sub_order_fact b
     on a.order_id=b.order_id
-    where lading_time>=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
-    and lading_time<date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
+    where lading_time>=FROM_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
+    AND lading_time<date_add(FROM_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
     group by depod_id
 
 -- 根据 jolly.who_wms_lading_order 
@@ -2427,17 +2427,17 @@ WHERE p1.delivered_order_sn = 'GZ2FHD201711071801481083'
 
 SELECT pur_order_sn
         ,goods_id
-        ,from_unixtime(gmt_created)
-from jolly.who_wms_pur_deliver_goods
+        ,FROM_unixtime(gmt_created)
+FROM jolly.who_wms_pur_deliver_goods
 WHERE pur_order_sn = 'GZ2FHD201711071801481083'
 ;
 
-SELECT from_unixtime(max(gmt_created))
+SELECT FROM_unixtime(max(gmt_created))
 FROM zydb.ods_wms_pur_deliver_receipt 
 --WHERE pur_order_sn = 'GZ2FHD201711071801481083'
 ;
 
-SELECT from_unixtime(gmt_created) 
+SELECT FROM_unixtime(gmt_created) 
         ,pur_order_sn
 FROM jolly.who_wms_pur_deliver_receipt
 WHERE pur_order_sn = 'GZ2FHD201711071801481083'
@@ -2606,6 +2606,138 @@ FROM t1
 GROUP BY pay_to_return
         --,status
 ;
+
+
+-- 商品上架量与配货量的关系
+-- 00:00:00 — 01:00:00：上架X1件商品，配货Y1件商品， 配货Z1个订单
+-- 01:00:00 — 02:00:00：上架X2件商品，配货Y2件商品， 配货Z2个订单
+-- 。。。。。。
+
+WITH 
+-- 1.上架商品数
+t1 AS
+(SELECT p1.depot_id
+        ,SUBSTR(p1.on_shelf_finish_time, 1, 10) AS onshelf_date
+        ,SUBSTR(p1.on_shelf_finish_time, 12, 2) AS onshelf_hour
+        ,SUM(p1.on_shelf_num) AS onshelf_num
+FROM zydb.dw_delivered_receipt_onself p1
+WHERE p1.on_shelf_finish_time >= '2017-10-01'
+     AND p1.on_shelf_finish_time < '2017-11-24'
+GROUP BY p1.depot_id
+        ,SUBSTR(p1.on_shelf_finish_time, 1, 10) 
+        ,SUBSTR(p1.on_shelf_finish_time, 12, 2)
+),
+-- 2.完成配货商品数和订单数
+t2 AS
+(SELECT p1.depot_id
+        ,SUBSTR(p1.outing_stock_time, 1, 10) AS outing_stock_date
+        ,SUBSTR(p1.outing_stock_time, 12, 2) AS outing_stock_hour
+        ,COUNT(p1.order_sn) AS order_num
+        ,SUM(goods_number) AS goods_num
+FROM zydb.dw_order_node_time p1
+WHERE p1.is_shiped IN (1, 3, 6, 7, 8)
+     AND p1.outing_stock_time >= '2017-10-01'
+GROUP BY p1.depot_id
+        ,SUBSTR(p1.outing_stock_time, 1, 10)
+        ,SUBSTR(p1.outing_stock_time, 12, 2)
+)
+
+SELECT t1.*
+        ,t2.order_num
+        ,t2.goods_num
+FROM t1
+LEFT JOIN t2
+             ON t1.depot_id = t2.depot_id
+          AND t1.onshelf_date = t2.outing_stock_date
+          AND t1.onshelf_hour = t2.outing_stock_hour
+ORDER BY t1.depot_id
+        ,t1.onshelf_date
+        ,t1.onshelf_hour
+;
+
+
+-- HK仓独有库存的商品在印尼市场的下单情况
+-- 供应商与发货仓库对应表：jolly.who_esoloo_supplier_send_depot
+-- 商品发货仓库对应表：jolly.who_goods_send_depot
+
+WITH 
+-- 会发货到HK仓的供应商代码
+t1 AS
+(SELECT supp_id
+        ,supp_code
+FROM jolly.who_esoloo_supplier_send_depot
+WHERE depot_id = 6
+GROUP BY supp_id
+        ,supp_code
+),
+-- 供应商发货给几个仓库
+t2 AS
+(SELECT supp_id
+        ,supp_code
+        ,COUNT(depot_id) AS depot_num
+FROM jolly.who_esoloo_supplier_send_depot
+GROUP BY supp_id
+        ,supp_code
+),
+-- 只发货给HK仓的供应商
+t3 AS
+(SELECT t1.*
+FROM t1
+INNER JOIN t2 
+                 ON t1.supp_id = t2.supp_id
+WHERE t2.depot_num = 1
+),
+-- HK仓独有库存商品列表
+t4 AS
+(SELECT p1.goods_id
+        ,p1.goods_sn
+        ,p1.is_on_sale
+        ,p1.shop_price
+        ,p1.provide_code AS supp_code
+        ,p1.supp_name
+FROM zydb.dim_jc_goods AS p1, t3
+WHERE p1.provide_code = t3.supp_code
+),
+-- goods_id在印尼的下单量
+t5 AS 
+(SELECT p1.goods_id
+        ,COUNT(DISTINCT p2.order_id) AS order_num           -- 下单订单数
+        ,SUM(p1.original_goods_number) AS org_goods_num             -- 下单商品数
+FROM zydb.dw_order_sub_order_fact p2 
+LEFT JOIN jolly.who_order_goods p1 
+             ON p1.order_id = p2.order_id
+LEFT JOIN jolly.who_order_user_info p4 
+             ON p2.order_id = p4.order_id 
+LEFT JOIN jolly.who_region p5 
+             ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
+WHERE p5.region_id IS NOT NULL
+     AND p2.add_time >= '2017-10-01'
+     AND p2.add_time < '2017-11-28'
+     AND p4.country = 1788
+GROUP BY p1.goods_id
+),
+-- 最终结果，关联t4/t5
+t0 AS
+(SELECT t4.*
+        ,t5.order_num
+        ,t5.org_goods_num
+FROM t4
+LEFT JOIN t5
+             ON t4.goods_id = t5.goods_id
+)
+
+SELECT COUNT(*)
+FROM t0;
+
+
+
+
+
+
+
+;
+
+
 
 
 

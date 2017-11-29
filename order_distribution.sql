@@ -18,7 +18,7 @@ t1 AS
 FROM zydb.dw_order_sub_order_fact
 WHERE pay_status IN (1, 3)
     AND order_status = 1
-    AND depod_id IN (4, 5, 6, 7)
+    AND depod_id IN (4, 5, 6, 7, 14)
 ),
 t2 AS
 (SELECT *

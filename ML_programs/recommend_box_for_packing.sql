@@ -1,3 +1,10 @@
+/*
+内容：打包数据挖掘项目
+时间：20171129
+作者：Neo王政鸣
+ */
+
+
 -- 1.包裹称重信息表：jolly.who_wms_weigh_package_info
 -- 2.订单包裹打包信息表：jolly.who_wms_order_package
 -- 3.订单商品表：jolly.who_order_goods
@@ -91,3 +98,86 @@ WHERE p1.material_type = 3    -- 3代表打包物料
 -- 查询物料的库存数量
 -- jolly.who_wms_material_stock_detail
 
+
+
+
+/*
+-- 主题：打包项目，降低运费成本
+-- 时间：20171129
+-- 作者：Neo王政鸣
+ */
+
+-- 2017年总发运订单数及Aramex发运订单数
+-- 国内3仓：real_shipping_id = 40, real_shipping_name = Aramex(HK)
+-- 沙特仓：real_shipping_id = 200, real_shipping_name = Aramex
+SELECT SUBSTR(p1.shipping_time, 1, 7) AS ship_month
+        ,COUNT(p1.order_id) AS total_order_num
+        ,SUM(CASE WHEN p1.real_shipping_id = 40 OR p1.real_shipping_id = 200 THEN 1 ELSE 0 END) AS aramex_order_num
+FROM zydb.dw_order_sub_order_fact p1
+WHERE p1.shipping_time >= '2017-01-01'
+     AND p1.shipping_time < '2017-11-29'
+     AND p1.is_shiped = 1 
+     AND p1.order_status = 1
+GROUP BY SUBSTR(p1.shipping_time, 1, 7)
+ORDER BY SUBSTR(p1.shipping_time, 1, 7);
+
+-- 2018年预测订单数
+-- from jojo
+
+
+-- Aramex在9/10/11月有多少比例的订单抛重
+-- b.shipping_time：从2017-09-06 14:31:41开始
+WITH 
+-- 订单包裹重量
+t1 AS
+(SELECT b.customer_order_id AS order_id
+        ,a.tracking_no
+        ,FROM_UNIXTIME(b.shipped_time, 'yyyy-MM') AS ship_month
+        ,a.total_volume_weight
+        ,a.total_actual_weight
+        ,(CASE WHEN a.total_volume_weight > a.total_actual_weight THEN 1 ELSE 0 END) AS is_paozhong
+        --,MAX(a.total_volume_weight, a.total_actual_weight) AS charge_weight
+FROM jolly_tms_center.tms_order_package AS a
+INNER JOIN jolly_tms_center.tms_order_info AS b
+                 ON a.tms_order_id=b.tms_order_id
+INNER JOIN zydb.dw_order_sub_order_fact p1
+                ON b.customer_order_id = p1.order_id
+WHERE b.shipped_time >= unix_timestamp('2017-05-01')
+     AND b.shipped_time < unix_timestamp('2017-12-01')
+     AND p1.order_status = 1
+     AND p1.is_shiped = 1
+     AND p1.real_shipping_id IN (40, 200)
+)
+-- 计算抛重后的费用，以及在不抛重条件下所需的费用
+-- 计算方式太复杂了，暂时用excel来计算
+
+-- 抛重订单数量和比例, 订单平均重量
+-- Aramex平均有一半的订单是抛重的
+SELECT ship_month
+        ,COUNT(order_id) AS total_order_num
+        ,SUM(is_paozhong) AS paozhong_order_num
+        ,AVG(total_actual_weight) AS total_actual_weight_mean
+        ,AVG(CASE WHEN is_paozhong = 1 THEN total_actual_weight ELSE NULL END) AS paozhong_actual_weight_mean
+FROM t1
+GROUP BY ship_month
+ORDER BY ship_month
+;
+
+SELECT order_id
+        ,total_actual_weight
+        ,total_volume_weight
+        ,is_paozhong
+FROM t1
+WHERE ship_month = '2017-10'
+LIMIT 10
+;
+
+
+-- 物流承运商价格表
+-- jolly_tms_center.tms_carrier_price_zone_algorithm
+-- 还不知道怎么使用这张表，计费规则据说非常复杂
+SELECT * 
+FROM jolly_tms_center.tms_carrier_price_zone_algorithm
+WHERE zone_code = 'ARAMEX(HK)-2'
+     --AND weight = 0.5
+ORDER BY weight;

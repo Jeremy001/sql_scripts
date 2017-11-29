@@ -32,7 +32,7 @@ select
 zydb.dim_dw_depot t0
 full join 
 (
-	select order_count orders_num,depod_id depot_id,round(order_count/order_sum,1) prop_orders
+	select order_count orders_num,depod_id depot_id,round(order_count/order_sum,3) prop_orders
 	from
 	(
 		select order_count,depod_id ,sum(order_count) over() order_sum
@@ -41,7 +41,8 @@ full join
 			  select count(order_id) order_count,depod_id 
 			   from zydb.dw_order_sub_order_fact 
 			  where 
-			  case when pay_id=41 then pay_time  else result_pay_time end >=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
+			  depod_id in(4,5,6,7,14)
+			  and case when pay_id=41 then pay_time  else result_pay_time end >=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
 			  and 
 			  case when pay_id=41 then pay_time else result_pay_time end <date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
 			  and pay_status in(1,3)
@@ -65,15 +66,21 @@ full join
 (
 --质检完成商品件数  --上架商品件数
 	
-	select a.depot_id,sum(checked_num) onshelf_goods
+	select a.depot_id,sum(on_shelf_num) onshelf_goods
 	from  
-	  jolly.who_wms_on_shelf_goods a 
+	  (
+		  select on_shelf_id,depot_id,on_shelf_num from jolly.who_wms_on_shelf_goods a 
+		  union all
+		  select on_shelf_id,depot_id,on_shelf_num from jolly_wms.who_wms_on_shelf_goods b
+	  )a
 	  left join
-	  jolly.who_wms_on_shelf_info b
+	  (
+		  select on_shelf_id,on_shelf_finish_time from jolly.who_wms_on_shelf_info a
+		  union all
+		  select on_shelf_id,on_shelf_finish_time from jolly_wms.who_wms_on_shelf_info b
+	  )b
 	  on a.on_shelf_id=b.on_shelf_id
-		 where a.gmt_created >=unix_timestamp('${data_date}','yyyyMMdd')
-	  and a.gmt_created < unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd')
-	  and b.on_shelf_finish_time >=unix_timestamp('${data_date}','yyyyMMdd')
+		 where  b.on_shelf_finish_time >=unix_timestamp('${data_date}','yyyyMMdd')
 	  and b.on_shelf_finish_time < unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd')
 	group by a.depot_id
 	
@@ -292,7 +299,11 @@ full join
 --质检商品数
 	select a.depot_id,sum(checked_num) check_goods_num
 	from  
-  jolly.who_wms_on_shelf_goods a 
+	(
+		select depot_id,checked_num,gmt_created from  jolly.who_wms_on_shelf_goods a 
+		union all 
+		select depot_id,checked_num,gmt_created from  jolly_wms.who_wms_on_shelf_goods a 
+	)a
    where a.gmt_created >=unix_timestamp('${data_date}','yyyyMMdd')
   and a.gmt_created < unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd')
   	group by depot_id
@@ -354,16 +365,15 @@ full join
 
 (
 --销售退货入库数   销售退货入库订单数
-	select  b.depot_id,
-				nvl(sum(returned_stock_num),0) return_onself_goods_num,
-				count(distinct a.returned_order_id) return_onself_order_num
-	from jolly.who_wms_returned_order_goods a
-	left join  
-	jolly.who_wms_returned_order_info b
-	on a.returned_rec_id=b.returned_rec_id
-	where b.returned_time>=unix_timestamp('${data_date}','yyyyMMdd')
-	and b.returned_time<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') 
-	group by b.depot_id 
+	
+	select depot_id,sum(nvl(change_num,0))  return_onself_goods_num,
+		   0 return_onself_order_num
+	from jolly.who_wms_goods_stock_detail_log
+	where change_type=3
+	 and  change_time>=unix_timestamp('${data_date}','yyyyMMdd')
+	 and  change_time<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') 
+	group by  depot_id 
+
 )t2
 on t0.depot_id=t2.depot_id
 full join  
@@ -719,7 +729,8 @@ full join
 	)b
 	on a.order_id=b.order_id
 	where is_shiped<>1
-	and order_status<>2
+	and order_status in(1,4)
+	and is_problems_order=2
 	group by a.depod_id 
 ) t8
 on t0.depot_id=t8.depot_id
@@ -743,7 +754,7 @@ full join
 		   gmt_created<unix_timestamp('${data_date}','yyyyMMdd') then goods_number end) unship_prepare_goods_num_1days
 		   
 	from zydb.dw_order_sub_order_fact  a
-	full join  
+	inner join  
 	(
   	select distinct order_id,gmt_created from jolly.who_wms_outing_stock_detail
   	union all 
@@ -751,7 +762,8 @@ full join
 	) b
 	on a.order_id=b.order_id
 	where is_shiped<>1
-	and order_status<>2
+	and order_status in(1,4)
+	and is_problems_order=2
 	group by a.depod_id 
 	
 )t9
@@ -815,9 +827,9 @@ full join
 		--上架积压
 		select depot_id,sum(inspect_num-on_shelf_num) no_onself from zydb.dw_delivered_receipt_onself 
 		where on_shelf_start_time>=date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
-		and on_shelf_start_time <from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
-		and (on_shelf_finish_time>=concat(to_date(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)),' 06:00:00') 
-			  or   on_shelf_finish_time is null 
+		and on_shelf_start_time <concat(to_date(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)),' 20:00:00')
+		and (on_shelf_finish_time>=concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 06:00:00') 
+			  or on_shelf_finish_time is null 
 			  or on_shelf_finish_time='1970-01-01 08:00:00')
 		and exp_num=0
 		group by depot_id
@@ -855,8 +867,19 @@ full join
 	from
 	(
 	select b.depot_id,b.order_sn,max(a.finish_time) finish_time
-	from  jolly.who_wms_picking_info a
-	,jolly.who_wms_picking_goods_detail b
+	from  
+	(
+		select depot_id,picking_id,finish_time from jolly.who_wms_picking_info a
+		union all
+		select depot_id,picking_id,finish_time from jolly_wms.who_wms_picking_info a
+	)a
+	,
+	(
+		select * from jolly.who_wms_picking_goods_detail b
+		union all
+		select * from jolly_wms.who_wms_picking_goods_detail a
+	)b
+	
 	where 
 		a.picking_id=b.picking_id 
 	and finish_time>=unix_timestamp('${data_date}','yyyyMMdd')
