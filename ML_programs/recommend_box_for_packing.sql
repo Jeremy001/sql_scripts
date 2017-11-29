@@ -135,7 +135,7 @@ t1 AS
         ,FROM_UNIXTIME(b.shipped_time, 'yyyy-MM') AS ship_month
         ,a.total_volume_weight
         ,a.total_actual_weight
-        ,(CASE WHEN a.total_volume_weight > a.total_actual_weight THEN 1 ELSE 0 END) AS is_paozhong
+        ,(CASE WHEN (CEIL(a.total_volume_weight * 2) / 2) > (CEIL(a.total_actual_weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
         --,MAX(a.total_volume_weight, a.total_actual_weight) AS charge_weight
 FROM jolly_tms_center.tms_order_package AS a
 INNER JOIN jolly_tms_center.tms_order_info AS b
@@ -181,3 +181,23 @@ FROM jolly_tms_center.tms_carrier_price_zone_algorithm
 WHERE zone_code = 'ARAMEX(HK)-2'
      --AND weight = 0.5
 ORDER BY weight;
+
+
+
+-- 物流商的运费这么贵？来看看占笔单价有多少？
+SELECT SUBSTR(shipping_time, 1, 7) AS ship_month
+        ,COUNT(order_id) AS order_num
+        ,SUM(order_amount_no_bonus) AS order_amount
+        ,SUM(order_amount_no_bonus) / COUNT(order_id) AS per_order_amount
+FROM zydb.dw_order_sub_order_fact
+WHERE real_shipping_id IN (40, 200)
+     AND order_status = 1
+     AND is_shiped = 1
+     AND shipping_time >= '2017-01-01'
+     AND shipping_time < '2017-12-01'
+GROUP BY SUBSTR(shipping_time, 1, 7)
+ORDER BY SUBSTR(shipping_time, 1, 7)
+;
+
+
+
