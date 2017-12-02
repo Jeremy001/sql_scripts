@@ -2728,9 +2728,159 @@ LEFT JOIN t5
 
 SELECT COUNT(*)
 FROM t0;
+;
+
+
+WITH
+-- 1.系统自动退货的
+t1 AS
+(SELECT p1.returned_order_id AS order_id
+        ,p2.sku_id
+        ,'自动退货' AS oos_type
+        ,p2.returned_num AS sku_num
+FROM jolly_oms.who_oms_apply_returned_order_info p1
+LEFT JOIN jolly_oms.who_oms_apply_returned_order_goods p2
+             ON p1.returned_rec_id = p2.returned_rec_id
+WHERE p1.remark = '===缺货订单，系统自动退货==='
+     AND p1.apply_time >= unix_timestamp('2017-11-16')
+     AND p1.apply_time < unix_timestamp('2017-12-01')
+     AND p1.return_reason = 10
+     AND p2.returned_num >= 1
+),
+
+
+-- ======================================
+WITH
+-- 2.手工添加异常的
+t2 AS
+(SELECT p1.order_id
+        ,p1.sku_id
+        ,(CASE WHEN p1.type IN (1, 2, 3, 9) THEN 'pur' 
+                      WHEN p1.type IN (5, 6, 7, 10, 13) THEN 'wh' 
+                      WHEN p1.type IN (4,  11, 12) THEN 'sys' 
+                      ELSE 'other' END) AS oos_type
+        ,p1.oos_num
+FROM jolly.who_wms_order_oos_log p1
+WHERE p1.create_time >= UNIX_TIMESTAMP('2017-11-16')
+     AND p1.create_time < UNIX_TIMESTAMP('2017-12-01')
+     AND p1.oos_num >= 1
+),
+-- 关联订单表，商品信息表
+t4 AS
+(SELECT t2.*
+        ,p2.order_sn
+        ,(CASE WHEN p2.depod_id = 4 THEN '广州仓'
+                      WHEN p2.depod_id IN (5, 14) THEN '东莞仓'
+                      WHEN p2.depod_id = 6 THEN '香港仓'
+                      WHEN p2.depod_id = 7 THEN '沙特仓'
+                      ELSE '其他' END) AS depot_name
+        ,p2.original_goods_number
+        ,p2.order_amount_no_bonus
+        ,(CASE WHEN p2.order_status = 1 THEN '已确认'
+                      WHEN p2.order_status = 2 THEN '已取消'
+                      WHEN p2.order_status = 3 THEN '已退货'
+                      WHEN p2.order_status = 4 THEN '已拆分'
+                      ELSE '其他' END) AS order_status
+        ,(t2.oos_num * p3.prop_price) AS oos_amount
+FROM t2
+LEFT JOIN zydb.dw_order_sub_order_fact p2
+             ON t2.order_id = p2.order_id
+LEFT JOIN jolly.who_sku_relation p3
+             ON t2.sku_id = p3.rec_id
+),
+-- 汇总到订单级别
+t5 AS
+(SELECT order_id
+        ,order_sn
+        ,depot_name
+        ,original_goods_number
+        ,order_amount_no_bonus
+        ,order_status
+        ,SUM(oos_num) AS oos_num
+        ,SUM(CASE WHEN oos_type = 'pur' THEN 1 ELSE 0 END) AS pur_oos_num
+        ,SUM(CASE WHEN oos_type = 'wh' THEN 1 ELSE 0 END) AS wh_oos_num
+        ,SUM(CASE WHEN oos_type = 'sys' THEN 1 ELSE 0 END) AS sys_oos_num
+        ,SUM(CASE WHEN oos_type = 'other' THEN 1 ELSE 0 END) AS other_oos_num
+        ,ROUND(SUM(oos_amount), 1) AS oos_amount
+        ,ROUND(SUM(CASE WHEN oos_type = 'pur' THEN oos_amount ELSE 0 END), 1) AS pur_oos_amount
+        ,ROUND(SUM(CASE WHEN oos_type = 'wh' THEN oos_amount ELSE 0 END), 1) AS wh_oos_amount
+        ,ROUND(SUM(CASE WHEN oos_type = 'sys' THEN oos_amount ELSE 0 END), 1) AS sys_oos_amount
+        ,ROUND(SUM(CASE WHEN oos_type = 'other' THEN oos_amount ELSE 0 END), 1) AS other_oos_amount
+        ,ROUND(SUM(oos_num) / original_goods_number, 3) AS oos_num_prop
+        ,ROUND(SUM(oos_amount) / order_amount_no_bonus, 3) AS oos_amount_prop
+FROM t4
+GROUP BY order_id
+        ,order_sn
+        ,depot_name
+        ,original_goods_number
+        ,order_amount_no_bonus
+        ,order_status
+)
+
+-- 根据缺货商品数量汇总订单数量和金额
+SELECT oos_num
+        ,COUNT(DISTINCT order_sn) AS order_num
+        ,SUM(oos_num) AS oos_num2
+        ,SUM(order_amount_no_bonus) AS order_amount_no_bonus
+        ,SUM(oos_amount) AS oos_amount
+FROM t5
+GROUP BY oos_num
+ORDER BY oos_num2;
 
 
 
+,(CASE WHEN p1.type = 1 THEN '采购单取消' 
+                      WHEN p1.type = 2 THEN '供应商门户确认缺货' 
+                      WHEN p1.type = 3 THEN '处理到货异常' 
+                      WHEN p1.type = 4 THEN '超期标记缺货' 
+                      WHEN p1.type = 5 THEN '拣货异常' 
+                      WHEN p1.type = 6 THEN '调拨取消' 
+                      WHEN p1.type = 7 THEN '盘亏' 
+                      WHEN p1.type = 9 THEN '采购延迟到货' 
+                      WHEN p1.type = 10 THEN '调拨延迟' 
+                      WHEN p1.type = 11 THEN '超卖' 
+                      WHEN p1.type = 12 THEN 'HK仓超卖' 
+                      WHEN p1.type = 13 THEN '打包异常'
+                      ELSE '其他' END) AS oos_type
+
+
+
+-- 一共缺了多少？
+SELECT oos_type
+        ,COUNT(DISTINCT order_id) AS order_num
+        ,SUM(oos_num) AS oos_num
+FROM t1
+GROUP BY oos_type
+;
+
+-- 每天缺多少？
+SELECT oos_date
+        ,COUNT(DISTINCT order_id) AS order_num
+        ,SUM(oos_num) AS oos_num
+FROM t1
+GROUP BY oos_date
+ORDER BY oos_date
+;
+
+-- 明细数据
+SELECT *
+FROM t1
+LIMIT 10;
+
+
+-- 申请退货退款表
+-- jolly_oms.who_oms_apply_returned_order_info
+-- jolly_oms.who_oms_apply_returned_order_goods
+
+
+SELECT *
+FROM jolly_oms.who_oms_apply_returned_order_info
+LIMIT 10;
+
+
+SELECT *
+FROM jolly_oms.who_oms_apply_returned_order_goods
+LIMIT 10;
 
 
 
@@ -2739,5 +2889,29 @@ FROM t0;
 
 
 
-
-
+SELECT p1.returned_order_id
+        ,p1.returned_order_sn
+        ,p1.return_reason
+        ,p1.remark
+        ,p1.returned_op_type
+        ,p1.depot_id
+        ,p1.return_status
+        ,p1.apply_time
+        ,p1.close_reason
+        ,p1.order_goods_num
+        ,p1.returned_goods_num
+        ,p1.process_status
+        ,p2.goods_id
+        ,p2.goods_sn
+        ,p2.sku_id
+        ,p2.returned_num
+        ,p2.returned_amount
+        ,p2.gmt_created
+FROM jolly_oms.who_oms_apply_returned_order_info p1
+LEFT JOIN jolly_oms.who_oms_apply_returned_order_goods p2
+ON p1.returned_rec_id = p2.returned_rec_id
+WHERE p1.remark = '===缺货订单，系统自动退货==='
+AND p1.apply_time >= unix_timestamp('2017-11-16')
+AND p1.apply_time < unix_timestamp('2017-12-01')
+AND p1.return_reason = 10
+LIMIT 10;
