@@ -35,20 +35,21 @@ type  订单缺货商品对应的缺货类型，此处如果是多个商品缺货可能会重复出现订单条数
 create_time 订单登记缺货的时间
 */
 
-
-
 WITH 
 -- 调拨单的收货数量和上架开始/结束时间
 t00 AS
 (SELECT p2.pur_order_sn
+        ,p2.depot_id
         ,SUM(p2.deliver_num) AS deliver_num     -- 收货数量
         ,MAX(p2.gmt_created) AS gmt_created      -- 质检结束时间，也即上架开始时间
         ,MAX(p3.finish_time) AS finish_time     -- 上架结束时间
 FROM jolly.who_wms_pur_deliver_goods p2 
 INNER JOIN jolly.who_wms_pur_deliver_info  p3 
-                 ON p2.deliver_id = p3.deliver_id AND p2.type = 2
+                 ON p2.deliver_id = p3.deliver_id
+WHERE p2.type = 2
 GROUP BY p2.pur_order_sn
-), 
+        ,p2.depot_id
+),
 t01 AS
 (SELECT p1.order_id
         ,p1.from_depot_id
@@ -64,8 +65,8 @@ LEFT JOIN t00
              ON p1.allocate_order_sn=t00.pur_order_sn 
 WHERE 1=1
      AND p1.to_depot_id = 6     -- 调往HK
-/*     AND p1.allocate_gmt_created  >= DATE_SUB(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),60)
-     AND p1.allocate_gmt_created < DATE_SUB(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),0)*/
+/*     AND p1.allocate_gmt_created  >= DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP(),'yyyy-MM-dd'),60)
+     AND p1.allocate_gmt_created < DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP(),'yyyy-MM-dd'),0)*/
 GROUP BY p1.order_id
         ,p1.from_depot_id
         ,p1.allocate_order_sn
@@ -105,8 +106,8 @@ LEFT JOIN jolly.who_wms_order_oos_log p4
 WHERE 1=1
      AND p.pay_time >= '2017-01-01 00:00:00'  
 -- AND p.pay_time < '2017-10-01 00:00:00'
---  >= DATE_SUB(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),7)
---  < DATE_SUB(FROM_UNIXTIME(unix_timestamp(),'yyyy-MM-dd'),0)
+--  >= DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP(),'yyyy-MM-dd'),7)
+--  < DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP(),'yyyy-MM-dd'),0)
      AND p.depot_id = 6 --只取6
 ),
 
@@ -122,10 +123,10 @@ t03 AS
         ,allocate_order_out
         ,allocate_order_start_onself
         ,allocate_order_finish_onself
-        ,((unix_timestamp(allocate_order_start) - unix_timestamp(allocate_demand_start)) / 3600) AS allocate_response_duration    -- 调拨需求响应时长 = 调拨单生成时间 - 调拨需求生成时间
-        ,((unix_timestamp(allocate_order_out) - unix_timestamp(allocate_order_start)) / 3600) AS allocate_work_duration    -- 调出仓作业时长 = 出库时间 - 调拨单生成时间
-        ,((unix_timestamp(allocate_order_start_onself) - unix_timestamp(allocate_order_out)) / 3600) AS allocate_onway_duration    -- 调拨在途时长 = 开始入库时间 - 出库时间
-        ,((unix_timestamp(allocate_order_finish_onself) - unix_timestamp(allocate_order_start_onself)) / 3600) AS allocate_onshelf_duration    -- 调拨单上架时长 = 入库完成时间 - 开始入库时间
+        ,((UNIX_TIMESTAMP(allocate_order_start) - UNIX_TIMESTAMP(allocate_demand_start)) / 3600) AS allocate_response_duration    -- 调拨需求响应时长 = 调拨单生成时间 - 调拨需求生成时间
+        ,((UNIX_TIMESTAMP(allocate_order_out) - UNIX_TIMESTAMP(allocate_order_start)) / 3600) AS allocate_work_duration    -- 调出仓作业时长 = 出库时间 - 调拨单生成时间
+        ,((UNIX_TIMESTAMP(allocate_order_start_onself) - UNIX_TIMESTAMP(allocate_order_out)) / 3600) AS allocate_onway_duration    -- 调拨在途时长 = 开始入库时间 - 出库时间
+        ,((UNIX_TIMESTAMP(allocate_order_finish_onself) - UNIX_TIMESTAMP(allocate_order_start_onself)) / 3600) AS allocate_onshelf_duration    -- 调拨单上架时长 = 入库完成时间 - 开始入库时间
 FROM t02
 WHERE allocate_demand_start IS NOT NULL
 AND allocate_order_start IS NOT NULL
@@ -233,18 +234,48 @@ GROUP BY pay_date
 ORDER BY pay_date
 ;
 
-
-
-
-
-
-
-
 SELECT *
 FROM t01
 LIMIT 10;
 
 
+
+-- 每天调拨发货商品件数
+SELECT SUBSTR(p1.out_time, 1, 10) AS out_date
+        ,SUM(p1.demand_allocate_num) AS demand_allocate_num
+FROM zydb.dw_allocate_out_node p1
+WHERE p1.out_time >= '2017-11-23'
+GROUP BY SUBSTR(p1.out_time, 1, 10)
+ORDER BY out_date
+;
+
+WITH 
+-- 调拨单的收货数量和上架开始/结束时间
+t00 AS
+(SELECT p2.pur_order_sn
+        ,p2.depot_id
+        ,SUM(p2.deliver_num) AS deliver_num     -- 收货数量
+        ,MAX(p2.gmt_created) AS gmt_created      -- 质检结束时间，也即上架开始时间
+        ,MAX(p3.finish_time) AS finish_time     -- 上架结束时间
+FROM jolly.who_wms_pur_deliver_goods p2 
+INNER JOIN jolly.who_wms_pur_deliver_info  p3 
+                 ON p2.deliver_id = p3.deliver_id
+WHERE p2.type = 2
+GROUP BY p2.pur_order_sn
+        ,p2.depot_id
+),
+-- 每天HK仓收货商品件数
+t01 AS
+(SELECT FROM_UNIXTIME(t00.gmt_created, 'yyyy-MM-dd') AS onshelf_begin_date
+        ,SUM(t00.deliver_num) AS deliver_num     -- 收货数量
+FROM t00
+WHERE t00.depot_id = 6 
+     AND t00.gmt_created >= UNIX_TIMESTAMP('2017-11-20')
+GROUP BY FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
+)
+
+
+ORDER BY onshelf_begin_date
 
 
 
