@@ -1848,8 +1848,8 @@ AND is_shiped = 1
 AND is_problems_order IN (0, 2)
 AND order_status = 1
 AND pay_status IN (1, 3)
-AND shipping_time >= '2017-10-01'
-AND shipping_time < '2017-10-31'
+AND shipping_time >= '2017-11-27'
+AND shipping_time < '2017-12-03'
 ORDER BY shipping_time;
 
 

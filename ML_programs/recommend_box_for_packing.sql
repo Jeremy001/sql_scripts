@@ -107,15 +107,20 @@ WHERE p1.material_type = 3    -- 3代表打包物料
 -- 作者：Neo王政鸣
  */
 
--- 2017年总发运订单数及Aramex发运订单数
--- 国内3仓：real_shipping_id = 40, real_shipping_name = Aramex(HK)
--- 沙特仓：real_shipping_id = 200, real_shipping_name = Aramex
+-- 2017年总发运订单数及主要物流商发运订单数
+-- Aramex: real_shipping_id IN (40, 200)
+-- Naqel: real_shipping_id IN (172, 174, 176)
+-- Fetchr: real_shipping_id IN (170, 201)
+-- SMSA: real_shipping_id IN (168, 171)
 SELECT SUBSTR(p1.shipping_time, 1, 7) AS ship_month
         ,COUNT(p1.order_id) AS total_order_num
-        ,SUM(CASE WHEN p1.real_shipping_id = 40 OR p1.real_shipping_id = 200 THEN 1 ELSE 0 END) AS aramex_order_num
+        ,SUM(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 1 ELSE 0 END) AS aramex_order_num
+        ,SUM(CASE WHEN p1.real_shipping_id IN (172, 174, 176) THEN 1 ELSE 0 END) AS naqel_order_num
+        ,SUM(CASE WHEN p1.real_shipping_id IN (170, 201) THEN 1 ELSE 0 END) AS fetchr_order_num
+        ,SUM(CASE WHEN p1.real_shipping_id IN (168, 171) THEN 1 ELSE 0 END) AS smsa_order_num
 FROM zydb.dw_order_sub_order_fact p1
 WHERE p1.shipping_time >= '2017-01-01'
-     AND p1.shipping_time < '2017-11-29'
+     AND p1.shipping_time < '2017-12-01'
      AND p1.is_shiped = 1 
      AND p1.order_status = 1
 GROUP BY SUBSTR(p1.shipping_time, 1, 7)
@@ -125,28 +130,32 @@ ORDER BY SUBSTR(p1.shipping_time, 1, 7);
 -- from jojo
 
 
--- Aramex在9/10/11月有多少比例的订单抛重
+-- 各承运商在9/10/11月有多少比例的订单抛重
 -- b.shipping_time：从2017-09-06 14:31:41开始
 WITH 
 -- 订单包裹重量
 t1 AS
 (SELECT b.customer_order_id AS order_id
         ,a.tracking_no
+        ,p1.depot_id
+        ,p1.real_shipping_id AS shipping_id
+        ,p1.real_shipping_name AS shipping_name
+        ,p2.is_cubic_weight         -- 是否计收抛重， 1=是，0=否
         ,FROM_UNIXTIME(b.shipped_time, 'yyyy-MM') AS ship_month
         ,a.total_volume_weight
         ,a.total_actual_weight
         ,(CASE WHEN (CEIL(a.total_volume_weight * 2) / 2) > (CEIL(a.total_actual_weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
-        --,MAX(a.total_volume_weight, a.total_actual_weight) AS charge_weight
 FROM jolly_tms_center.tms_order_package AS a
 INNER JOIN jolly_tms_center.tms_order_info AS b
                  ON a.tms_order_id=b.tms_order_id
 INNER JOIN zydb.dw_order_sub_order_fact p1
                 ON b.customer_order_id = p1.order_id
-WHERE b.shipped_time >= unix_timestamp('2017-05-01')
+INNER JOIN jolly.who_shipping p2
+                 ON p1.real_shipping_id = p2.shipping_id
+WHERE b.shipped_time >= unix_timestamp('2017-10-01')
      AND b.shipped_time < unix_timestamp('2017-12-01')
      AND p1.order_status = 1
      AND p1.is_shiped = 1
-     AND p1.real_shipping_id IN (40, 200)
 )
 -- 计算抛重后的费用，以及在不抛重条件下所需的费用
 -- 计算方式太复杂了，暂时用excel来计算
@@ -154,13 +163,17 @@ WHERE b.shipped_time >= unix_timestamp('2017-05-01')
 -- 抛重订单数量和比例, 订单平均重量
 -- Aramex平均有一半的订单是抛重的
 SELECT ship_month
+        ,shipping_name
         ,COUNT(order_id) AS total_order_num
-        ,SUM(is_paozhong) AS paozhong_order_num
+        ,SUM(is_cubic_weight) AS cubic_order_num
+        ,SUM(CASE WHEN is_cubic_weight = 1 THEN is_paozhong ELSE 0 END) AS paozhong_order_num
         ,AVG(total_actual_weight) AS total_actual_weight_mean
         ,AVG(CASE WHEN is_paozhong = 1 THEN total_actual_weight ELSE NULL END) AS paozhong_actual_weight_mean
 FROM t1
 GROUP BY ship_month
+        ,shipping_name
 ORDER BY ship_month
+        ,total_order_num
 ;
 
 SELECT order_id

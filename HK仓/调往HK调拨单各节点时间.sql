@@ -166,5 +166,88 @@ SELECT pay_month
         ,COUNT(order_sn) AS 订单数量
 FROM t03
 WHERE pay_date < TO_DATE(DATE_SUB(NOW(), 5))  -- 取6天以前的支付订单
+     AND pay_date NOT IN ('2017-11-08', '2017-11-09')
 GROUP BY pay_month
 ORDER BY pay_month;
+
+-- =====================================================
+-- HK仓订单商品数，仍未配齐商品数，调拨各环节商品数
+-- =====================================================
+
+WITH 
+-- 上架入库到HK仓
+t00 AS
+(SELECT p2.pur_order_sn
+        ,SUM(p2.deliver_num) AS deliver_num     -- 上架数量
+        ,MAX(p2.gmt_created) AS gmt_created      -- 上架开始时间
+        ,MAX(p3.finish_time) AS finish_time     -- 上架结束时间
+FROM jolly.who_wms_pur_deliver_goods p2 
+INNER JOIN jolly.who_wms_pur_deliver_info  p3 
+                 ON p2.deliver_id = p3.deliver_id AND p2.type = 2
+GROUP BY p2.pur_order_sn
+), 
+-- 配货，订单未配齐数量
+t02 AS
+(SELECT order_id
+        ,SUM(num) AS still_need_num
+FROM jolly_oms.who_wms_goods_need_lock_detail
+GROUP BY order_id
+),
+-- 调拨各环节
+t01 AS
+(SELECT p2.order_id
+        ,SUBSTR(p2.pay_time, 1, 10) AS pay_date
+        ,p2.depot_id
+        ,p2.original_goods_number
+        ,t02.still_need_num
+        ,SUM(NVL(p1.demand_allocate_num, 0)) AS demand_allocate_num        -- 调拨需求商品数量
+        ,SUM(NVL(CASE WHEN p1.allocate_gmt_created IS NULL THEN NULL ELSE p1.demand_allocate_num END, 0)) AS order_allocate_num          -- 生成调拨单商品数量
+        ,SUM(NVL(CASE WHEN p1.out_time IS NULL THEN NULL ELSE p1.demand_allocate_num END, 0)) AS allocate_out_num          -- 调拨发货商品数量
+        ,SUM(NVL(CASE WHEN t00.finish_time IS NULL THEN NULL ELSE p1.demand_allocate_num END, 0)) AS allocate_onshelf_num          -- 上架到HK仓商品数量
+FROM zydb.dw_order_node_time p2
+LEFT JOIN zydb.dw_allocate_out_node p1
+             ON p1.order_id = p2.order_id
+LEFT JOIN t00 
+             ON t00.pur_order_sn = p1.allocate_order_sn
+LEFT JOIN t02 
+             ON p1.order_id = t02.order_id
+GROUP BY p2.order_id
+        ,SUBSTR(pay_time, 1, 10)
+        ,p2.depot_id
+        ,p2.original_goods_number
+        ,t02.still_need_num
+)
+
+SELECT pay_date
+        ,COUNT(order_id) AS order_num
+        ,SUM(original_goods_number) AS org_goods_num
+        ,SUM(still_need_num) AS still_need_num
+        ,SUM(demand_allocate_num) AS demand_allocate_num
+        ,SUM(order_allocate_num) AS order_allocate_num
+        ,SUM(allocate_out_num) AS allocate_out_num
+        ,SUM(allocate_onshelf_num) AS allocate_onshelf_num
+FROM t01
+WHERE pay_date >= '2017-11-20'
+     AND depot_id = 6
+GROUP BY pay_date
+ORDER BY pay_date
+;
+
+
+
+
+
+
+
+
+SELECT *
+FROM t01
+LIMIT 10;
+
+
+
+
+
+
+
+
