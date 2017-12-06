@@ -146,3 +146,61 @@ GROUP BY p1.shipping_depot_id
         ,p3.reason_name_cn
         ,FROM_UNIXTIME(p1.gmt_push)
         ,FROM_UNIXTIME(p1.gmt_confirm);
+
+
+/*
+-- 退货量查询
+条件：
+1.订单确实从仓库发出了（剔除掉出仓前的退货）；
+2.商品确实要退回或已退回仓库（剔除掉退款但无需退货的数据）
+ */
+
+WITH t1 AS
+(SELECT p1.returned_order_id
+        ,p1.returned_rec_id
+        ,p2.goods_sn
+        ,FROM_UNIXTIME(p2.stock_end_time) AS stock_end_date
+        ,FROM_UNIXTIME(p2.stock_end_time, 'yyyy-MM') AS stock_end_month
+        ,p2.in_stock_num
+        ,p5.region_id
+        ,p5.region_name
+FROM jolly.who_wms_returned_order_info p1
+INNER JOIN jolly.who_wms_returned_order_goods p2
+                 ON p1.returned_rec_id = p2.returned_rec_id
+LEFT JOIN zydb.dw_order_node_time p3
+                 ON p1.returned_order_id = p3.order_id
+LEFT JOIN jolly.who_order_user_info p4 
+             ON p3.order_id = p4.order_id 
+LEFT JOIN jolly.who_region p5 
+             ON p4.country = p5.region_id
+WHERE p3.is_shiped = 1
+     AND p5.region_type = 0 
+     AND p5.region_status = 1
+)
+
+SELECT stock_end_month
+        ,SUM(in_stock_num) AS in_stock_num
+FROM t1
+WHERE region_id 1878
+GROUP BY stock_end_month
+ORDER BY stock_end_month;
+
+
+SELECT FROM_UNIXTIME(p2.stock_end_time, 'yyyy-MM') AS return_in_month
+        ,SUM(p2.in_stock_num) AS in_stock_num
+FROM jolly.who_wms_returned_order_info p1
+INNER JOIN jolly.who_wms_returned_order_goods p2
+                 ON p1.returned_rec_id = p2.returned_rec_id
+LEFT JOIN zydb.dw_order_node_time p3
+                 ON p1.returned_order_id = p3.order_id
+LEFT JOIN jolly.who_order_user_info p4 
+             ON p3.order_id = p4.order_id 
+LEFT JOIN jolly.who_region p5 
+             ON p4.country = p5.region_id
+WHERE p3.is_shiped = 1
+     AND p5.region_type = 0 
+     AND p5.region_status = 1
+     AND p5.region_id IN (1878, 1861, 1877, 1859, 1868)
+GROUP BY FROM_UNIXTIME(p2.stock_end_time, 'yyyy-MM')
+ORDER BY FROM_UNIXTIME(p2.stock_end_time, 'yyyy-MM')
+;

@@ -2915,3 +2915,79 @@ AND p1.apply_time >= unix_timestamp('2017-11-16')
 AND p1.apply_time < unix_timestamp('2017-12-01')
 AND p1.return_reason = 10
 LIMIT 10;
+
+
+/*
+jolly.who_region.region_id, region_name
+GCC国家的代码和名称：
+阿拉伯联合酋长国：1878， United Arab Emirates
+沙特阿拉伯：1876，Saudi Arabia
+阿曼：1861，Oman
+巴林：1877，Bahrain
+科威特：1859，Kuwait
+卡塔尔：1868，Qatar
+ */
+
+-- 每月销售额，销售数量
+WITH 
+t1 AS 
+(SELECT SUBSTR(p1.pay_time, 1, 7) AS pay_month
+        ,p5.region_id
+        ,p5.region_name
+        ,COUNT(p1.order_id) AS order_num
+        ,SUM(p1.goods_number) AS goods_num 
+FROM zydb.dw_order_node_time p1
+LEFT JOIN jolly.who_order_user_info p4 
+             ON p1.order_id = p4.order_id 
+LEFT JOIN jolly.who_region p5 
+             ON p4.country = p5.region_id
+WHERE p1.order_status = 1
+     AND p1.is_shiped = 1
+     AND p1.pay_time >= '2016-12-01'
+     AND p1.pay_time < '2017-12-01'
+     AND p5.region_type = 0 
+     AND p5.region_status = 1
+GROUP BY SUBSTR(p1.pay_time, 1, 7)
+        ,p5.region_id
+        ,p5.region_name
+)
+
+SELECT COUNT(*)
+FROM t1
+LIMIT 10;
+
+-- 类目销售结构
+WITH 
+t1 AS 
+(SELECT SUBSTR(p1.pay_time, 1, 7) AS pay_month
+        ,p5.region_id
+        ,p5.region_name
+        ,p3.cat_level1_name
+        ,SUM(p2.goods_number) AS goods_num 
+FROM zydb.dw_order_node_time p1
+INNER JOIN jolly.who_order_goods p2 
+                 ON p1.order_id = p2.order_id
+LEFT JOIN zydb.dim_jc_goods p3
+             ON p2.goods_id = p3.goods_id
+LEFT JOIN jolly.who_order_user_info p4 
+             ON p1.order_id = p4.order_id 
+LEFT JOIN jolly.who_region p5 
+             ON p4.country = p5.region_id
+WHERE p1.order_status = 1
+     AND p1.is_shiped = 1
+     AND p1.pay_time >= '2016-12-01'
+     AND p1.pay_time < '2017-12-01'
+     AND p5.region_type = 0 
+     AND p5.region_status = 1
+GROUP BY SUBSTR(p1.pay_time, 1, 7)
+        ,p5.region_id
+        ,p5.region_name
+        ,p3.cat_level1_name
+)
+-- 查询阿联酋的类目销售结构
+SELECT pay_month
+        ,cat_level1_name
+        ,goods_num
+FROM t1
+WHERE region_id = 1878
+;

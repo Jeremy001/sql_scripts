@@ -1,12 +1,14 @@
 
 
 
-
-select s.pay_date,s.pay_duration,s.depot,
+WITH 
+t1 AS
+(select s.pay_date,s.pay_duration,s.depot,
   s.order_id,s.order_sn,s.site_id,
   s.goods_num order_goods_number,
   s.pay_time,s.no_problems_order_uptime,s.shipping_time,s.is_shiped,
  s1.goods_id,s1.sku_id,s1.goods_number,FROM_UNIXTIME(s2.last_modified_time) last_modified_time,
+ s2.org_num,
  s2.num    allo_need_num,
  s2.oos_num allo_lock_oos,
  FROM_UNIXTIME(s3.gmt_created)  allocate_demand_start_time,
@@ -22,7 +24,7 @@ select s.pay_date,s.pay_duration,s.depot,
  FROM_UNIXTIME(s10.gmt_created)  pur_goods_onself_time 
  from zybiro.yf_mysql_pay_10orders_3a s
  inner join default.who_order_goods s1 on s.order_id=s1.order_id 
- inner  join default.who_wms_goods_need_lock_detail s2  on  s.order_id=s2.order_id  and cast(s1.sku_id as int)=s2.sku_id  and num >0
+ inner  join default.who_wms_goods_need_lock_detail s2  on  s.order_id=s2.order_id  and cast(s1.sku_id as int)=s2.sku_id
  left  join  default.jolly_spm_allocate_goods_demand s3  on s.order_id=s3.order_id and cast(s1.sku_id as int)=s3.sku_id                                                                                   
  inner join   default.jolly_spm_allocate_demand_goods_relation  s4 on   s4.allocate_goods_demand_rec_id = s3.rec_id
  left  join  default.jolly_spm_allocate_order_goods  s5 on s4.allocate_order_goods_rec_id= s5.rec_id
@@ -36,4 +38,9 @@ select s.pay_date,s.pay_duration,s.depot,
     group by s9.delivered_order_sn
     ) s10         on  s7.delivered_order_sn=s10.delivered_order_sn  
  where 1=1
- and s2.source_type=2
+ )
+
+
+select *
+from t1
+limit 10;

@@ -277,8 +277,24 @@ GROUP BY FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
 
 ORDER BY onshelf_begin_date
 
+-- ======================================================
+-- 调拨需求都产生了的订单数，预测第二天的可出库订单
+-- ======================================================
 
-
-
-
-
+WITH 
+-- 各个订单仍需调拨数
+t1 AS
+(SELECT p1.order_id
+        ,SUM(p1.org_num) AS org_num
+        ,SUM(p1.num) AS still_need_num
+        ,SUM(p1.oos_num) AS oos_num
+        ,SUM(p1.wait_allocate_num) AS wait_allocate_num
+FROM default.who_wms_goods_need_lock_detail AS p1
+WHERE p1.depot_id = 6
+GROUP BY p1.order_id
+)
+SELECT COUNT(*)
+FROM t1
+WHERE still_need_num >= 1
+     AND wait_allocate_num = 0
+;

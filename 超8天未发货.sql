@@ -45,9 +45,22 @@ WHERE 1=1
      AND a.pay_time > date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),30)
      AND a.pay_time <= date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),7)
      AND a.depot_id IN (4,5,6,7,14)
+),
+-- 配货，订单未配齐数量
+t2 AS
+(SELECT depot_id
+        ,order_id
+        ,SUM(num) AS still_need_num
+FROM jolly_oms.who_wms_goods_need_lock_detail
+GROUP BY depot_id
+        ,order_id
 )
 
-SELECT *
+-- 最终结果
+SELECT t1.*
+        ,t2.still_need_num
 FROM t1
-LIMIT 10;
+LEFT JOIN t2 
+             ON t1.order_id = t2.order_id
+;
 
