@@ -2828,6 +2828,94 @@ GROUP BY oos_num
 ORDER BY oos_num2;
 
 
+-- 拣货异常、打包异常数量 ======================================================
+WITH
+-- 2.手工添加异常的
+t2 AS
+(SELECT p1.order_id
+        ,p2.order_sn
+        ,p2.original_goods_number
+        ,p2.goods_number
+        ,p2.pay_time
+        ,p2.depot_id
+        ,p1.sku_id
+
+        ,FROM_UNIXTIME(p1.create_time) AS add_time
+        ,(CASE WHEN p1.type = 5 THEN '拣货异常' 
+                      WHEN p1.type = 13 THEN '打包异常' 
+                      ELSE '其他' END) AS oos_type
+        ,p1.oos_num
+FROM jolly.who_wms_order_oos_log p1
+LEFT JOIN zydb.dw_order_node_time p2
+             ON p1.order_id = p2.order_id
+WHERE p1.type IN (5. 13)
+     AND p1.create_time >= UNIX_TIMESTAMP('2017-11-14')
+     AND p1.oos_num >= 1
+),
+-- 关联订单表，商品信息表
+t4 AS
+(SELECT t2.*
+        ,p2.order_sn
+        ,(CASE WHEN p2.depod_id = 4 THEN '广州仓'
+                      WHEN p2.depod_id IN (5, 14) THEN '东莞仓'
+                      WHEN p2.depod_id = 6 THEN '香港仓'
+                      WHEN p2.depod_id = 7 THEN '沙特仓'
+                      ELSE '其他' END) AS depot_name
+        ,p2.original_goods_number
+        ,p2.order_amount_no_bonus
+        ,(CASE WHEN p2.order_status = 1 THEN '已确认'
+                      WHEN p2.order_status = 2 THEN '已取消'
+                      WHEN p2.order_status = 3 THEN '已退货'
+                      WHEN p2.order_status = 4 THEN '已拆分'
+                      ELSE '其他' END) AS order_status
+        ,(t2.oos_num * p3.prop_price) AS oos_amount
+FROM t2
+LEFT JOIN zydb.dw_order_sub_order_fact p2
+             ON t2.order_id = p2.order_id
+LEFT JOIN jolly.who_sku_relation p3
+             ON t2.sku_id = p3.rec_id
+),
+-- 汇总到订单级别
+t5 AS
+(SELECT order_id
+        ,order_sn
+        ,depot_name
+        ,original_goods_number
+        ,order_amount_no_bonus
+        ,order_status
+        ,SUM(oos_num) AS oos_num
+        ,SUM(CASE WHEN oos_type = 'pur' THEN 1 ELSE 0 END) AS pur_oos_num
+        ,SUM(CASE WHEN oos_type = 'wh' THEN 1 ELSE 0 END) AS wh_oos_num
+        ,SUM(CASE WHEN oos_type = 'sys' THEN 1 ELSE 0 END) AS sys_oos_num
+        ,SUM(CASE WHEN oos_type = 'other' THEN 1 ELSE 0 END) AS other_oos_num
+        ,ROUND(SUM(oos_amount), 1) AS oos_amount
+        ,ROUND(SUM(CASE WHEN oos_type = 'pur' THEN oos_amount ELSE 0 END), 1) AS pur_oos_amount
+        ,ROUND(SUM(CASE WHEN oos_type = 'wh' THEN oos_amount ELSE 0 END), 1) AS wh_oos_amount
+        ,ROUND(SUM(CASE WHEN oos_type = 'sys' THEN oos_amount ELSE 0 END), 1) AS sys_oos_amount
+        ,ROUND(SUM(CASE WHEN oos_type = 'other' THEN oos_amount ELSE 0 END), 1) AS other_oos_amount
+        ,ROUND(SUM(oos_num) / original_goods_number, 3) AS oos_num_prop
+        ,ROUND(SUM(oos_amount) / order_amount_no_bonus, 3) AS oos_amount_prop
+FROM t4
+GROUP BY order_id
+        ,order_sn
+        ,depot_name
+        ,original_goods_number
+        ,order_amount_no_bonus
+        ,order_status
+)
+
+-- 根据缺货商品数量汇总订单数量和金额
+SELECT oos_num
+        ,COUNT(DISTINCT order_sn) AS order_num
+        ,SUM(oos_num) AS oos_num2
+        ,SUM(order_amount_no_bonus) AS order_amount_no_bonus
+        ,SUM(oos_amount) AS oos_amount
+FROM t5
+GROUP BY oos_num
+ORDER BY oos_num2;
+
+
+
 
 ,(CASE WHEN p1.type = 1 THEN '采购单取消' 
                       WHEN p1.type = 2 THEN '供应商门户确认缺货' 

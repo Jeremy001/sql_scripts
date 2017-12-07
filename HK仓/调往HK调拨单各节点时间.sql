@@ -187,11 +187,12 @@ INNER JOIN jolly.who_wms_pur_deliver_info  p3
                  ON p2.deliver_id = p3.deliver_id AND p2.type = 2
 GROUP BY p2.pur_order_sn
 ), 
--- 配货，订单未配齐数量
+-- 配货，订单未配齐数量和待调拨数量
 t02 AS
 (SELECT order_id
-        ,SUM(num) AS still_need_num
-FROM jolly_oms.who_wms_goods_need_lock_detail
+        ,SUM(num) AS still_need_num         -- 未配齐数量
+        ,SUM(wait_allocate_num) AS wait_allocate_num        -- 待调拨数量
+FROM default.who_wms_goods_need_lock_detail p1
 GROUP BY order_id
 ),
 -- 调拨各环节
@@ -201,6 +202,7 @@ t01 AS
         ,p2.depot_id
         ,p2.original_goods_number
         ,t02.still_need_num
+        ,t02.wait_allocate_num
         ,SUM(NVL(p1.demand_allocate_num, 0)) AS demand_allocate_num        -- 调拨需求商品数量
         ,SUM(NVL(CASE WHEN p1.allocate_gmt_created IS NULL THEN NULL ELSE p1.demand_allocate_num END, 0)) AS order_allocate_num          -- 生成调拨单商品数量
         ,SUM(NVL(CASE WHEN p1.out_time IS NULL THEN NULL ELSE p1.demand_allocate_num END, 0)) AS allocate_out_num          -- 调拨发货商品数量
@@ -217,6 +219,7 @@ GROUP BY p2.order_id
         ,p2.depot_id
         ,p2.original_goods_number
         ,t02.still_need_num
+        ,t02.wait_allocate_num
 )
 
 SELECT pay_date
@@ -282,19 +285,83 @@ ORDER BY onshelf_begin_date
 -- ======================================================
 
 WITH 
--- 各个订单仍需调拨数
+-- 各个订单原始商品数，仍未配货数，缺货数，仍需调拨数
 t1 AS
 (SELECT p1.order_id
         ,SUM(p1.org_num) AS org_num
-        ,SUM(p1.num) AS still_need_num
+        ,SUM(p1.num) AS still_need_num      -- 仍未配货数
         ,SUM(p1.oos_num) AS oos_num
-        ,SUM(p1.wait_allocate_num) AS wait_allocate_num
+        ,SUM(p1.wait_allocate_num) AS wait_allocate_num         -- 仍需调拨数
 FROM default.who_wms_goods_need_lock_detail AS p1
 WHERE p1.depot_id = 6
 GROUP BY p1.order_id
-)
+),
+-- 加上订单属性
+t2 AS
+SELECT t1.*
+        ,
+FROM t1
+LEFT JOIN zydb.dw_order_node_time p1
+             ON t1.order_id = p1.order_id
+
+
 SELECT COUNT(*)
 FROM t1
 WHERE still_need_num >= 1
      AND wait_allocate_num = 0
+;
+
+
+
+
+-- 从源表查询调拨出库数据，与万金核实数据
+-- jolly.who_wms_allocate_order_info
+-- jolly.who_wms_allocate_order_goods
+WITH 
+-- 调拨出库信息
+t1 AS 
+(SELECT p1.allocate_order_sn
+        ,p1.from_depot_id
+        ,p1.to_depot_id
+        ,p1.tracking_no
+        ,FROM_UNIXTIME(p1.gmt_created) AS create_time
+        ,FROM_UNIXTIME(p1.out_time) AS out_time
+        ,SUM(p2.allocate_num) AS allocate_num
+FROM jolly.who_wms_allocate_order_info p1
+LEFT JOIN jolly.who_wms_allocate_order_goods p2
+             ON p1.allocate_order_id = p2.allocate_order_id
+GROUP BY p1.allocate_order_sn
+        ,p1.from_depot_id
+        ,p1.to_depot_id
+        ,p1.tracking_no
+        ,FROM_UNIXTIME(p1.gmt_created)
+        ,FROM_UNIXTIME(p1.out_time)
+),
+-- 到货签收时间和签收数量
+t2 AS 
+(SELECT p1.delivered_order_id
+        ,p1.delivered_order_sn
+        ,FROM_UNIXTIME(p1.finish_check_time) AS finish_check_time
+        ,SUM(p2.delivered_num) AS delivered_num
+        ,SUM(p2.checked_num) AS checked_num
+        ,SUM(p2.exp_num) AS exp_num
+FROM jolly.who_wms_delivered_order_info p1
+LEFT JOIN jolly.who_wms_delivered_order_goods p2
+             ON p1.delivered_order_id = p2.delivered_order_id
+GROUP BY p1.delivered_order_id
+        ,p1.delivered_order_sn
+        ,FROM_UNIXTIME(p1.finish_check_time)
+)
+
+SELECT t1.* 
+        ,t2.finish_check_time
+        ,t2.delivered_num
+        ,t2.checked_num
+        ,t2.exp_num
+FROM t1
+LEFT JOIN t2 
+             ON t1.allocate_order_sn = t2.delivered_order_sn
+WHERE t1.to_depot_id = 6
+     AND t1.out_time >= '2017-12-01'
+     AND t1.out_time < '2017-12-06'
 ;

@@ -1241,3 +1241,27 @@ FROM t3
 LIMIT 10;
 
 
+
+
+
+SELECT p1.order_id
+        ,p1.order_sn
+        ,p1.invoice_no
+        ,(CASE WHEN p1.cod_check_status = 4 THEN '4投递失败' ELSE '6已拒收' END) AS cod_status
+        ,FROM_UNIXTIME(CASE WHEN p1.prepare_pay_time = 0 THEN p1.pay_time ELSE p1.prepare_pay_time END, 'yyyy-MM-dd') AS pay_date
+        ,FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd') AS shipping_date
+        ,DATEDIFF(NOW(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd')) AS shiped_days
+        ,(CASE WHEN p1.real_shipping_id = 40 THEN 'Aramex' 
+                     WHEN p1.real_shipping_id = 170 THEN 'fetchr'  
+                     WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA' 
+                     WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'  
+                     ELSE 'Others' END) AS shipping_name
+        ,p2.return_time
+FROM jolly.who_order_info p1
+LEFT JOIN zydb.dw_order_shipping_tracking_node p2
+            ON p1.order_id = p2.order_id
+WHERE p1.is_shiped = 1
+     AND p1.shipping_time >= UNIX_TIMESTAMP('2017-07-01')
+     AND p1.shipping_time < UNIX_TIMESTAMP(TRUNC(NOW(), 'DD'))
+     AND p1.cod_check_status in (4, 6)
+LIMIT 100;
