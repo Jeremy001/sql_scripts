@@ -4,6 +4,8 @@
 作者：Cherish & Neo
  */
 
+
+-- 订单级别，未发货订单和相关信息 ========================================================
 WITH t1 AS
 (SELECT to_date(a.pay_time) AS pay_date
         ,a.site_id
@@ -50,8 +52,9 @@ WHERE 1=1
 t2 AS
 (SELECT depot_id
         ,order_id
-        ,SUM(num) AS still_need_num
-FROM jolly_oms.who_wms_goods_need_lock_detail
+        ,SUM(num) AS total_still_need_num
+-- FROM jolly_oms.who_wms_goods_need_lock_detail
+FROM default.who_wms_goods_need_lock_detail
 GROUP BY depot_id
         ,order_id
 )
@@ -64,3 +67,35 @@ LEFT JOIN t2
              ON t1.order_id = t2.order_id
 ;
 
+
+
+-- sku级别，未配货的sku和对应供应商 ========================================================
+-- 1.用前面的t1表
+
+-- 未配齐sku和数量
+t2 AS
+(SELECT p1.order_id
+        ,p1.sku_id
+        ,p1.num AS sku_still_need_num
+FROM jolly_oms.who_wms_goods_need_lock_detail AS p1
+WHERE p1.num >= 1
+),
+-- JOIN，得到供应商信息
+t3 AS
+(SELECT t1.*
+        ,t2.sku_id
+        ,t2.sku_still_need_num
+        ,p4.supp_name
+FROM t1
+LEFT JOIN t2
+             ON t1.order_id = t2.order_id
+LEFT JOIN zydb.dw_order_goods_fact p3
+             ON t2.order_id = p3.order_id AND t2.sku_id = p3.sku_id
+LEFT JOIN zydb.dim_jc_goods p4
+             ON p3.goods_id = p4.goods_id
+WHERE t1.is_shiped = '部分匹配'
+)
+
+SELECT * 
+FROM t3
+LIMIT 10;

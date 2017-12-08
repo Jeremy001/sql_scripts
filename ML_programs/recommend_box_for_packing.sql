@@ -4,7 +4,6 @@
 作者：Neo王政鸣
  */
 
-
 -- 1.包裹称重信息表：jolly.who_wms_weigh_package_info
 -- 2.订单包裹打包信息表：jolly.who_wms_order_package
 -- 3.订单商品表：jolly.who_order_goods
@@ -17,7 +16,7 @@ WITH
 -- 明细数据
 t1 AS
 (SELECT p1.order_id    -- 订单id
-        ,p1.order_sn    -- 订单编号
+        --,p1.order_sn    -- 订单编号
         --,p1.depot_id    -- 订单所属仓库id
         --,p2.result_code    -- 称重结果代码
         --,p2.remark    -- 称重结果说明
