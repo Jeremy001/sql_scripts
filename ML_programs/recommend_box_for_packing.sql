@@ -31,19 +31,20 @@ t1 AS
         ,p3.material_standard   -- 打包耗材的标准尺寸
         
         -- 以下是包裹的信息，包括各个重量，体积，尺寸等
-        ,p2.weight      -- 包裹重量
-        ,p6.package_weight    -- 包裹重量
-        ,p6.express_paper_weight    -- 面单重量，即承运商用于计算费用的重量
         ,p6.package_size    -- 包裹尺寸规格
-        ,p6.package_type    -- 0箱子， 1袋子
-        --,p6.real_shipping_id    -- 物流承运商id
-        --,p6.real_shipping_name    -- 物流承运商名称
         ,p6.package_num AS package_goods_num   -- 包裹内商品数量
         ,p6.goods_weight AS total_goods_weight    -- 商品总重量
-        ,p6.real_shipping_price    -- 系统计算出的实际运费
         ,p6.total_packages    -- 包裹数量
-        ,p6.package_volume_weight    -- 包裹抛重，即根据体积计算
         ,p6.total_volume    -- 包裹总体积
+        ,p6.package_volume_weight    -- 包裹抛重，即根据体积计算
+        ,p2.weight      -- 包裹重量
+        ,(CASE WHEN (CEIL(p6.package_volume_weight * 2) / 2) > (CEIL(p2.weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
+        ,p6.package_type    -- 0箱子， 1袋子
+        --,p6.package_weight    -- 包裹重量
+        --,p6.express_paper_weight    -- 面单重量，即承运商用于计算费用的重量
+        --,p6.real_shipping_id    -- 物流承运商id
+        --,p6.real_shipping_name    -- 物流承运商名称
+        --,p6.real_shipping_price    -- 系统计算出的实际运费
         
         -- 以下是商品信息
         ,p4.goods_id    -- 订单所含商品id
@@ -59,7 +60,7 @@ t1 AS
         ,p5.cat_level2_id    -- 商品的二级类目id
         ,p5.cat_level3_name    -- -- 商品的三级类目名称
         ,p5.cat_level3_id    -- 商品的三级类目id
-FROM jolly.who_order_info p1
+FROM zydb.dw_order_sub_order_fact p1
 LEFT JOIN jolly.who_wms_weigh_package_info p2 
              ON p1.order_id = p2.order_id
           AND p2.result_code IN (0, 4)    -- 称重成功和抛重过高
@@ -73,7 +74,8 @@ LEFT JOIN zydb.dim_jc_goods p5
              ON p4.goods_id = p5.goods_id
 WHERE p1.is_shiped = 1
      AND p1.order_status = 1
-     AND p1.depot_id IN (4, 5, 6)
+     AND p1.depod_id IN (4, 5, 6,  7, 14)
+     AND p1.pay_time >= '2017-01-01'
 )
 
 -- 数据行数
@@ -83,6 +85,8 @@ FROM t1;
 -- 前20条数据
 SELECT * 
 FROM t1
+WHERE package_type = 0            -- 打包耗材是箱子
+     AND package_volume_weight > 0       -- package_volume_weight>0的订单才是计抛的订单
 LIMIT 20;
 
 
@@ -96,6 +100,12 @@ WHERE p1.material_type = 3    -- 3代表打包物料
 
 -- 查询物料的库存数量
 -- jolly.who_wms_material_stock_detail
+
+-- 商品尺寸表
+-- jolly.who_goods_size_property
+SELECT * 
+FROM jolly.who_goods_size_property
+LIMIT 10;
 
 
 
