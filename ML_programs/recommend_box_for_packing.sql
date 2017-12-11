@@ -42,10 +42,16 @@ t1 AS
         ,p6.package_type    -- 0箱子， 1袋子
         --,p6.package_weight    -- 包裹重量
         --,p6.express_paper_weight    -- 面单重量，即承运商用于计算费用的重量
-        --,p6.real_shipping_id    -- 物流承运商id
-        --,p6.real_shipping_name    -- 物流承运商名称
+        ,p6.real_shipping_id    -- 物流承运商id
+        ,p6.real_shipping_name    -- 物流承运商名称
         --,p6.real_shipping_price    -- 系统计算出的实际运费
-        
+        ,p8.weighing_factor AS carrier_domestic_transport_weighing_factor         -- 体积重因子，0表示不计抛，体积重(kg) = 长(cm) * 宽(cm) * 高(cm) / (体积重因子)
+        ,p9.weighing_factor AS carrier_export_customsclearance_weighing_factor         -- 体积重因子，0表示不计抛，体积重(kg) = 长(cm) * 宽(cm) * 高(cm) / (体积重因子)
+        ,p10.weighing_factor AS carrier_international_line_weighing_factor         -- 体积重因子，0表示不计抛，体积重(kg) = 长(cm) * 宽(cm) * 高(cm) / (体积重因子)
+        ,p11.weighing_factor AS carrier_aimcountry_customsclearance_weighing_factor         -- 体积重因子，0表示不计抛，体积重(kg) = 长(cm) * 宽(cm) * 高(cm) / (体积重因子)
+        ,p12.weighing_factor AS carrier_aimcountry_line_weighing_factor         -- 体积重因子，0表示不计抛，体积重(kg) = 长(cm) * 宽(cm) * 高(cm) / (体积重因子)
+        ,p13.weighing_factor AS carrier_terminal_delivery_weighing_factor         -- 体积重因子，0表示不计抛，体积重(kg) = 长(cm) * 宽(cm) * 高(cm) / (体积重因子)
+
         -- 以下是商品信息
         ,p4.goods_id    -- 订单所含商品id
         ,p4.sku_id    -- 订单所含skuid
@@ -72,10 +78,24 @@ LEFT JOIN jolly.who_order_goods p4
              ON p1.order_id = p4.order_id
 LEFT JOIN zydb.dim_jc_goods p5
              ON p4.goods_id = p5.goods_id
+LEFT JOIN jolly_tms_center.tms_shipping p7
+             ON p1.real_shipping_id = p7.shipping_id
+LEFT JOIN jolly_tms_center.tms_carrier p8
+             ON p7.carrier_domestic_transport_id = p8.carrier_id
+LEFT JOIN jolly_tms_center.tms_carrier p9
+             ON p7.carrier_domestic_transport_id = p9.carrier_id
+LEFT JOIN jolly_tms_center.tms_carrier p10
+             ON p7.carrier_domestic_transport_id = p10.carrier_id
+LEFT JOIN jolly_tms_center.tms_carrier p11
+             ON p7.carrier_domestic_transport_id = p11.carrier_id
+LEFT JOIN jolly_tms_center.tms_carrier p12
+             ON p7.carrier_domestic_transport_id = p12.carrier_id
+LEFT JOIN jolly_tms_center.tms_carrier p13
+             ON p7.carrier_domestic_transport_id = p13.carrier_id
 WHERE p1.is_shiped = 1
      AND p1.order_status = 1
      AND p1.depod_id IN (4, 5, 6,  7, 14)
-     AND p1.pay_time >= '2017-01-01'
+     AND p1.pay_time >= '2017-01-01'        -- 2017年
 )
 
 -- 数据行数
@@ -86,7 +106,8 @@ FROM t1;
 SELECT * 
 FROM t1
 WHERE package_type = 0            -- 打包耗材是箱子
-     AND package_volume_weight > 0       -- package_volume_weight>0的订单才是计抛的订单
+     AND package_volume_weight >= 0.01       -- package_volume_weight>0的订单才是计抛的订单
+     AND real_shipping_id = 40  -- Aramex(HK)
 LIMIT 20;
 
 
@@ -107,7 +128,34 @@ SELECT *
 FROM jolly.who_goods_size_property
 LIMIT 10;
 
+-- 各物流商计算体积重时，除以多少？
+-- 物流商会承运不同的段（一共有6个段），不同段可能收/不收抛重费用，或计抛的计算方式也不同
+-- carrier_domestic_transport_id，国内运输承运商ID
+-- carrier_export_customsclearance_id，出口清关承运商ID
+-- carrier_international_line_id，国际干线承运商ID
+-- carrier_aimcountry_customsclearance_id，目的国清关承运商ID
+-- carrier_aimcountry_line_id，目的国干线承运商ID
+-- carrier_terminal_delivery_id，终端派送承运商ID
+SELECT *
+FROM jolly_tms_center.tms_shipping
+WHERE shipping_id = 40;
+-- real_shipping_id表示的是线路，实际上是把上面的六个段拼接到一起
+-- 以上六个字段记录了每个段是由哪个物流商来承运
 
+-- 查询部分订单（已发运）
+SELECT * 
+FROM zydb.dw_order_sub_order_fact
+WHERE pay_time >= '2017-11-11'
+     AND is_shiped = 1
+LIMIT 100;
+
+-- 那么各个物流商是否计抛，就要看下表了：
+-- jolly_tms_center.tms_carrier
+-- weighing_factor = 5000, 表示：体积重 = 长 * 宽 * 高 / 5000
+-- weighing_factor = 0, 表示：不计抛
+SELECT *
+FROM jolly_tms_center.tms_carrier
+LIMIT 10;
 
 
 /*
