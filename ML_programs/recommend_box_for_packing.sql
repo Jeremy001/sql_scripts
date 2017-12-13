@@ -98,6 +98,13 @@ WHERE p1.is_shiped = 1
      AND p1.pay_time >= '2017-01-01'        -- 2017年
 )
 
+SELECT t1.*
+FROM t1
+LEFT JOIN jolly.who_sku_relation p1
+             ON t1.sku_id = p1.rec_id
+
+
+
 -- 数据行数
 SELECT COUNT(*)
 FROM t1;
@@ -127,6 +134,23 @@ WHERE p1.material_type = 3    -- 3代表打包物料
 SELECT * 
 FROM jolly.who_goods_size_property
 LIMIT 10;
+
+
+-- 商品属性
+-- jolly.who_sku_relation.sku_valued
+SELECT *
+from jolly.who_sku_relation
+WHERE sku_value LIKE '%MATERIAL%'
+LIMIT 20;
+
+-- 每天销售商品的属性值
+SELECT *
+FROM zybiro.t_yf_heiwu_auc_daily_repot_07 
+WHERE vname = 'MATERIAL'
+AND sku_id = cast(4681492 as STRING)
+LIMIT 100;
+
+
 
 -- 各物流商计算体积重时，除以多少？
 -- 物流商会承运不同的段（一共有6个段），不同段可能收/不收抛重费用，或计抛的计算方式也不同

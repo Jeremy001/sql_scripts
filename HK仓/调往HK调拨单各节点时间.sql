@@ -296,17 +296,25 @@ FROM default.who_wms_goods_need_lock_detail AS p1
 WHERE p1.depot_id = 6
 GROUP BY p1.order_id
 ),
--- 加上订单属性
-t2 AS
-SELECT t1.*
-        ,
+-- JOIN 订单表，得到订单信息，分组
+t2 AS 
+(SELECT t1.*
+        ,p2.pay_time
+        ,SUBSTR(p2.pay_time, 1, 10) AS pay_date
 FROM t1
-LEFT JOIN zydb.dw_order_node_time p1
-             ON t1.order_id = p1.order_id
+LEFT JOIN zydb.dw_order_sub_order_fact AS p2
+             ON t1.order_id = p2.order_id
+)
+
+SELECT * 
+FROM t2
+WHERE still_need_num >= 1
+     AND wait_allocate_num = 0
+;
 
 
 SELECT COUNT(*)
-FROM t1
+FROM t2
 WHERE still_need_num >= 1
      AND wait_allocate_num = 0
 ;
@@ -337,6 +345,18 @@ GROUP BY p1.allocate_order_sn
         ,FROM_UNIXTIME(p1.gmt_created)
         ,FROM_UNIXTIME(p1.out_time)
 ),
+
+-- 从t1表中查询生成调拨单的商品数量
+SELECT COUNT(t1.allocate_order_sn) AS total_order_num
+        ,SUM(CASE WHEN t1.out_time IS NULL THEN 0 ELSE 1 END) AS out_order_num
+        ,SUM(t1.allocate_num) AS total_goods_num
+        ,SUM(CASE WHEN t1.out_time IS NULL THEN 0 ELSE t1.allocate_num END) AS out_goods_num
+FROM t1 
+WHERE t1.to_depot_id = 6
+     AND t1.create_time >= '2017-11-12'
+     AND t1.create_time < '2017-11-13'
+;
+
 -- 到货签收时间和签收数量
 t2 AS 
 (SELECT p1.delivered_order_id
@@ -365,3 +385,5 @@ WHERE t1.to_depot_id = 6
      AND t1.out_time >= '2017-12-01'
      AND t1.out_time < '2017-12-06'
 ;
+
+

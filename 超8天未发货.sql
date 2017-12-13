@@ -41,13 +41,13 @@ WITH t1 AS
         ,a.picking_finish_time AS 拣货完成时间
         ,a.order_pack_time AS 打包完成时间
         ,a.shipping_time AS 发货时间
-FROM  zydb.dw_order_node_time a
+FROM zydb.dw_order_node_time a
 WHERE 1=1
      AND a.is_shiped <> 1
      AND a.order_status = 1
      AND a.pay_time > date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),30)
      AND a.pay_time <= date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),7)
-     AND a.depot_id IN (4,5,6,7,14)
+     AND a.depot_id IN (4, 5, 6, 7, 8, 14)
 ),
 -- 订单未配齐总数量
 t2 AS
@@ -87,3 +87,13 @@ LEFT JOIN zydb.dim_jc_goods p4
 SELECT *
 FROM t4
 LIMIT 10;
+
+
+-- 各仓未发货订单数
+SELECT depot_id
+        ,COUNT(DISTINCT order_id) AS order_num
+        ,SUM(goods_number) AS goods_num
+FROM t4
+GROUP BY depot_id
+ORDER BY depot_id
+;
