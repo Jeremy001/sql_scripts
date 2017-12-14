@@ -1037,6 +1037,29 @@ GROUP BY depot_id;
                      free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
 
 
+-- 查询SA仓正品库存
+-- jolly_wms.who_wms_depot_area
+-- jolly_wms.who_wms_goods_stock_detail
+
+SELECT SUM(stock_num)
+FROM jolly_wms.who_wms_goods_stock_detail p1
+LEFT JOIN jolly_wms.who_wms_depot_area p2
+             ON p1.depot_area_id = p2.depot_area_id
+WHERE p2.depot_area_type_id = 1
+;
+
+-- 查询国内仓正品库存
+SELECT p1.depot_id
+        ,SUM(stock_num) AS total_stock_num
+        ,SUM(CASE WHEN p2.depot_area_type_id = 1 THEN stock_num ELSE 0 END) AS good_stock_num         -- 正品库存
+        ,SUM(CASE WHEN p2.depot_area_type_id = 1 THEN 0 ELSE stock_num END) AS bad_stock_num         -- 次品库存
+FROM jolly.who_wms_goods_stock_detail p1
+LEFT JOIN jolly.who_wms_depot_area p2
+             ON p1.depot_area_id = p2.depot_area_id
+GROUP BY p1.depot_id
+ORDER BY p1.depot_id
+;
+
 
 -- 库存
 --每日各仓某时刻 自由库存统计
@@ -3100,3 +3123,15 @@ SELECT *
 FROM t4
 LIMIT 10;
 
+-- 已发货运单号和对应的发货时间
+WITH t10 AS
+(SELECT p1.invoice_no
+        ,p1.shipping_time
+FROM zydb.dw_order_sub_order_fact p1
+WHERE p1.shipping_time >= '2017-10-01'
+     AND p1.shipping_time < '2017-11-01'
+     AND p1.is_shiped = 1
+)
+SELECT *
+FROM t10
+;

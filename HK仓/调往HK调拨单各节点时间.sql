@@ -310,6 +310,8 @@ SELECT *
 FROM t2
 WHERE still_need_num >= 1
      AND wait_allocate_num = 0
+     AND pay_time >= '2017-11-01'
+ORDER BY pay_time
 ;
 
 
@@ -317,6 +319,7 @@ SELECT COUNT(*)
 FROM t2
 WHERE still_need_num >= 1
      AND wait_allocate_num = 0
+     AND pay_time >= '2017-11-01'
 ;
 
 

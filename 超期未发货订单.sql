@@ -75,7 +75,7 @@ t04 AS
         ,(CASE WHEN t01.is_problems_order = 1 THEN '是'
                       WHEN t01.is_problems_order = 2 THEN '否'
                       ELSE '其他' END) AS is_problems_order
-        ,(CASE WHEN t01.is_shiped = 0 THEN '未发货' 
+        ,(CASE WHEN t01.is_shiped = 0 THEN '未配货' 
                       WHEN t01.is_shiped = 1 THEN '已发货'
                       WHEN t01.is_shiped = 2 THEN '部分发货'
                       WHEN t01.is_shiped = 3 THEN '待发货'
@@ -88,6 +88,7 @@ t04 AS
         ,t01.goods_num
         --,t01.country_name
         ,t01.pay_time
+        ,t01.shipping_time
         ,t02.total_still_need_num
         ,t03.sku_id
         ,t03.sku_still_need_num
@@ -112,7 +113,9 @@ WHERE t01.is_split = 0
 -- 最终结果
 SELECT *
 FROM t04
-LIMIT 10;
+;
+-- WHERE SITE_ID = 'MarkaVIP'
+-- LIMIT 10;
 
 -- 各仓未发货订单数
 SELECT depot_id
