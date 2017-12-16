@@ -17,6 +17,7 @@ t01 AS
         ,p1.site_id
         ,p1.order_status
         ,p1.goods_num
+        ,(p1.pay_money+p1.surplus+p1.order_amount) AS order_amount
         ,p1.pay_status
         ,p1.is_problems_order
         --,p2.country_name
@@ -36,6 +37,7 @@ GROUP BY p1.order_id
         ,p1.site_id
         ,p1.order_status
         ,p1.goods_num
+        ,(p1.pay_money+p1.surplus+p1.order_amount)
         ,p1.pay_status
         ,p1.is_problems_order
         --,p2.country_name
@@ -86,16 +88,20 @@ t04 AS
                       WHEN t01.is_shiped = 8 THEN '拣货中'
                       ELSE NULL END) AS is_shiped
         ,t01.goods_num
+        ,t01.order_amount
         --,t01.country_name
         ,t01.pay_time
         ,t01.shipping_time
         ,t02.total_still_need_num
-        ,t03.sku_id
+        ,p5.sku_id
+        ,p5.goods_number
         ,t03.sku_still_need_num
         ,p4.supp_name
 FROM t01
 LEFT JOIN t02
              ON t01.order_id = t02.order_id
+LEFT JOIN jolly.who_order_goods p5
+             ON t01.order_id = p5.order_id
 LEFT JOIN t03
              ON t01.order_id = t03.order_id
 LEFT JOIN jolly.who_sku_relation p3
@@ -113,6 +119,7 @@ WHERE t01.is_split = 0
 -- 最终结果
 SELECT *
 FROM t04
+ORDER BY pay_time
 ;
 -- WHERE SITE_ID = 'MarkaVIP'
 -- LIMIT 10;

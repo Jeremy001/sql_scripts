@@ -45,7 +45,7 @@ FROM zydb.dw_order_node_time a
 WHERE 1=1
      AND a.is_shiped <> 1
      AND a.order_status = 1
-     AND a.pay_time > date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),30)
+     AND a.pay_time > date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),50)
      AND a.pay_time <= date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),7)
      AND a.depot_id IN (4, 5, 6, 7, 8, 14)
 ),
@@ -86,6 +86,8 @@ LEFT JOIN zydb.dim_jc_goods p4
 -- 最终结果
 SELECT *
 FROM t4
+ORDER BY pay_date
+        , order_id;
 LIMIT 10;
 
 

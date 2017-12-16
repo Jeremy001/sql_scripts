@@ -145,6 +145,7 @@ SELECT pay_date
         ,SUM(allocate_num) AS 调拨数量
         ,COUNT(order_sn) AS 订单数量
 FROM t03
+WHERE pay_date >= '2017-06-01'
 GROUP BY pay_date
 ORDER BY pay_date;
 
@@ -166,7 +167,8 @@ SELECT pay_month
         ,SUM(allocate_num) AS 调拨数量
         ,COUNT(order_sn) AS 订单数量
 FROM t03
-WHERE pay_date < TO_DATE(DATE_SUB(NOW(), 5))  -- 取6天以前的支付订单
+WHERE pay_month >= '2017-06'
+     AND pay_date < TO_DATE(DATE_SUB(NOW(), 5))  -- 取6天以前的支付订单
      AND pay_date NOT IN ('2017-11-08', '2017-11-09')
 GROUP BY pay_month
 ORDER BY pay_month;
