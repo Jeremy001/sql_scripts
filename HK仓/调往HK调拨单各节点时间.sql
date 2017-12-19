@@ -146,6 +146,7 @@ SELECT pay_date
         ,COUNT(order_sn) AS ¶©µ¥ÊýÁ¿
 FROM t03
 WHERE pay_date >= '2017-06-01'
+     AND pay_date NOT IN ('2017-11-08', '2017-11-09')
 GROUP BY pay_date
 ORDER BY pay_date;
 

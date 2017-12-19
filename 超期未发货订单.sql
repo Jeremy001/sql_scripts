@@ -101,9 +101,9 @@ FROM t01
 LEFT JOIN t02
              ON t01.order_id = t02.order_id
 LEFT JOIN jolly.who_order_goods p5
-             ON t01.order_id = p5.order_id
+             ON t01.order_id = p5.order_id 
 LEFT JOIN t03
-             ON t01.order_id = t03.order_id
+             ON p5.order_id = t03.order_id AND p5.sku_id = t03.sku_id
 LEFT JOIN jolly.who_sku_relation p3
              ON t03.sku_id = p3.rec_id
 LEFT JOIN zydb.dim_jc_goods p4

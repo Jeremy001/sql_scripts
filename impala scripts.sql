@@ -2990,30 +2990,35 @@ GCC国家的代码和名称：
 -- 每月销售额，销售数量
 WITH 
 t1 AS 
-(SELECT SUBSTR(p1.pay_time, 1, 7) AS pay_month
-        ,p5.region_id
+(SELECT p5.region_id
         ,p5.region_name
+        ,p3.cat_level1_name
         ,COUNT(p1.order_id) AS order_num
         ,SUM(p1.goods_number) AS goods_num 
 FROM zydb.dw_order_node_time p1
+LEFT JOIN zydb.dw_order_goods_fact p2 
+             ON p1.order_id = p2.order_id
+LEFT JOIN zydb.dim_jc_goods p3
+             ON p2.goods_id = p3.goods_id
 LEFT JOIN jolly.who_order_user_info p4 
              ON p1.order_id = p4.order_id 
 LEFT JOIN jolly.who_region p5 
              ON p4.country = p5.region_id
 WHERE p1.order_status = 1
      AND p1.is_shiped = 1
-     AND p1.pay_time >= '2016-12-01'
-     AND p1.pay_time < '2017-12-01'
+     AND p1.pay_time >= '2017-05-27'
+     AND p1.pay_time < '2017-06-26'
      AND p5.region_type = 0 
      AND p5.region_status = 1
-GROUP BY SUBSTR(p1.pay_time, 1, 7)
-        ,p5.region_id
+GROUP BY  p5.region_id
         ,p5.region_name
+        ,p3.cat_level1_name
 )
 
-SELECT COUNT(*)
+SELECT *
 FROM t1
-LIMIT 10;
+WHERE region_id = 1878
+;
 
 -- 类目销售结构
 WITH 
