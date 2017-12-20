@@ -3024,36 +3024,84 @@ WHERE region_id = 1878
 WITH 
 t1 AS 
 (SELECT SUBSTR(p1.pay_time, 1, 7) AS pay_month
-        ,p5.region_id
-        ,p5.region_name
         ,p3.cat_level1_name
+        ,p3.cat_level2_name
+        ,p3.cat_level3_name
         ,SUM(p2.goods_number) AS goods_num 
 FROM zydb.dw_order_node_time p1
 INNER JOIN jolly.who_order_goods p2 
                  ON p1.order_id = p2.order_id
 LEFT JOIN zydb.dim_jc_goods p3
              ON p2.goods_id = p3.goods_id
-LEFT JOIN jolly.who_order_user_info p4 
-             ON p1.order_id = p4.order_id 
-LEFT JOIN jolly.who_region p5 
-             ON p4.country = p5.region_id
 WHERE p1.order_status = 1
      AND p1.is_shiped = 1
-     AND p1.pay_time >= '2016-12-01'
+     AND p1.pay_time >= '2017-01-01'
      AND p1.pay_time < '2017-12-01'
-     AND p5.region_type = 0 
-     AND p5.region_status = 1
 GROUP BY SUBSTR(p1.pay_time, 1, 7)
-        ,p5.region_id
-        ,p5.region_name
         ,p3.cat_level1_name
+        ,p3.cat_level2_name
+        ,p3.cat_level3_name
 )
--- 查询阿联酋的类目销售结构
-SELECT pay_month
-        ,cat_level1_name
-        ,goods_num
+-- 类目销售结构
+SELECT *
 FROM t1
-WHERE region_id = 1878
+ORDER BY pay_month
+        ,cat_level1_name
+        ,cat_level2_name
+        ,cat_level3_name
+;
+
+-- 打包耗材使用比例
+
+-- 打包耗材使用比例
+-- 各打包耗材有多少订单使用
+SELECT UCASE(p2.material_sn) AS material_sn2
+        ,p2.material_name
+        ,p3.weight
+        ,p3.volume
+        ,p3.standard
+        ,p3.unit_price
+        ,(CASE WHEN p3.status = 1 THEN '正常' 
+                     WHEN p3.status = 2 THEN '禁用'
+                     ELSE '其他' END) AS material_status
+        ,COUNT(p1.order_id) AS order_num
+FROM zydb.dw_order_sub_order_fact p1
+INNER JOIN jolly.who_wms_order_package p2
+                 ON p1.order_id = p2.order_id
+LEFT JOIN jolly.who_wms_material p3
+             ON p2.material_sn = p3.material_sn
+WHERE p1.order_status = 1
+     AND p1.is_shiped = 1
+     AND p1.pay_time >= '2017-01-01'
+     AND p1.pay_time < '2017-12-01'
+GROUP BY UCASE(p2.material_sn)
+        ,p2.material_name
+        ,p3.weight
+        ,p3.volume
+        ,p3.standard
+        ,p3.unit_price
+        ,(CASE WHEN p3.status = 1 THEN '正常' 
+                      WHEN p3.status = 2 THEN '禁用'
+                      ELSE '其他' END)
+ORDER BY material_sn2 
+LIMIT 100;
+
+-- 特定invoice_no的发货时间
+WITH t1 AS
+(SELECT invoice_no 
+        ,MAX(shipping_time) AS shipping_time
+FROM zydb.dw_order_sub_order_fact p2
+GROUP BY invoice_no 
+),
+t2 AS 
+(SELECT p1.*
+        ,t1.shipping_time
+FROM zybiro.returned_order_invoice_no p1
+LEFT JOIN t1
+         ON p1.invoice_no = t1.invoice_no
+)
+SELECT COUNT(*)
+FROM t2
 ;
 
 

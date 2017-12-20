@@ -29,8 +29,9 @@ WHERE a.depot_shelf_id = b.shelf_id
      AND a.shelf_area_id=e.shelf_area_id 
      AND e.sku_id = h.rec_id
      AND h.goods_id = j.goods_id
-     AND e.stock_num>0 
-     AND e.depot_id=7
+     AND c.depot_area_type_id = 1
+     AND e.stock_num > 0 
+     AND e.depot_id = 7
 ),
 t2 AS
 (SELECT goods_sn

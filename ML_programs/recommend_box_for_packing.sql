@@ -17,7 +17,7 @@ WITH
 t1 AS
 (SELECT p1.order_id    -- 订单id
         --,p1.order_sn    -- 订单编号
-        --,p1.depot_id    -- 订单所属仓库id
+        ,p1.depot_id    -- 订单所属仓库id
         --,p2.result_code    -- 称重结果代码
         --,p2.remark    -- 称重结果说明
         --,p3.shipping_no    -- 货运单号
@@ -94,7 +94,7 @@ LEFT JOIN jolly_tms_center.tms_carrier p13
              ON p7.carrier_domestic_transport_id = p13.carrier_id
 WHERE p1.is_shiped = 1
      AND p1.order_status = 1
-     AND p1.depod_id IN (4, 5, 6,  7, 14)
+     AND p1.depod_id IN (4, 5, 6, 14)
      AND p1.pay_time >= '2017-01-01'        -- 2017年
 )
 
