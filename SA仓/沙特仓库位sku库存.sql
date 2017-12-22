@@ -44,7 +44,7 @@ t2 AS
         ,SUM(stock_num) AS stock_num
 FROM t
 WHERE cat_level1_name IS NOT NULL
-     AND depot_area_sn IN ('Q', 'V', 'X', 'Y', 'Z')    -- SA仓这些货区叫DP zone，这些货区存放的是diffective products
+     AND depot_area_sn NOT IN ('Q', 'V', 'X', 'Y', 'Z')    -- SA仓这些货区叫DP zone，这些货区存放的是diffective products
 GROUP BY goods_sn
         ,goods_id
         ,cat_level1_name
@@ -57,6 +57,8 @@ SELECT COUNT(*)
 FROM t2
 ;
 
+
+-- depot_area_sn IN ('A', 'B', 'C', 'D', 'E', 'F', 'G')
 
 
 

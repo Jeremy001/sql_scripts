@@ -3023,10 +3023,9 @@ WHERE region_id = 1878
 -- 类目销售结构
 WITH 
 t1 AS 
-(SELECT SUBSTR(p1.pay_time, 1, 7) AS pay_month
-        ,p3.cat_level1_name
+(SELECT p3.cat_level1_name
         ,p3.cat_level2_name
-        ,p3.cat_level3_name
+        ,p3.supp_name
         ,SUM(p2.goods_number) AS goods_num 
 FROM zydb.dw_order_node_time p1
 INNER JOIN jolly.who_order_goods p2 
@@ -3035,20 +3034,18 @@ LEFT JOIN zydb.dim_jc_goods p3
              ON p2.goods_id = p3.goods_id
 WHERE p1.order_status = 1
      AND p1.is_shiped = 1
-     AND p1.pay_time >= '2017-01-01'
+     AND p1.pay_time >= '2017-11-01'
      AND p1.pay_time < '2017-12-01'
-GROUP BY SUBSTR(p1.pay_time, 1, 7)
-        ,p3.cat_level1_name
+GROUP BY p3.cat_level1_name
         ,p3.cat_level2_name
-        ,p3.cat_level3_name
+        ,p3.supp_name
 )
 -- 类目销售结构
 SELECT *
 FROM t1
-ORDER BY pay_month
-        ,cat_level1_name
+ORDER BY cat_level1_name
         ,cat_level2_name
-        ,cat_level3_name
+        ,goods_num DESC
 ;
 
 -- 打包耗材使用比例
