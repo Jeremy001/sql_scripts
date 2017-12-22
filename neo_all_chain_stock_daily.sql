@@ -32,7 +32,7 @@ t100 AS
         ,SUM(p1.pur_shiped_order_onway_num * p2.in_price) AS purchase_onway_cost    --采购在途成本金额（人民币）
 FROM jolly.who_wms_goods_stock_onway_total p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
-WHERE p1.depot_id IN (4, 5, 6, 7)
+WHERE p1.depot_id IN (4, 5, 6, 7, 8, 14, 15)
 GROUP BY p1.depot_id
 ),
 -- 2.在库库存（含调拨在途库存，调拨库存计入调出仓库的在库库存中）
@@ -43,7 +43,7 @@ t201 AS
         ,SUM(p1.total_stock_num * p2.in_price) AS instock_cost
 FROM jolly.who_wms_goods_stock_total_detail p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
-WHERE p1.depot_id in (4, 5, 6)
+WHERE p1.depot_id in (4, 5, 6, 14)
 GROUP BY p1.depot_id
 ),
 -- SA仓在库库存
@@ -68,7 +68,7 @@ t204 AS
         ,SUM(p1.allocate_order_onway_num * p2.in_price) AS allocate_onway_cost    --采购在途成本金额（人民币）
 FROM jolly.who_wms_goods_stock_onway_total p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
-WHERE p1.depot_id in (4, 5, 6, 7)
+WHERE p1.depot_id in (4, 5, 6, 7, 8, 14, 15)
 GROUP BY p1.depot_id
 ),
 -- 在库库存 = 实际在库库存 + 调出库存
@@ -183,7 +183,7 @@ t301 AS
         ,t401.destination_days
 FROM jolly.who_order_shipping_tracking p1
 RIGHT JOIN jolly.who_order_info p2 
-             ON p1.order_id = p2.order_id AND P2.depot_id IN (4, 5, 6, 7) AND p2.order_status = 1
+             ON p1.order_id = p2.order_id AND P2.depot_id IN (4, 5, 6, 7, 8, 14, 15) AND p2.order_status = 1
 LEFT JOIN t401 
              ON t401.order_id = p1.order_id
 LEFT JOIN jolly.who_order_user_info p4 

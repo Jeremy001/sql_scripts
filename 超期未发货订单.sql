@@ -30,6 +30,7 @@ FROM default.who_order_info AS p1
 LEFT JOIN default.who_order_user_info AS p2
              ON p1.order_id = p2.source_order_id
 WHERE p1.depot_id IN (4, 5, 6, 7, 8, 14, 15)
+     AND p1.site_id = 2     -- 只查询MarkaVIP的订单
 GROUP BY p1.order_id
         ,p1.order_sn
         ,p1.is_shiped
@@ -111,15 +112,13 @@ LEFT JOIN zydb.dim_jc_goods p4
 WHERE t01.is_split = 0
      AND t01.order_status = 1
      AND t01.is_shiped <> 1
-     AND t01.pay_time > DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP(),'yyyy-MM-dd'),50)
-     AND t01.pay_time <= DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP(),'yyyy-MM-dd'),4)
+     AND t01.pay_time > DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP(),'yyyy-MM-dd'),60)
+     AND t01.pay_time <= DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP(),'yyyy-MM-dd'),4)     -- 支付超过5天了，仍未发货的订单
 )
-
 
 -- 最终结果
 SELECT *
 FROM t04
-WHERE site_id = 'MarkaVIP'
 ORDER BY pay_time
 ;
 
@@ -133,3 +132,9 @@ GROUP BY depot_id
 ORDER BY depot_id
 ;
 
+
+-- 一些东东
+(CASE WHEN t01.site_id = 0 THEN 'Jollychic'
+                      WHEN t01.site_id = 1 THEN 'NIMINI'
+                      WHEN t01.site_id = 2 THEN 'MarkaVIP'
+                      ELSE 'Others' END) AS site_id
