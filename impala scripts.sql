@@ -3185,3 +3185,52 @@ WHERE p1.shipping_time >= '2017-10-01'
 SELECT *
 FROM t10
 ;
+
+-- 知希 产能计划数据
+
+WITH 
+-- 实际销售数据，不分仓
+-- 年、月、日销售额，销售订单数，销售商品数， 各月峰值：销售订单数、销售商品数
+t1 AS
+(SELECT TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) AS pay_date
+        ,COUNT(DISTINCT order_id) AS paid_order_num
+        ,SUM(order_amount_no_bonus) AS order_amount_no_bonus
+        ,SUM(original_goods_number) AS original_goods_num
+FROM zydb.dw_order_fact p1
+WHERE p1.pay_status IN (1, 3)
+     AND site_id IN (400, 600, 602, 700, 800, 900)
+     AND TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) >= '2016-01-01'
+GROUP BY TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END)
+)
+SELECT *
+FROM t1
+ORDER BY pay_date
+LIMIT 10;
+
+
+ select 
+        to_date(case when pay_id=41 then pay_time else result_pay_time end) as pay_time  ----2017-06-01
+       ,count(distinct user_id) as paiduv
+       ,sum(order_amount_no_bonus) as order_amount_no_bonus ,count(distinct order_id) as paidordernum
+       ,sum(order_amount_no_bonus)/count(distinct order_id) as avgorderprice      
+ from zydb.dw_order_fact
+ where pay_status in (1,3)  
+   --and site_id in (600,900) 
+   and site_id in (400,700,600,800,900)  
+   ---and lower(country_name) in ('saudi arabia','bahrain','kuwait','united arab emirates','qatar','oman','jordan','lebanon')
+   and to_date(case when pay_id=41 then pay_time else result_pay_time end)>='${start_date}'
+group by pay_time
+order by 1
+;
+
+-- 实际出库数据，分仓（海外仓、国内仓）
+-- 发货订单数、发货商品数
+--各月峰值：发货订单数、发货商品数
+
+
+-- 历史库存数据，分仓（海外仓、国内仓）
+-- 各月峰值：库存sku数、库存件数
+
+
+
+

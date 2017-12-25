@@ -54,11 +54,11 @@ t1 aS
         ,p1.order_pack_time AS packing_finish_time
         ,p1.shipping_time
 FROM zydb.dw_order_node_time p1
-WHERE  p1.outing_stock_time>=FROM_UNIXTIME(UNIX_TIMESTAMP('${data_date}','yyyyMMdd'))
-AND p1.outing_stock_time<FROM_UNIXTIME(UNIX_TIMESTAMP(CONCAT(to_date(FROM_UNIXTIME(UNIX_TIMESTAMP('${data_date}','yyyyMMdd'))),' 18:00:00'),'yyyy-MM-dd HH:mm:ss'))
+WHERE  p1.outing_stock_time>=FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd'))
+AND p1.outing_stock_time<FROM_UNIXTIME(UNIX_TIMESTAMP(CONCAT(to_date(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd'))),' 18:00:00'),'yyyy-MM-dd HH:mm:ss'))
 AND p1.is_problems_order != 1
 AND p1.order_status=1
-AND (p1.shipping_time>=DATE_ADD(FROM_UNIXTIME(UNIX_TIMESTAMP('${data_date}','yyyyMMdd')),1) or p1.shipping_time IS NULL)
+AND (p1.shipping_time>=DATE_ADD(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd')),1) or p1.shipping_time IS NULL)
 )
 -- 查询明细
 SELECT * FROM t1;
