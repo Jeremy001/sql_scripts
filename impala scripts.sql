@@ -1017,7 +1017,6 @@ GROUP BY depot_id;
 
 
 ----------------- 各仓库 总库存 和 自由库存，历史和当前值取法
-*******************************************************************
 国内仓，求总库存表：   (hadoop) zydb.ods_who_wms_goods_stock_detail       stock_num          (可以查：当前最新和历史每天快照)
 
 
@@ -1036,6 +1035,7 @@ GROUP BY depot_id;
                              jolly_wms.who_wms_goods_stock_total_detail_daily      (可以查：当前最新和历史每天快照) 
                      free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
 
+zydb.ods_who_wms_goods_stock_detail
 
 -- 查询SA仓正品库存
 -- jolly_wms.who_wms_depot_area
@@ -3083,7 +3083,16 @@ GROUP BY UCASE(p2.material_sn)
 ORDER BY material_sn2 
 LIMIT 100;
 
--- 特定invoice_no的发货时间
+
+-- 特定invoice_no的发货时间  ===================================================
+-- 0.把退货订单的AWB做成csv文件，保存一列AWB即可，不需要表头字段；
+-- 1.运行建表语句
+CREATE TABLE zybiro.neo_returned_awb(awb string)
+row format delimited fields terminated by '\t'
+lines terminated by '\n'
+stored AS textfile
+
+
 WITH t1 AS
 (SELECT invoice_no 
         ,MAX(shipping_time) AS shipping_time
@@ -3186,12 +3195,12 @@ SELECT *
 FROM t10
 ;
 
--- 知希 产能计划数据
+-- 知希 产能计划数据  ===================================================================
 
 WITH 
 -- 实际销售数据，不分仓
 -- 年、月、日销售额，销售订单数，销售商品数， 各月峰值：销售订单数、销售商品数
-t1 AS
+t101 AS
 (SELECT TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) AS pay_date
         ,COUNT(DISTINCT order_id) AS paid_order_num
         ,SUM(order_amount_no_bonus) AS order_amount_no_bonus
@@ -3201,35 +3210,125 @@ WHERE p1.pay_status IN (1, 3)
      AND site_id IN (400, 600, 602, 700, 800, 900)
      AND TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) >= '2016-01-01'
 GROUP BY TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END)
+),
+-- 年月汇总，得到合计和峰值
+t102 AS
+(SELECT SUBSTR(pay_date, 1, 4) AS pay_year
+        ,SUBSTR(pay_date, 6, 2) AS pay_month
+        ,SUM(paid_order_num) AS paid_order_num
+        ,SUM(order_amount_no_bonus) AS order_amount_no_bonus
+        ,SUM(original_goods_num) AS original_goods_num
+        ,MAX(paid_order_num) AS max_paid_order_num
+        ,MAX(original_goods_num) AS max_original_goods_num
+FROM t101
+GROUP BY SUBSTR(pay_date, 1, 4)
+        ,SUBSTR(pay_date, 6, 2)
 )
-SELECT *
-FROM t1
-ORDER BY pay_date
-LIMIT 10;
-
-
- select 
-        to_date(case when pay_id=41 then pay_time else result_pay_time end) as pay_time  ----2017-06-01
-       ,count(distinct user_id) as paiduv
-       ,sum(order_amount_no_bonus) as order_amount_no_bonus ,count(distinct order_id) as paidordernum
-       ,sum(order_amount_no_bonus)/count(distinct order_id) as avgorderprice      
- from zydb.dw_order_fact
- where pay_status in (1,3)  
-   --and site_id in (600,900) 
-   and site_id in (400,700,600,800,900)  
-   ---and lower(country_name) in ('saudi arabia','bahrain','kuwait','united arab emirates','qatar','oman','jordan','lebanon')
-   and to_date(case when pay_id=41 then pay_time else result_pay_time end)>='${start_date}'
-group by pay_time
-order by 1
-;
-
 -- 实际出库数据，分仓（海外仓、国内仓）
 -- 发货订单数、发货商品数
 --各月峰值：发货订单数、发货商品数
-
+t201 AS
+(SELECT SUBSTR(p1.shipping_time, 1, 10) AS ship_date
+        ,(CASE WHEN p1.depot_id IN (7, 8, 15) THEN '海外仓' ELSE '国内仓' END) AS depot
+        ,COUNT(DISTINCT p1.order_id) AS shiped_order_num
+        ,SUM(p1.goods_number) AS shiped_goods_num
+FROM zydb.dw_order_node_time p1
+WHERE p1.shipping_time >= '2016-01-01'
+     AND p1.is_shiped = 1
+GROUP BY SUBSTR(p1.shipping_time, 1, 10)
+        ,(CASE WHEN p1.depot_id IN (7, 8, 15) THEN '海外仓' ELSE '国内仓' END)
+),
+-- 年月汇总，得到合计和峰值
+t202 AS
+(SELECT SUBSTR(ship_date, 1, 4) AS ship_year
+        ,SUBSTR(ship_date, 6, 2) AS ship_month
+        ,depot
+        ,SUM(shiped_order_num) AS shiped_order_num
+        ,SUM(shiped_goods_num) AS shiped_goods_num
+        ,MAX(shiped_order_num) AS max_shiped_order_num
+        ,MAX(shiped_goods_num) AS max_shiped_goods_num
+FROM t201
+GROUP BY SUBSTR(ship_date, 1, 4)
+        ,SUBSTR(ship_date, 6, 2)
+        ,depot
+)
 
 -- 历史库存数据，分仓（海外仓、国内仓）
 -- 各月峰值：库存sku数、库存件数
+t301 AS 
+-- 国内仓
+(SELECT p1.data_date
+        ,'国内仓' AS depot
+        ,COUNT(DISTINCT p1.sku_id) AS sku_count
+        ,SUM(p1.stock_num) AS total_stock_num
+FROM zydb.ods_who_wms_goods_stock_detail p1
+GROUP BY p1.data_date
+        ,'国内仓'
+),
+t3011 AS
+(SELECT SUBSTR(t301.data_date, 1, 4) AS data_year
+        ,SUBSTR(t301.data_date, 5, 2) AS data_month
+        ,t301.depot
+        ,MAX(t301.sku_count) AS max_sku_count
+        ,MAX(t301.total_stock_num) AS max_total_stock_num
+FROM t301
+GROUP BY SUBSTR(t301.data_date, 1, 4)
+        ,SUBSTR(t301.data_date, 5, 2)
+        ,t301.depot
+),
+
+t302 AS
+-- 海外仓
+(SELECT p1.ds AS data_date
+        ,'海外仓' AS depot
+        ,COUNT(DISTINCT p1.sku_id) AS sku_count
+        ,SUM(p1.total_stock_num) AS total_stock_num
+        ,SUM(p1.total_stock_num - p1.total_order_lock_num - p1.total_allocate_lock_num - p1.total_return_lock_num) AS free_stock_num
+FROM jolly_wms.who_wms_goods_stock_total_detail_daily p1
+GROUP BY p1.ds
+        ,'海外仓'
+),
+t3022 AS
+(SELECT SUBSTR(t302.data_date, 1, 4) AS data_year
+        ,SUBSTR(t302.data_date, 5, 2) AS data_month
+        ,t302.depot
+        ,MAX(t302.sku_count) AS max_sku_count
+        ,MAX(t302.total_stock_num) AS max_total_stock_num
+FROM t302
+GROUP BY SUBSTR(t302.data_date, 1, 4)
+        ,SUBSTR(t302.data_date, 5, 2)
+        ,t302.depot
+)
+
+
+-- 历史库存：从oracle中查询的结果，包含国内海外仓
+t301 AS
+(SELECT TO_CHAR(p1.data_date, 'yyyy') AS data_year
+        ,TO_CHAR(p1.data_date, 'mm') AS data_month
+        ,p1.data_date
+        ,(CASE WHEN p1.depot_id IN (7, 8, 15) THEN '海外仓' ELSE '国内仓' END) AS depot
+        ,SUM(p1.stock_num) AS total_stock_num
+FROM zybi.ods_who_wms_goods_stock_dtl p1
+GROUP BY TO_CHAR(p1.data_date, 'yyyy')
+        ,TO_CHAR(p1.data_date, 'mm')
+        ,p1.data_date
+        ,(CASE WHEN p1.depot_id IN (7, 8, 15) THEN '海外仓' ELSE '国内仓' END)
+),
+-- 年月合计和峰值
+t302 AS
+(SELECT data_year
+        ,data_month
+        ,depot
+        ,SUM(total_stock_num) AS total_stock_num
+        ,MAX(total_stock_num) AS max_total_stock_num
+FROM t301
+GROUP BY data_year
+        ,data_month
+        ,depot
+)
+
+SELECT *
+FROM t302
 
 
 

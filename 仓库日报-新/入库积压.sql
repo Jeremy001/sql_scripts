@@ -20,15 +20,16 @@ WITH t1 AS
 (SELECT p1.depot_id
         ,p1.delivered_order_sn
         ,p1.end_receipt_time AS qc_start_time
-        ,SUM(p1.real_num) AS real_receive_num
-        ,SUM(p1.inspect_num) AS qc_num
-        ,SUM(p1.real_num - p1.inspect_num) AS didnt_qc_num
+        ,SUM(p1.delivered_num) AS real_receive_num
+        ,SUM(p1.checked_num) AS qc_num
+        ,SUM(p1.delivered_num - p1.checked_num) AS didnt_qc_num
         ,p1.on_shelf_start_time AS qc_finish_time
 FROM zydb.dw_delivered_receipt_onself p1
-WHERE start_receipt_time >= DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd')),1)
-     AND end_receipt_time <FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd'))
-     AND (on_shelf_start_time>=DATE_ADD(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd')),1)
-                OR on_shelf_start_time IS NULL OR on_shelf_start_time='1970-01-01 08:00:00')
+WHERE p1.start_receipt_time >= DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd')),1)
+     AND p1.end_receipt_time <FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd'))
+     AND (p1.on_shelf_start_time>=DATE_ADD(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd')),1)
+                OR p1.on_shelf_start_time IS NULL 
+                OR p1.on_shelf_start_time='1970-01-01 08:00:00')
      AND exp_num=0
 GROUP BY p1.delivered_order_sn
         ,p1.depot_id
