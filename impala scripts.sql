@@ -3085,29 +3085,56 @@ LIMIT 100;
 
 
 -- 特定invoice_no的发货时间  ===================================================
+/*
+hive上传文件建临时表步骤：
+第一步：建好文件，存csv格式，不需要带表头字段，文件命名一定要为英文，如命名为 kidsfeaturecode.csv；
+第二步：将csv格式文件上传至/user/zybiro/load/temp目录下；如上面建的文件，上完之后文件完整的路径应为/user/zybiro/load/temp/kidsfeaturecode.csv；
+第三步：运行建表语句，建表；如想要建一个名称为 zybiro.kids_featurecode，里面存featurecode字段，数据类型为string的表，具体语句如下：
+create table zybiro.kids_featurecode(featurecode string)
+row format delimited fields terminated by '\t'
+lines terminated by '\n'
+stored as textfile
+第四步： 运行以下语句：
+load data inpath '/user/zybiro/load/temp/kidsfeaturecode.csv' into table zybiro.kids_featurecode
+建表完成。
+此处路径根据每次建表实际路径自行替换。
+ */
+
 -- 0.把退货订单的AWB做成csv文件，保存一列AWB即可，不需要表头字段；
+-- neo_returned_awb.csv
+-- /user/zybiro/load/temp/neo_returned_awb.csv
 -- 1.运行建表语句
 CREATE TABLE zybiro.neo_returned_awb(awb string)
 row format delimited fields terminated by '\t'
 lines terminated by '\n'
 stored AS textfile
-
-
+-- 2.把csv文件导入到创建的表中；
+load data inpath '/user/zybiro/load/temp/neo_returned_awb.csv' into table zybiro.neo_returned_awb
+-- 3.用上表关联， 查询所需结果；
 WITH t1 AS
-(SELECT invoice_no 
+(SELECT p1.invoice_no 
+        ,(CASE WHEN p1.depod_id = 4 THEN 'GZ2'
+                      WHEN p1.depod_id IN (5, 14) THEN 'DG1'
+                      WHEN p1.depod_id = 6 THEN 'HK1'
+                      WHEN p1.depod_id = 7 THEN 'SA1'
+                      WHEN p1.depod_id = 8 THEN 'USA1'
+                      ELSE 'Others' END) AS depot
         ,MAX(shipping_time) AS shipping_time
-FROM zydb.dw_order_sub_order_fact p2
-GROUP BY invoice_no 
-),
-t2 AS 
-(SELECT p1.*
-        ,t1.shipping_time
-FROM zybiro.returned_order_invoice_no p1
-LEFT JOIN t1
-         ON p1.invoice_no = t1.invoice_no
+FROM zydb.dw_order_sub_order_fact p1
+GROUP BY invoice_no
+        ,(CASE WHEN p1.depod_id = 4 THEN 'GZ2'
+                      WHEN p1.depod_id IN (5, 14) THEN 'DG1'
+                      WHEN p1.depod_id = 6 THEN 'HK1'
+                      WHEN p1.depod_id = 7 THEN 'SA1'
+                      WHEN p1.depod_id = 8 THEN 'USA1'
+                      ELSE 'Others' END)
 )
-SELECT COUNT(*)
-FROM t2
+SELECT p1.awb
+        ,t1.depot
+        ,t1.shipping_time
+FROM zybiro.neo_returned_awb p1
+LEFT JOIN t1
+         ON p1.awb = t1.invoice_no
 ;
 
 
