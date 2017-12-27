@@ -39,7 +39,7 @@ t1 AS
         ,p6.package_volume_weight    -- 包裹抛重，即根据体积计算
         ,p2.weight      -- 包裹重量
         ,(CASE WHEN (CEIL(p6.package_volume_weight * 2) / 2) > (CEIL(p2.weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
-        ,p6.package_type    -- 0箱子， 1袋子
+        ,p6.package_type    -- 0箱子， 1袋子  -- 根据秋瑾的信息，total_volume >0:箱子， total_volume=0:其他
         --,p6.package_weight    -- 包裹重量
         --,p6.express_paper_weight    -- 面单重量，即承运商用于计算费用的重量
         ,p6.real_shipping_id    -- 物流承运商id
@@ -69,7 +69,6 @@ t1 AS
 FROM zydb.dw_order_sub_order_fact p1
 LEFT JOIN jolly.who_wms_weigh_package_info p2 
              ON p1.order_id = p2.order_id
-          AND p2.result_code IN (0, 4)    -- 称重成功和抛重过高
 LEFT JOIN jolly.who_wms_order_package p3
              ON p1.order_id = p3.order_id
 LEFT JOIN jolly.who_wms_order_shipping_info p6
@@ -102,6 +101,7 @@ SELECT t1.*
 FROM t1
 LEFT JOIN jolly.who_sku_relation p1
              ON t1.sku_id = p1.rec_id
+
 
 
 

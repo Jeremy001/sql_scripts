@@ -3223,12 +3223,14 @@ FROM t10
 ;
 
 -- 知希 产能计划数据  ===================================================================
-
 WITH 
 -- 实际销售数据，不分仓
 -- 年、月、日销售额，销售订单数，销售商品数， 各月峰值：销售订单数、销售商品数
 t101 AS
 (SELECT TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) AS pay_date
+        ,SUBSTR(TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END), 1, 4) AS pay_year
+        ,SUBSTR(TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END), 6, 2) AS pay_month
+        ,SUBSTR(TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END), 9, 2) AS pay_day
         ,COUNT(DISTINCT order_id) AS paid_order_num
         ,SUM(order_amount_no_bonus) AS order_amount_no_bonus
         ,SUM(original_goods_number) AS original_goods_num
@@ -3240,22 +3242,32 @@ GROUP BY TO_DATE(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_ti
 ),
 -- 年月汇总，得到合计和峰值
 t102 AS
-(SELECT SUBSTR(pay_date, 1, 4) AS pay_year
-        ,SUBSTR(pay_date, 6, 2) AS pay_month
+(SELECT pay_year
+        ,pay_month
         ,SUM(paid_order_num) AS paid_order_num
         ,SUM(order_amount_no_bonus) AS order_amount_no_bonus
         ,SUM(original_goods_num) AS original_goods_num
         ,MAX(paid_order_num) AS max_paid_order_num
         ,MAX(original_goods_num) AS max_original_goods_num
 FROM t101
-GROUP BY SUBSTR(pay_date, 1, 4)
-        ,SUBSTR(pay_date, 6, 2)
+GROUP BY pay_year
+        ,pay_month
 )
+
+-- 需求2：得到每天的销售数据
+SELECT *
+FROM t101
+WHERE pay_month IN ('05', '06', '08', '09', '11', '12')
+;
+
 -- 实际出库数据，分仓（海外仓、国内仓）
 -- 发货订单数、发货商品数
 --各月峰值：发货订单数、发货商品数
 t201 AS
 (SELECT SUBSTR(p1.shipping_time, 1, 10) AS ship_date
+        ,SUBSTR(p1.shipping_time, 1, 4) AS ship_year
+        ,SUBSTR(p1.shipping_time, 6, 2) AS ship_month
+        ,SUBSTR(p1.shipping_time, 9, 2) AS ship_day
         ,(CASE WHEN p1.depot_id IN (7, 8, 15) THEN '海外仓' ELSE '国内仓' END) AS depot
         ,COUNT(DISTINCT p1.order_id) AS shiped_order_num
         ,SUM(p1.goods_number) AS shiped_goods_num
@@ -3263,69 +3275,101 @@ FROM zydb.dw_order_node_time p1
 WHERE p1.shipping_time >= '2016-01-01'
      AND p1.is_shiped = 1
 GROUP BY SUBSTR(p1.shipping_time, 1, 10)
+        ,SUBSTR(p1.shipping_time, 1, 4)
+        ,SUBSTR(p1.shipping_time, 6, 2)
+        ,SUBSTR(p1.shipping_time, 9, 2)
         ,(CASE WHEN p1.depot_id IN (7, 8, 15) THEN '海外仓' ELSE '国内仓' END)
 ),
 -- 年月汇总，得到合计和峰值
 t202 AS
-(SELECT SUBSTR(ship_date, 1, 4) AS ship_year
-        ,SUBSTR(ship_date, 6, 2) AS ship_month
+(SELECT ship_year
+        ,ship_month
         ,depot
         ,SUM(shiped_order_num) AS shiped_order_num
         ,SUM(shiped_goods_num) AS shiped_goods_num
         ,MAX(shiped_order_num) AS max_shiped_order_num
         ,MAX(shiped_goods_num) AS max_shiped_goods_num
 FROM t201
-GROUP BY SUBSTR(ship_date, 1, 4)
-        ,SUBSTR(ship_date, 6, 2)
+GROUP BY ship_year
+        ,ship_month
         ,depot
 )
+
+-- 需求2：得到每天的发货数据
+SELECT *
+FROM t201
+WHERE ship_month IN ('05', '06', '08', '09', '11', '12')
+;
+
 
 -- 历史库存数据，分仓（海外仓、国内仓）
 -- 各月峰值：库存sku数、库存件数
 t301 AS 
 -- 国内仓
 (SELECT p1.data_date
+        ,SUBSTR(p1.data_date, 1, 4) AS data_year
+        ,SUBSTR(p1.data_date, 5, 2) AS data_month
+        ,SUBSTR(p1.data_date, 7, 2) AS data_day
         ,'国内仓' AS depot
         ,COUNT(DISTINCT p1.sku_id) AS sku_count
         ,SUM(p1.stock_num) AS total_stock_num
 FROM zydb.ods_who_wms_goods_stock_detail p1
 GROUP BY p1.data_date
+        ,SUBSTR(p1.data_date, 1, 4)
+        ,SUBSTR(p1.data_date, 5, 2)
+        ,SUBSTR(p1.data_date, 7, 2)
         ,'国内仓'
 ),
 t3011 AS
-(SELECT SUBSTR(t301.data_date, 1, 4) AS data_year
-        ,SUBSTR(t301.data_date, 5, 2) AS data_month
+(SELECT AS data_year
+        ,data_month
         ,t301.depot
         ,MAX(t301.sku_count) AS max_sku_count
         ,MAX(t301.total_stock_num) AS max_total_stock_num
 FROM t301
-GROUP BY SUBSTR(t301.data_date, 1, 4)
-        ,SUBSTR(t301.data_date, 5, 2)
+GROUP BY data_year
+        ,data_month
         ,t301.depot
 ),
 
 t302 AS
 -- 海外仓
 (SELECT p1.ds AS data_date
+        ,SUBSTR(p1.ds, 1, 4) AS data_year
+        ,SUBSTR(p1.ds, 5, 2) AS data_month
+        ,SUBSTR(p1.ds, 7, 2) AS data_day
         ,'海外仓' AS depot
         ,COUNT(DISTINCT p1.sku_id) AS sku_count
         ,SUM(p1.total_stock_num) AS total_stock_num
-        ,SUM(p1.total_stock_num - p1.total_order_lock_num - p1.total_allocate_lock_num - p1.total_return_lock_num) AS free_stock_num
+        --,SUM(p1.total_stock_num - p1.total_order_lock_num - p1.total_allocate_lock_num - p1.total_return_lock_num) AS free_stock_num
 FROM jolly_wms.who_wms_goods_stock_total_detail_daily p1
 GROUP BY p1.ds
+        ,SUBSTR(p1.ds, 1, 4)
+        ,SUBSTR(p1.ds, 5, 2)
+        ,SUBSTR(p1.ds, 7, 2)
         ,'海外仓'
 ),
 t3022 AS
-(SELECT SUBSTR(t302.data_date, 1, 4) AS data_year
-        ,SUBSTR(t302.data_date, 5, 2) AS data_month
+(SELECT data_year
+        ,data_month
         ,t302.depot
         ,MAX(t302.sku_count) AS max_sku_count
         ,MAX(t302.total_stock_num) AS max_total_stock_num
 FROM t302
-GROUP BY SUBSTR(t302.data_date, 1, 4)
-        ,SUBSTR(t302.data_date, 5, 2)
+GROUP BY data_year
+        ,data_month
         ,t302.depot
 )
+
+-- 需求2：得到每天的库存数据
+SELECT *
+FROM t301
+WHERE t301.data_month IN ('05', '06', '08', '09', '11', '12')
+UNION ALL 
+SELECT *
+FROM t302
+WHERE t302.data_month IN ('05', '06', '08', '09', '11', '12')
+
 
 
 -- 历史库存：从oracle中查询的结果，包含国内海外仓
@@ -3359,4 +3403,147 @@ FROM t302
 
 
 
+
+-- SA1仓春节备货事宜 ================================================================
+-- 工作核心：根据销售的需求，调控退货商品的入库节奏和已入库商品的清理，保留已销售所需的库存量和保留可销售商品；
+/*
+1、库存及商品盘点（三个时间节点：当前、2.5、3.11）
+            各节点的总库存=【当前】仓库库存+【当前】拒签在途（拒签或退货但未入仓库）+【新增】拒签退货- 【消耗】
+        a). 【当前】仓库库存商品盘点，分整体、各品类、季节性的存量及动销情况                                --政鸣
+        b). 【当前】拒签在途商品盘点，需考虑当前SKU是否在架，分整体、各品类、季节性的存量         --云英
+        c). 【新增】新增拒签退货的商品预估，需考虑订单签收率的预估，分整体、各品类、季节性         --小马
+        d). 【消耗】各个阶段内的商品消耗预估，历史的周转天数，分整体、各品类、季节性                   --云英
+2、库存释放评估
+          由于只有沙特1仓，能够进行分炼操作，且库容有限，需要清除死库存商品，考虑季节性，评估能够腾出多少库容   --政鸣
+3、春节期间（2.5~3.11）沙仓的销售情况
+         根据2月5号时间节点时的商品结构，结合历史的动销情况，预估沙特仓的销售      --云英
+ */
+
+-- 【当前】库存结构和可释放仓容：
+-- 1.正品，剔除掉次品
+-- 2.划分一二三级类目和季节
+-- 3.加上动销情况（销售量和库存，计算动销率和周转？），评估可以释放的仓容
+-- 目的：了解当前库存的结构是否合理，根据需要决定是否释放一定的仓容，调整当前的库存结构
+
+-- 把 jolly_wms.who_wms_goods_stock_detail p1表的数据保存，避免后续无法查询26日凌晨的库存数据
+CREATE TABLE zybiro.neo_who_wms_goods_stock_detail_sa_20171225
+AS 
+SELECT *
+FROM jolly_wms.who_wms_goods_stock_detail p1
+WHERE p1.stock_num > 0
+     AND p1.depot_id = 7 
+;
+
+WITH t1 AS 
+(SELECT j.cat_level1_name
+        ,j.cat_level2_name
+        ,j.cat_level3_name
+        ,(CASE WHEN j.goods_season = 1 THEN '春'
+                      WHEN j.goods_season = 2 THEN '夏'
+                      WHEN j.goods_season = 3 THEN '秋'
+                      WHEN j.goods_season = 4 THEN '冬'
+                      WHEN j.goods_season = 5 THEN '春夏'
+                      WHEN j.goods_season = 6 THEN '春秋'
+                      WHEN j.goods_season = 7 THEN '春冬'
+                      WHEN j.goods_season = 8 THEN '夏秋'
+                      WHEN j.goods_season = 9 THEN '夏冬'
+                      WHEN j.goods_season = 10 THEN '秋冬'
+                      ELSE '其他' END) AS good_season
+        ,SUM(e.stock_num) AS stock_num
+FROM jolly_wms.who_wms_depot_shelf_area a
+         ,jolly_wms.who_wms_depot_shelf b
+         ,jolly_wms.who_wms_depot_channel c
+         ,jolly_wms.who_wms_depot_area d
+         ,zybiro.neo_who_wms_goods_stock_detail_sa_20171225 e
+         ,zydb.dim_jc_goods j
+WHERE a.depot_shelf_id = b.shelf_id
+     AND b.depot_channel_id = c.channel_id
+     AND c.depot_area_id = d.depot_area_id
+     AND a.shelf_area_id = e.shelf_area_id 
+     AND e.goods_id = j.goods_id
+     AND d.depot_area_type_id = 1       -- =1表示正品
+GROUP BY j.cat_level1_name
+        ,j.cat_level2_name
+        ,j.cat_level3_name
+        ,(CASE WHEN j.goods_season = 1 THEN '春'
+                      WHEN j.goods_season = 2 THEN '夏'
+                      WHEN j.goods_season = 3 THEN '秋'
+                      WHEN j.goods_season = 4 THEN '冬'
+                      WHEN j.goods_season = 5 THEN '春夏'
+                      WHEN j.goods_season = 6 THEN '春秋'
+                      WHEN j.goods_season = 7 THEN '春冬'
+                      WHEN j.goods_season = 8 THEN '夏秋'
+                      WHEN j.goods_season = 9 THEN '夏冬'
+                      WHEN j.goods_season = 10 THEN '秋冬'
+                      ELSE '其他' END)
+)
+SELECT *
+FROM t1
+LIMIT 10;
+
+-- 筛选滞销品
+-- zybiro.t_yf_stock_monitor_v1_12
+
+WITH t1 AS
+(SELECT p1.cat1_name
+        ,p1.cat2_name
+        ,p1.supp_name
+        ,p1.zx_type_old
+        ,p1.zx_level_old
+        ,(CASE WHEN p2.goods_season = 1 THEN '春'
+                      WHEN p2.goods_season = 2 THEN '夏'
+                      WHEN p2.goods_season = 3 THEN '秋'
+                      WHEN p2.goods_season = 4 THEN '冬'
+                      WHEN p2.goods_season = 5 THEN '春夏'
+                      WHEN p2.goods_season = 6 THEN '春秋'
+                      WHEN p2.goods_season = 7 THEN '春冬'
+                      WHEN p2.goods_season = 8 THEN '夏秋'
+                      WHEN p2.goods_season = 9 THEN '夏冬'
+                      WHEN p2.goods_season = 10 THEN '秋冬'
+                      ELSE '其他' END) AS good_season
+        ,COUNT(p1.goods_id) AS goods_count
+        ,SUM(p1.fre_stk_cnt_07) AS free_stock_num
+FROM zybiro.t_yf_stock_monitor_v1_12 p1
+LEFT JOIN zydb.dim_jc_goods p2
+        ON p1.goods_id = CAST(p2.goods_id AS string)
+WHERE p1.ds = '20171225'
+GROUP BY p1.cat1_name
+        ,p1.cat2_name
+        ,p1.supp_name
+        ,p1.zx_type_old
+        ,p1.zx_level_old
+        ,(CASE WHEN p2.goods_season = 1 THEN '春'
+                      WHEN p2.goods_season = 2 THEN '夏'
+                      WHEN p2.goods_season = 3 THEN '秋'
+                      WHEN p2.goods_season = 4 THEN '冬'
+                      WHEN p2.goods_season = 5 THEN '春夏'
+                      WHEN p2.goods_season = 6 THEN '春秋'
+                      WHEN p2.goods_season = 7 THEN '春冬'
+                      WHEN p2.goods_season = 8 THEN '夏秋'
+                      WHEN p2.goods_season = 9 THEN '夏冬'
+                      WHEN p2.goods_season = 10 THEN '秋冬'
+                      ELSE '其他' END) 
+)
+SELECT *
+FROM t1
+;
+
+
+-- 春节备货商品的发货情况  ==================================
+
+SELECT p1.rec_id
+        ,p1.pur_type
+        ,p1.supp_num
+        ,p1.oos_num
+        ,p1.depot_id
+        ,p1.send_num
+        ,p1.receive_status
+        ,FROM_UNIXTIME(p1.gmt_created) AS gmt_created   -- 需求生成时间
+        ,FROM_UNIXTIME(p1.check_time) AS check_time     -- 需求审核时间
+        ,p2.pur_order_goods_rec_id
+FROM jolly_spm.jolly_spm_pur_goods_demand p1
+LEFT JOIN jolly_spm.jolly_spm_pur_goods_demand_relation p2
+             ON p1.rec_id = p2.demand_rec_id
+WHERE p1.pur_type = 11          -- 11表示节日备货
+     AND p1.gmt_created >= 
 
