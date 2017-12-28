@@ -3529,21 +3529,48 @@ FROM t1
 ;
 
 
--- 春节备货商品的发货情况  ==================================
+-- 缺货明细 =======================================
+WITH t1 AS
+(SELECT
+        b.order_sn, b.site_id, b.goods_number  order_goods_number,b.order_amount_no_bonus,
+  case when b.pay_id=41 then  b.pay_time else b.result_pay_time end as pay_time,
+        f.supp_name,
+        c.goods_id,c.goods_number,c.goods_price,
+        a.sku_id,
+        a.TYPE,
+        a.oos_num,
+        FROM_UNIXTIME(a.create_time) create_time, 
+        f.provide_code, 
+       f.cat_level1_name  cat_name,
+       f.cat_level2_name sub_cat_name,
+       b.depod_id,
+      f.first_on_sale_time,
+     c2.status,
+     c2.is_stock,
+  t.free_num 
+FROM   jolly.who_wms_order_oos_log a
+   inner join         zydb.dw_order_sub_order_fact b  on  a.order_id=b.order_id
+  left  join    zydb.dw_order_goods_fact c        on  b.order_id=c.order_id  and a.sku_id=c.sku_id
+  left  join     jolly.who_sku_depot_coverage_area_status c2  on  c2.goods_id=c.goods_id and c2.sku_id=a.sku_id and depot_coverage_area_id =1 
+     left join       zydb.dim_jc_goods f              on  f.goods_id = c.goods_id 
+  left join     zybiro.yf_oos_detail_stock   t       on b.depod_id = t.depot_id  and a.sku_id=t.sku_id
+WHERE  1=1
+--AND to_date(from_unixtime(a.create_time)) >= date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),1)
+--AND to_date(from_unixtime(a.create_time)) < date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),0)
+     AND a.create_time >= UNIX_TIMESTAMP('2017-11-11')
+     AND a.create_time < UNIX_TIMESTAMP('2017-12-21')
+)
+SELECT *
+FROM t1
+;
 
-SELECT p1.rec_id
-        ,p1.pur_type
-        ,p1.supp_num
-        ,p1.oos_num
-        ,p1.depot_id
-        ,p1.send_num
-        ,p1.receive_status
-        ,FROM_UNIXTIME(p1.gmt_created) AS gmt_created   -- 需求生成时间
-        ,FROM_UNIXTIME(p1.check_time) AS check_time     -- 需求审核时间
-        ,p2.pur_order_goods_rec_id
-FROM jolly_spm.jolly_spm_pur_goods_demand p1
-LEFT JOIN jolly_spm.jolly_spm_pur_goods_demand_relation p2
-             ON p1.rec_id = p2.demand_rec_id
-WHERE p1.pur_type = 11          -- 11表示节日备货
-     AND p1.gmt_created >= 
+
+
+
+
+
+
+
+
+
 
