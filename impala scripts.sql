@@ -3565,6 +3565,13 @@ FROM t1
 ;
 
 
+-- 国内，供应商发货的物流记录
+-- jolly_tms_center.tms_domestic_order_shipping_tracking_detail
+-- 物流信息存放在tracking_detail字段中，尚未解析
+-- "UniqId":3这一块是揽件信息，col_008字段表示的是揽件时间
+SELECT *
+FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail
+LIMIT 10;
 
 
 
