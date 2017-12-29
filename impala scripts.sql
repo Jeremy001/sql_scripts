@@ -3573,6 +3573,13 @@ SELECT *
 FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail
 LIMIT 10;
 
+-- 中间层：到货签收质检上架明细表
+SELECT p1.*
+FROM zydb.dw_delivered_receipt_onself p1
+WHERE p1.end_receipt_time IS NOT NULL
+     AND p1.finish_check_time IS NOT NULL
+     AND p1.on_shelf_finish_time IS NOT NULL
+LIMIT 10;
 
 
 -- 订单采购需求 --> 推送 --> 缺货 --> 发货 --> 到货 --> 系统配货      ===============================
@@ -3582,8 +3589,8 @@ t1 AS
 (SELECT p1.order_id
         ,p1.order_sn
         ,p1.depod_id AS depot_id
-        ,(CASE WHEN p1.pay_id=41 THEN p1.pay_time ELSE p1.result_pay_time END) AS real_pay_time      -- 支付时间
-        ,TO_DATE(CASE WHEN p1.pay_id=41 THEN p1.pay_time ELSE p1.result_pay_time END) AS real_pay_date      -- 支付日期
+        ,(CASE WHEN p1.pay_id=41 THEN p1.pay_time ELSE p1.result_pay_time END) AS order_pay_time      -- 支付时间
+        ,TO_DATE(CASE WHEN p1.pay_id=41 THEN p1.pay_time ELSE p1.result_pay_time END) AS order_pay_date      -- 支付日期
         ,p1.is_problems_order       -- 默认值为0,1是问题单,2非问题单,
         ,p2.goods_id
         ,p2.goods_sn
@@ -3603,7 +3610,7 @@ t2 AS
 (SELECT p1.rec_id
         ,p1.order_id
         ,p1.source_rec_id
-        ,FROM_UNIXTIME(p1.check_time) AS check_time
+        ,FROM_UNIXTIME(p1.check_time) AS lock_check_time        -- 锁定的确认时间，一般也是需求的生成时间
         ,p1.order_goods_rec_id
         ,p1.sku_id
         ,p1.org_num
@@ -3637,8 +3644,9 @@ t3 AS
         ,p1.supp_num
         ,p1.oos_num
         ,p1.send_num
-        ,FROM_UNIXTIME(p1.gmt_created) AS create_time   -- 需求生成时间
-        ,FROM_UNIXTIME(p1.check_time) AS check_time     -- 需求审核时间
+        ,FROM_UNIXTIME(p1.gmt_created) AS demand_create_time   -- 需求生成时间
+        ,FROM_UNIXTIME(p1.check_time) AS demand_check_time     -- 需求审核时间，也就是推送时间
+        ,FROM_UNIXTIME(p1.oos_time) AS demand_oos_time      -- 供应商标记缺货时间
 FROM jolly_spm.jolly_spm_pur_goods_demand p1
 LEFT JOIN jolly_spm.jolly_spm_pur_goods_demand_relation p2
              ON p1.rec_id = p2.demand_rec_id
@@ -3663,6 +3671,40 @@ LEFT JOIN t3
 WHERE t1.order_id = 40549547
 ;
  */
+
+-- 4.入库各环节时间
+t4 AS 
+(SELECT p1.delivered_order_id
+        ,p1.delivered_order_sn
+        ,p1.tracking_no
+        ,MAX(p1.end_receipt_time) AS receipt_time
+        ,MAX(p1.finish_check_time) AS finish_check_time
+        ,MAX(p1.on_shelf_finish_time) AS finish_onshelf_time
+FROM zydb.dw_delivered_receipt_onself AS p1
+GROUP BY p1.delivered_order_id
+        ,p1.delivered_order_sn
+        ,p1.tracking_no
+),
+
+-- 5. JOIN各表，获取各环节时间
+t5 AS 
+SELECT t1.*
+
+FROM t1
+LEFT JOIN t2
+             ON t1.order_id = t2.order_id 
+             AND t1.sku_id = t2.sku_id
+LEFT JOIN t3
+             ON t2.source_rec_id = t3.rec_id
+WHERE t1.order_id = 40549547
+
+
+
+
+
+
+
+
 
 
 
