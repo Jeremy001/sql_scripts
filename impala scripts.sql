@@ -3575,9 +3575,100 @@ LIMIT 10;
 
 
 
+-- 订单采购需求 --> 推送 --> 缺货 --> 发货 --> 到货 --> 系统配货      ===============================
+WITH
+-- 1.支付订单（子单）
+t1 AS
+(SELECT p1.order_id
+        ,p1.order_sn
+        ,p1.depod_id AS depot_id
+        ,(CASE WHEN p1.pay_id=41 THEN p1.pay_time ELSE p1.result_pay_time END) AS real_pay_time      -- 支付时间
+        ,TO_DATE(CASE WHEN p1.pay_id=41 THEN p1.pay_time ELSE p1.result_pay_time END) AS real_pay_date      -- 支付日期
+        ,p1.is_problems_order       -- 默认值为0,1是问题单,2非问题单,
+        ,p2.goods_id
+        ,p2.goods_sn
+        ,p2.sku_id
+        ,p2.original_goods_number
+        ,p2.goods_number
+FROM zydb.dw_order_sub_order_fact AS p1
+LEFT JOIN zydb.dw_order_goods_fact AS p2
+             ON p1.order_id = p2.order_id
+WHERE p1.order_status = 1
+     AND p1.pay_status IN (1, 3)
+     AND p1.add_time >= '2017-12-25'
+     AND p1.add_time <= '2017-12-26'
+),
+-- 2.订单商品锁定明细
+t2 AS
+(SELECT p1.rec_id
+        ,p1.order_id
+        ,p1.source_rec_id
+        ,FROM_UNIXTIME(p1.check_time) AS check_time
+        ,p1.order_goods_rec_id
+        ,p1.sku_id
+        ,p1.org_num
+        ,p1.oos_num
+        ,p1.status      -- 状态：1有效；2无效
+FROM jolly_oms.who_wms_goods_need_lock_detail AS p1
+WHERE p1.source_type = 1        -- source_type：需求类型； = 1表示采购需求，= 2表示调拨需求
+),
+
+/*
+-- 查询某订单的商品锁定明细
+SELECT t1.*
+        ,t2.*
+FROM t1
+LEFT JOIN t2
+             ON t1.order_id = t2.order_id 
+             AND t1.sku_id = t2.sku_id
+WHERE t1.order_id = 40549547
+;
+ */
+
+-- 3.采购需求
+t3 AS
+(SELECT p1.rec_id
+        ,p2.pur_order_goods_rec_id          -- 同一个采购需求，也可能对应多个这个rec_id，这意味着多个采购单
+        ,p1.goods_id
+        ,p1.sku_id
+        --,p1.depot_id
+        ,p1.supp_name
+        ,p3.cat_level1_name
+        ,p1.supp_num
+        ,p1.oos_num
+        ,p1.send_num
+        ,FROM_UNIXTIME(p1.gmt_created) AS create_time   -- 需求生成时间
+        ,FROM_UNIXTIME(p1.check_time) AS check_time     -- 需求审核时间
+FROM jolly_spm.jolly_spm_pur_goods_demand p1
+LEFT JOIN jolly_spm.jolly_spm_pur_goods_demand_relation p2
+             ON p1.rec_id = p2.demand_rec_id
+LEFT JOIN zydb.dim_jc_goods p3
+             ON p1.goods_id = p3.goods_id
+WHERE p1.pur_type IN (1, 2, 5, 7)          -- 表示按需采购
+     AND p1.review_status = 1       -- 审核状态：0 未审核；1 已审核；2不用审核
+     AND p1.check_time >= UNIX_TIMESTAMP('2017-12-19', 'yyyy-MM-dd')
+),
+
+/*
+-- 查询某订单的采购需求明细
+SELECT t1.*
+        ,t2.*
+        ,t3.*
+FROM t1
+LEFT JOIN t2
+             ON t1.order_id = t2.order_id 
+             AND t1.sku_id = t2.sku_id
+LEFT JOIN t3
+             ON t2.source_rec_id = t3.rec_id
+WHERE t1.order_id = 40549547
+;
+ */
 
 
 
-
-
-
+/*
+9   40549547    15
+40527491
+40574881
+40683881
+ */
