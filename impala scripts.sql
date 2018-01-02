@@ -3573,6 +3573,13 @@ SELECT *
 FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail
 LIMIT 10;
 
+-- 解析揽件时间
+SELECT p1.*
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[3].col_008') 
+FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail p1
+LIMIT 10; 
+
+
 -- 中间层：到货签收质检上架明细表
 SELECT p1.*
 FROM zydb.dw_delivered_receipt_onself p1
@@ -3583,8 +3590,10 @@ LIMIT 10;
 
 
 -- 订单采购需求 --> 推送 --> 缺货 --> 发货 --> 到货 --> 系统配货      ===============================
+-- hive
 WITH
 -- 1.支付订单（子单）
+-- 子单中每个sku的原始商品数量和最终数量，支付时间
 t1 AS
 (SELECT p1.order_id
         ,p1.order_sn
@@ -3601,11 +3610,13 @@ FROM zydb.dw_order_sub_order_fact AS p1
 LEFT JOIN zydb.dw_order_goods_fact AS p2
              ON p1.order_id = p2.order_id
 WHERE p1.order_status = 1
-     AND p1.pay_status IN (1, 3)
-     AND p1.add_time >= '2017-12-25'
-     AND p1.add_time <= '2017-12-26'
+     AND p1.order_id = 40683881
+     --AND p1.pay_status IN (1, 3)
+     --AND p1.add_time >= '2017-12-25'
+     --AND p1.add_time <= '2017-12-26'
 ),
 -- 2.订单商品锁定明细
+-- 采购需求的生成时间、原始商品需求数量、缺货数量
 t2 AS
 (SELECT p1.rec_id
         ,p1.order_id
@@ -3633,6 +3644,7 @@ WHERE t1.order_id = 40549547
  */
 
 -- 3.采购需求
+-- 需求推送时间、标记缺货时间
 t3 AS
 (SELECT p1.rec_id
         ,p2.pur_order_goods_rec_id          -- 同一个采购需求，也可能对应多个这个rec_id，这意味着多个采购单
@@ -3677,28 +3689,54 @@ t4 AS
 (SELECT p1.delivered_order_id
         ,p1.delivered_order_sn
         ,p1.tracking_no
+        ,p2.tracking_id AS shipping_id
+        ,p3.shipping_name
         ,MAX(p1.end_receipt_time) AS receipt_time
         ,MAX(p1.finish_check_time) AS finish_check_time
         ,MAX(p1.on_shelf_finish_time) AS finish_onshelf_time
 FROM zydb.dw_delivered_receipt_onself AS p1
+LEFT JOIN jolly_spm.jolly_spm_pur_order_tracking_info p2
+             ON p1.tracking_no = p2.tracking_no
+LEFT JOIN jolly.who_shipping p3
+             ON p2.tracking_id = p3.shipping_id
 GROUP BY p1.delivered_order_id
         ,p1.delivered_order_sn
         ,p1.tracking_no
+        ,p2.tracking_id
+        ,p3.shipping_name
 ),
 
 -- 5. JOIN各表，获取各环节时间
 t5 AS 
-SELECT t1.*
-
+(SELECT t1.*
+        ,t2.*
+        ,t3.*
+        ,p5.pur_order_id
+        ,p5.pur_order_sn
+        ,FROM_UNIXTIME(p5.gmt_created) AS pur_send_time
+        ,GET_JSON_OBJECT(p6.tracking_detail, '$.datas[3].col_008') AS pur_grab_time
+        ,t4.tracking_no
+        ,t4.shipping_id
+        ,t4.shipping_name
+        ,t4.receipt_time
+        ,t4.finish_check_time
+        ,t4.finish_onshelf_time
 FROM t1
 LEFT JOIN t2
              ON t1.order_id = t2.order_id 
              AND t1.sku_id = t2.sku_id
 LEFT JOIN t3
              ON t2.source_rec_id = t3.rec_id
-WHERE t1.order_id = 40549547
-
-
+LEFT JOIN jolly_spm.jolly_spm_pur_order_goods AS p4       -- 采购单商品明细表
+             ON t3.pur_order_goods_rec_id = p4.rec_id
+LEFT JOIN jolly_spm.jolly_spm_pur_order_info AS p5         -- 采购单表，发货时间
+             ON p4.pur_order_id = p5.pur_order_id
+LEFT JOIN t4
+             ON p5.pur_order_sn = t4.delivered_order_sn             
+LEFT JOIN jolly_tms_center.tms_domestic_order_shipping_tracking_detail p6
+             ON t4.tracking_no = p6.tracking_no
+WHERE t1.order_id = 40683881
+)
 
 
 
@@ -3709,8 +3747,10 @@ WHERE t1.order_id = 40549547
 
 
 /*
-9   40549547    15
-40527491
-40574881
+-- 订单
 40683881
+40574881
+-- 发货单, jolly_spm.jolly_spm_pur_order_info
+pur_order_id  pur_order_sn
+3459918 GZ2FHD201712262050104014
  */

@@ -39,7 +39,7 @@ t1 AS
         ,p6.package_volume_weight    -- 包裹抛重，即根据体积计算
         ,p2.weight      -- 包裹重量
         ,(CASE WHEN (CEIL(p6.package_volume_weight * 2) / 2) > (CEIL(p2.weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
-        ,p6.package_type    -- 0箱子， 1袋子  -- 根据秋瑾的信息，total_volume >0:箱子， total_volume=0:其他
+        ,p6.package_type    -- 0箱子， 1袋子  -- 根据秋瑾的信息，total_volume >0表示箱子， total_volume=0:其他
         --,p6.package_weight    -- 包裹重量
         --,p6.express_paper_weight    -- 面单重量，即承运商用于计算费用的重量
         ,p6.real_shipping_id    -- 物流承运商id
@@ -66,6 +66,7 @@ t1 AS
         ,p5.cat_level2_id    -- 商品的二级类目id
         ,p5.cat_level3_name    -- -- 商品的三级类目名称
         ,p5.cat_level3_id    -- 商品的三级类目id
+        ,p5.goods_season    -- 商品季节
 FROM zydb.dw_order_sub_order_fact p1
 LEFT JOIN jolly.who_wms_weigh_package_info p2 
              ON p1.order_id = p2.order_id
