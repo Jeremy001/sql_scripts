@@ -3579,6 +3579,27 @@ SELECT p1.*
 FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail p1
 LIMIT 10; 
 
+-- 物流到货签收时间（非jollychic系统签收时间）
+-- 有15的取15，没15的取14，没14的取13。。。
+-- 或者更精准的选择：uniqId = 100
+SELECT p1.*
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[14].col_008') 
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[15].col_008') 
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[-1].col_008') 
+FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail p1
+LIMIT 20; 
+
+SELECT p1.*
+        -- 一共多少个环节
+        ,CAST(GET_JSON_OBJECT(p1.tracking_detail,'$.dataCount') AS INT)
+        -- 取出各个环节的时间
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[:1].col_008') 
+        -- 最后一个时间是到货签收时间
+        ,SUBSTR(GET_JSON_OBJECT(p1.tracking_detail,'$.datas[:1].col_008'), -18, 16)
+FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail p1
+LIMIT 20; 
+
+
 
 -- 中间层：到货签收质检上架明细表
 SELECT p1.*
@@ -3587,6 +3608,14 @@ WHERE p1.end_receipt_time IS NOT NULL
      AND p1.finish_check_time IS NOT NULL
      AND p1.on_shelf_finish_time IS NOT NULL
 LIMIT 10;
+
+
+-- 国内物流商
+-- value_name是物流商名称，用的是中文缩写
+SELECT p1.value_id AS shipping_id
+        ,p1.value_name AS shipping_name
+FROM jolly.who_pur_set_value p1
+WHERE type_id=16        -- type_id = 16代表物流商
 
 
 -- 订单采购需求 --> 推送 --> 缺货 --> 发货 --> 到货 --> 系统配货      ===============================
@@ -3690,20 +3719,22 @@ t4 AS
         ,p1.delivered_order_sn
         ,p1.tracking_no
         ,p2.tracking_id AS shipping_id
-        ,p3.shipping_name
+        ,p3.value_name AS shipping_name
         ,MAX(p1.end_receipt_time) AS receipt_time
         ,MAX(p1.finish_check_time) AS finish_check_time
         ,MAX(p1.on_shelf_finish_time) AS finish_onshelf_time
 FROM zydb.dw_delivered_receipt_onself AS p1
-LEFT JOIN jolly_spm.jolly_spm_pur_order_tracking_info p2
+LEFT JOIN jolly_spm.jolly_spm_pur_order_tracking_info AS p2
              ON p1.tracking_no = p2.tracking_no
-LEFT JOIN jolly.who_shipping p3
-             ON p2.tracking_id = p3.shipping_id
+LEFT JOIN (SELECT * 
+                      FROM jolly.who_pur_set_value 
+                      WHERE type_id=16) AS p3
+             ON p2.tracking_id = p3.value_id
 GROUP BY p1.delivered_order_id
         ,p1.delivered_order_sn
         ,p1.tracking_no
         ,p2.tracking_id
-        ,p3.shipping_name
+        ,p3.value_name
 ),
 
 -- 5. JOIN各表，获取各环节时间
@@ -3718,6 +3749,7 @@ t5 AS
         ,t4.tracking_no
         ,t4.shipping_id
         ,t4.shipping_name
+        ,SUBSTR(GET_JSON_OBJECT(p6.tracking_detail,'$.datas[:1].col_008'), -18, 16) AS wuliu_daohuo_time
         ,t4.receipt_time
         ,t4.finish_check_time
         ,t4.finish_onshelf_time
@@ -3732,11 +3764,11 @@ LEFT JOIN jolly_spm.jolly_spm_pur_order_goods AS p4       -- 采购单商品明�
 LEFT JOIN jolly_spm.jolly_spm_pur_order_info AS p5         -- 采购单表，发货时间
              ON p4.pur_order_id = p5.pur_order_id
 LEFT JOIN t4
-             ON p5.pur_order_sn = t4.delivered_order_sn             
+             ON p5.pur_order_sn = t4.delivered_order_sn
 LEFT JOIN jolly_tms_center.tms_domestic_order_shipping_tracking_detail p6
              ON t4.tracking_no = p6.tracking_no
-WHERE t1.order_id = 40683881
 )
+
 
 
 
