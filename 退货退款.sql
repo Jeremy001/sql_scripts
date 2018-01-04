@@ -107,6 +107,14 @@ SELECT *
 FROM jolly.who_cs_duty_push
 LIMIT 10;
 
+-- 东莞仓需求
+-- 查询2018-1-1推送的记录
+SELECT *
+FROM jolly.who_cs_duty_push AS p1
+WHERE p1.gmt_push >= UNIX_TIMESTAMP('2018-01-01')
+     AND p1.gmt_push < UNIX_TIMESTAMP('2018-01-02')
+     AND depart_duty = 3
+
 -- 一个订单可能会有多个推送记录
 SELECT FROM_UNIXTIME(p1.gmt_push) AS push_time
         ,FROM_UNIXTIME(p1.gmt_confirm) AS confirm_time

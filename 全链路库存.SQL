@@ -48,18 +48,6 @@ FROM t1
 GROUP BY month 
 ORDER BY month;
 
-
-
-
-
-
-
-
-
-
-
-
-
 /* ================================= 1.采购在途（顶） =====================================
 -- 1.采购在途商品数量 & 成本金额（人民币）
 -- jolly.who_wms_goods_stock_onway_total（包含所有仓库的在途数据）
@@ -70,9 +58,9 @@ t100 AS
 (SELECT p1.depot_id
         ,SUM(p1.pur_shiped_order_onway_num) AS purchase_onway_num      -- 采购在途数量
         ,SUM(p1.pur_shiped_order_onway_num * p2.in_price) AS purchase_onway_cost    --采购在途成本金额（人民币）
-FROM jolly.who_wms_goods_stock_onway_total p1
+FROM jolly_oms.who_wms_goods_stock_onway_total p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
-WHERE p1.depot_id IN (4, 5, 6, 7)
+WHERE p1.depot_id IN (4, 5, 6, 7, 8, 14, 15)
 GROUP BY p1.depot_id
 ),
 
@@ -91,7 +79,7 @@ t201 AS
         ,SUM(p1.total_stock_num * p2.in_price) AS instock_cost
 FROM jolly.who_wms_goods_stock_total_detail p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
-WHERE p1.depot_id in (4, 5, 6)
+WHERE p1.depot_id in (4, 5, 6, 14)
 GROUP BY p1.depot_id
 ),
 -- SA仓在库库存
@@ -114,9 +102,8 @@ t204 AS
 (SELECT p1.depot_id
         ,SUM(p1.allocate_order_onway_num) AS allocate_onway_num      -- 采购在途数量
         ,SUM(p1.allocate_order_onway_num * p2.in_price) AS allocate_onway_cost    --采购在途成本金额（人民币）
-FROM jolly.who_wms_goods_stock_onway_total p1
+FROM jolly_oms.who_wms_goods_stock_onway_total p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
-WHERE p1.depot_id in (4, 5, 6, 7)
 GROUP BY p1.depot_id
 ),
 -- 在库库存 = 实际在库库存 + 调出库存
@@ -305,7 +292,7 @@ LEFT JOIN (SELECT region_id, region_name
                     AND region_status = 1) p4
             ON p2.country = p4.region_id                
 WHERE P1.pay_id = 41
-AND p1.depot_id IN (4, 5, 6, 7)
+AND p1.depot_id IN (4, 5, 6, 7, 8, 14, 15)
 AND P1.cod_check_status NOT IN (3, 4, 5, 6)
 AND p1.real_shipping_id NOT IN (170, 172, 174, 176)
 GROUP BY p1.order_id
@@ -362,7 +349,7 @@ LEFT JOIN (SELECT region_id, region_name
                     AND region_status = 1) p4
             ON p2.country = p4.region_id                    
 WHERE P1.pay_id = 41
-AND p1.depot_id IN (4, 5, 6, 7)
+AND p1.depot_id IN (4, 5, 6, 7, 8, 14, 15)
 AND P1.cod_check_status NOT IN (3, 4, 5, 6)
 AND p1.real_shipping_id IN (170, 172, 174, 176)
 GROUP BY p1.order_id
