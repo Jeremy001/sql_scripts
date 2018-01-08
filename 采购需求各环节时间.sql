@@ -224,11 +224,10 @@ GROUP BY t5.order_id
         ,t5.outing_stock_time 
 )
 
-
-
-
-
-
+-- 看几条记录
+SELECT *
+FROM t6
+LIMIT 20;
 
 
 

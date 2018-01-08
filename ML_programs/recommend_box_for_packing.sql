@@ -295,4 +295,21 @@ ORDER BY SUBSTR(shipping_time, 1, 7)
 ;
 
 
+SELECT *
+FROM zydb.dim_jc_goods p1
+LIMIT 10;
+
+SELECT count(p1.goods_id) AS total_goods_count
+        ,sum(CASE WHEN p1.goods_weight IS NULL OR p1.goods_weight = 0 THEN 0 ELSE 1 END) AS weight_nnull_goods_count
+FROM zydb.dim_jc_goods p1
+;
+
+SELECT *
+FROM jolly.who_sku_relation p1
+LIMIT 10;
+
+SELECT count(p1.rec_id) AS total_sku_count
+        ,sum(CASE WHEN p1.sku_weight IS NULL OR p1.sku_weight = 0 THEN 0 ELSE 1 END) AS weight_nnull_sku_count
+FROM jolly.who_sku_relation p1
+;
 

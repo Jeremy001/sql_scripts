@@ -634,19 +634,27 @@ full join
 
 (
 	-- 大于3天配货完成仓库未发货订单数
-	select a.depod_id depot_id,count(distinct a.order_id)  unshipping_prepare_order_num
+		select a.depod_id depot_id,count(distinct a.order_id)  unshipping_prepare_order_num
 	from zydb.dw_order_sub_order_fact a
-	full join  
-	jolly_oms.who_wms_goods_need_lock_detail  b
+	left join 
+	(
+    	select order_id,max(gmt_created) outing_stock_time
+      from 
+      (
+    	  select order_id,gmt_created from  jolly.who_wms_outing_stock_detail
+    	  union all 
+    	  select order_id,gmt_created from  jolly_wms.who_wms_outing_stock_detail --沙特
+      )a
+      group by order_id 
+	)b
 	on a.order_id=b.order_id
-	where is_shiped=1
+	where is_shiped<>1
 	and order_status<>2
-	and last_modified_time<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') 
-	and last_modified_time>=unix_timestamp('2017-10-01','yyyy-MM-dd') 
-	and last_modified_time>0 
-	and num=0 
-	and oos_num=0
+	and outing_stock_time<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') 
+	and outing_stock_time>=unix_timestamp('2017-10-01' ,'yyyy-MM-dd') 
+	and outing_stock_time>0 
 	group by a.depod_id 
+	
 )t5
 on t0.depot_id=t5.depot_id
 full join  
@@ -813,26 +821,40 @@ full join
 	from 
 	(
 		--质检积压
-		select depot_id,sum(real_num-inspect_num) no_check_num from zydb.dw_delivered_receipt_onself 
-		where start_receipt_time>=date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
-		and end_receipt_time <from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
-		and (on_shelf_start_time>=date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
-			or on_shelf_start_time is null 
-			or on_shelf_start_time='1970-01-01 08:00:00') 
-		and exp_num=0
-		group by depot_id
+			select a.depot_id,sum(a.real_num-a.inspect_num) no_check_num 
+			from
+			(
+				select distinct a.depot_id,tracking_no,real_num,inspect_num,delivered_order_sn 
+				from zydb.dw_delivered_receipt_onself a 
+				where start_receipt_time>=date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
+				and end_receipt_time <from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
+				and (on_shelf_start_time>=date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
+					or on_shelf_start_time is null 
+					or on_shelf_start_time='1970-01-01 08:00:00') 
+				and a.exp_num=0
+			)a
+			left join 
+			jolly.who_wms_delivered_order_exp_goods b
+			on a.delivered_order_sn=b.delivered_order_sn 
+			where b.delivered_order_sn is null
+			group by a.depot_id
 	)a
 	full join 
 	(
 		--上架积压
-		select depot_id,sum(inspect_num-on_shelf_num) no_onself from zydb.dw_delivered_receipt_onself 
+		select a.depot_id,sum(num-on_shelf_num) no_onself 
+		from zydb.dw_delivered_receipt_onself  a
+		left join 
+		jolly.who_wms_delivered_order_exp_goods b
+		on a.delivered_order_sn=b.delivered_order_sn
 		where on_shelf_start_time>=date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
 		and on_shelf_start_time <concat(to_date(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)),' 20:00:00')
 		and (on_shelf_finish_time>=concat(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),' 06:00:00') 
 			  or on_shelf_finish_time is null 
 			  or on_shelf_finish_time='1970-01-01 08:00:00')
-		and exp_num=0
-		group by depot_id
+		and a.exp_num=0
+		and b.delivered_order_sn is null
+		group by a.depot_id
 	)b
 	on a.depot_id=b.depot_id
 )t2

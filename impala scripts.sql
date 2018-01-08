@@ -3641,3 +3641,37 @@ WHERE p1.pay_time >= '2016-01-01'
 GROUP BY SUBSTR(p1.pay_time, 1, 7)
 ORDER BY pay_month
 ;
+
+
+
+-- 仓库作业时长：质检时长、上架时长、拣货时长、打包时长、发货时长
+WITH 
+-- 质检时长
+t1 AS
+(SELECT SUBSTR(p1.on_shelf_start_time, 1, 7) AS data_month
+        ,SUM(((UNIX_TIMESTAMP(p1.on_shelf_start_time) - UNIX_TIMESTAMP(p1.start_receipt_time))/3600/24) * p1.num)/SUM(p1.num)*24 AS receipt_quality_duration
+FROM zydb.dw_delivered_receipt_onself AS p1
+WHERE p1.on_shelf_start_time >= '2016-01-01'
+     AND p1.on_shelf_start_time < '2018-01-01'
+     AND p1.on_shelf_start_time > p1.start_receipt_time
+GROUP BY SUBSTR(p1.on_shelf_start_time, 1, 7)
+),
+-- 上架时长
+t2 AS
+(SELECT SUBSTR(p1.on_shelf_finish_time, 1, 7) AS data_month
+        ,SUM(((UNIX_TIMESTAMP(p1.on_shelf_finish_time) - UNIX_TIMESTAMP(p1.on_shelf_start_time))/3600/24) * p1.on_shelf_num)/SUM(p1.on_shelf_num)*24 AS receipt_quality_duration
+FROM zydb.dw_delivered_receipt_onself AS p1
+WHERE p1.on_shelf_finish_time >= '2016-01-01'
+     AND p1.on_shelf_finish_time < '2018-01-01'
+     AND p1.on_shelf_finish_time > p1.on_shelf_start_time
+GROUP BY SUBSTR(p1.on_shelf_finish_time, 1, 7)
+)
+-- 拣货时长
+
+
+
+
+
+
+
+;
