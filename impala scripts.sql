@@ -5,7 +5,7 @@
  */
 
 
--- 商品表 
+-- 商品表
 -- 1.JOLLY.WHO_GOODS
 SELECT *
 FROM JOLLY.WHO_GOODS
@@ -101,7 +101,7 @@ GROUP BY FROM_UNIXTIME(ADD_TIME, 'yyyy-MM')
 ORDER BY ADD_MONTH DESC;
 -- 2017上半年添加了很多商品呀，特别是4-5-6三个月
 
--- PROVIDER_CODE 
+-- PROVIDER_CODE
 SELECT COUNT(DISTINCT PROVIDER_CODE)
 FROM JOLLY.WHO_GOODS;
 -- 3117，有点多呀，很多已经不合作了吧？
@@ -183,7 +183,7 @@ ORDER BY LEVEL;
 
 -- 2.ZYDB.DIM_JC_GOODS
 -- 前十条记录
-SELECT * 
+SELECT *
 FROM ZYDB.DIM_JC_GOODS
 LIMIT 10;
 -- 一级类目商品数
@@ -243,7 +243,7 @@ Test    47
 
 
 -- 商品分类表 JOLLY.WHO_CATEGORY
-SELECT * 
+SELECT *
 FROM JOLLY.WHO_CATEGORY
 LIMIT 10;
 
@@ -289,14 +289,14 @@ WHERE IS_SHOW = 1;
 
 
 -- 查看每天商品的上下架情况
-SELECT * 
-FROM ZYDB.DW_GOODS_ON_SALE 
+SELECT *
+FROM ZYDB.DW_GOODS_ON_SALE
 WHERE DATA_DATE = '20170717'
 LIMIT 10;
 
 
 SELECT IS_ON_SALE
-    ,COUNT(GOODS_ID) 
+    ,COUNT(GOODS_ID)
 FROM ZYDB.DW_GOODS_ON_SALE
 WHERE DATA_DATE = '20170717'
 GROUP BY IS_ON_SALE;
@@ -317,9 +317,9 @@ SELECT goods_id
         ,key_id
         ,'Prohibited' AS key_name
         ,value_id
-        ,(CASE WHEN value_id = 7524 THEN '完全违禁' 
-                     WHEN value_id = 7526 THEN '模糊违禁' 
-                     WHEN value_id = 7536 THEN '不违禁' 
+        ,(CASE WHEN value_id = 7524 THEN '完全违禁'
+                     WHEN value_id = 7526 THEN '模糊违禁'
+                     WHEN value_id = 7536 THEN '不违禁'
                      ELSE '其他'
           END) AS value_name
 FROM jolly.who_pattern_relation
@@ -328,14 +328,14 @@ WHERE key_id = 728;
 
 
 SELECT key_id
-    ,key_name    
+    ,key_name
     ,value_id
     ,value_name
     ,COUNT(goods_id)
 FROM jolly.who_pattern_relation
 WHERE key_id = 728
 GROUP BY key_id
-    ,key_name    
+    ,key_name
     ,value_id
     ,value_name
 ;
@@ -347,7 +347,7 @@ GROUP BY key_id
 
 
 -- 供应商信息表 JOLLY.WHO_ESOLOO_SUPPLIER
-SELECT * 
+SELECT *
 FROM JOLLY.WHO_ESOLOO_SUPPLIER
 WHERE ADDRESS IS NOT NULL
 LIMIT 10;
@@ -412,7 +412,7 @@ ORDER BY CREDIT_RANK;
     1
  */
 
--- ORDER_PLATFORM, 1:淘宝,2:天猫,3:独立平台,4:线下采购单,5:1688,6:代拍链接,0:其他 
+-- ORDER_PLATFORM, 1:淘宝,2:天猫,3:独立平台,4:线下采购单,5:1688,6:代拍链接,0:其他
 -- 这个其他是什么鬼？有了这个选项，绝大多数都选择了这个类型，太坑了！
 SELECT ORDER_PLATFORM
         ,COUNT(*)
@@ -720,17 +720,17 @@ GROUP BY IS_REAL_TIME_PUSH_PUR_DEMAND;
 
 -- 供应商地址表 JOLLY.WHO_ESOLOO_SUPPLIER_ADDRESS
 -- 这个表貌似不
-SELECT * 
+SELECT *
 FROM JOLLY.WHO_ESOLOO_SUPPLIER_ADDRESS
 LIMIT 10;
 
 -- 供应商商品类目表
-SELECT * 
+SELECT *
 FROM JOLLY.WHO_ESOLOO_SUPPLIER_CAT
 LIMIT 10;
 -- 供应商一般都有几个类目？
 SELECT AVG(CAT_NUM)
-FROM 
+FROM
 (SELECT SUPP_ID
         ,COUNT(CAT_ID) AS CAT_NUM
 FROM JOLLY.WHO_ESOLOO_SUPPLIER_CAT
@@ -765,7 +765,7 @@ GROUP BY CAST(SUPP_ID AS STRING)
 )
 SELECT T1.*
         ,T2.CAT_NUM
-FROM T1 
+FROM T1
 LEFT JOIN T2 ON T1.CODE = T2.CODE
 WHERE T2.CAT_NUM IS NOT NULL
 ORDER BY T2.CAT_NUM DESC;
@@ -778,15 +778,15 @@ LIMIT 10;
 
 
 -- =============================================== 库存相关数据（顶） ===================================================
-/* 
+/*
  1.库存快照（每天库存记录）
  2.库存变化（出入库记录）
  3.库存位置
  4.库存结构
- */ 
+ */
 
 -- 仓库货位表 ============================================
--- jolly_wms.who_wms_depot_shelf_area  
+-- jolly_wms.who_wms_depot_shelf_area
 -- jolly.who_wms_depot_shelf_area
 -- 去了解：
 -- 1.货位具体是什么？
@@ -796,7 +796,7 @@ LIMIT 10;
 -- 0101：第一个01表示第一列，第二个01表示第一层，即最下面一层
 
 
-SELECT * 
+SELECT *
 FROM jolly_wms.who_wms_depot_shelf_area
 LIMIT 10;
 /* 字段说明
@@ -816,7 +816,7 @@ FROM jolly.who_wms_depot_shelf_area;
 -- 仓库货架表 =============================================
 -- jolly_wms.who_wms_depot_shelf
 -- jolly.who_wms_depot_shelf
-SELECT * 
+SELECT *
 FROM jolly_wms.who_wms_depot_shelf
 LIMIT 10;
 /* 字段说明
@@ -827,7 +827,7 @@ shelf_row：列数
 shelf_line：层数
  */
 
-SELECT * 
+SELECT *
 FROM jolly.who_wms_depot_shelf
 LIMIT 10;
 
@@ -840,7 +840,7 @@ FROM jolly_wms.who_wms_depot_shelf;
 # 商品库存明细
 # 有点诡异，这个表的库存数据是怎么存的？
 # 查询总库存为什么要设置开始结束时间？
-SELECT * 
+SELECT *
 FROM jolly.who_wms_goods_stock_detail
 WHERE stock_num > 0
 LIMIT 10;
@@ -850,7 +850,7 @@ SELECT COUNT(*)
 FROM jolly.who_wms_goods_stock_detail
 
 
-SELECT * 
+SELECT *
 FROM jolly.who_wms_goods_stock_total_detail
 LIMIT 10;
 
@@ -898,7 +898,7 @@ ORDER BY change_date;
 
 # change_type 变更类型 1:采购入库,2:收货异常入库,3:销售退货入库,4:盘盈入库, 5:销售订单出库,6:盘亏出库,7:货位转移,8:移库,9:手动入库,10: 移库到亚马逊,11:fba商品入库,12:库存退货,13:调拨出库,14:上架异常入库,15:调拨入库,16-批发订单入库,17-批发订单出库
 
-WITH 
+WITH
 t1 AS
 (SELECT (CASE WHEN p1.change_type = 1 THEN '采购入库'
                             WHEN p1.change_type = 2 THEN '收货异常入库'
@@ -924,7 +924,7 @@ t1 AS
         ,FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS change_date
         ,SUM(p1.change_num) AS change_num
 FROM jolly_wms.who_wms_goods_stock_detail_log p1
-LEFT JOIN zydb.dim_jc_goods p2 
+LEFT JOIN zydb.dim_jc_goods p2
              ON p1.goods_id = p2.goods_id
 WHERE p1.depot_id = 7
      AND p1.change_time >= UNIX_TIMESTAMP('2017-07-01')
@@ -975,12 +975,12 @@ ORDER BY cat_level1_name
 # 库存快照表：zydb.ods_who_wms_goods_stock_detail
 # 每天一个快照，几点的？
 
-SELECT * 
+SELECT *
 FROM zydb.ods_who_wms_goods_stock_detail
 LIMIT 10;
 
 -- 查询昨天各二级类目的库存占比
-WITH 
+WITH
 -- 每个商品的库存
 t1 AS
 (SELECT p1.data_date
@@ -1020,19 +1020,19 @@ GROUP BY depot_id;
 国内仓，求总库存表：   (hadoop) zydb.ods_who_wms_goods_stock_detail       stock_num          (可以查：当前最新和历史每天快照)
 
 
-国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail ( data FROM 201704)  (可以查：当前最新和历史每天快照) 
---ZYDB.ODS_WHO_WMS_GOODS_STOCK_TOTAL_DETAIL表中20170813 - 20170822的库存数据可能不太准确 
+国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail ( data FROM 201704)  (可以查：当前最新和历史每天快照)
+--ZYDB.ODS_WHO_WMS_GOODS_STOCK_TOTAL_DETAIL表中20170813 - 20170822的库存数据可能不太准确
                                         free_num = total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
-          
+
                                 或  jolly.who_wms_goods_stock_total_detail             (可以查：当前最新)
 
 *******************************
-沙特仓，求总库存: (hadoop)   jolly_wms.who_wms_goods_stock_detail    stock_num     (可以查：当前最新)  --无法求沙特历史某天快照总库存   
+沙特仓，求总库存: (hadoop)   jolly_wms.who_wms_goods_stock_detail    stock_num     (可以查：当前最新)  --无法求沙特历史某天快照总库存
 
-沙特仓，求自由库: (hadoop)   jolly_wms.who_wms_goods_stock_total_detail            (可以查：当前最新)          
-                                       free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num   
-            
-                             jolly_wms.who_wms_goods_stock_total_detail_daily      (可以查：当前最新和历史每天快照) 
+沙特仓，求自由库: (hadoop)   jolly_wms.who_wms_goods_stock_total_detail            (可以查：当前最新)
+                                       free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
+
+                             jolly_wms.who_wms_goods_stock_total_detail_daily      (可以查：当前最新和历史每天快照)
                      free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
 
 zydb.ods_who_wms_goods_stock_detail
@@ -1064,12 +1064,12 @@ ORDER BY p1.depot_id
 -- 库存
 --每日各仓某时刻 自由库存统计
 SELECT t.depot_id,count(distinct t.goods_id), sum(t.free_num)
-FROM 
+FROM
 (--  CN仓
 SELECT depot_id,goods_id,sku_id,
 sum(total_stock_num) total_stock_num,
-sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num 
-FROM  jolly.who_wms_goods_stock_total_detail s  -- 历史自由库存  201704开始 -zydb.ods_who_wms_goods_stock_total_detail 
+sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num
+FROM  jolly.who_wms_goods_stock_total_detail s  -- 历史自由库存  201704开始 -zydb.ods_who_wms_goods_stock_total_detail
 where 1=1
 AND depot_id in (4,5,6)
 AND total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
@@ -1078,14 +1078,14 @@ group by depot_id, goods_id,sku_id
 group by t.depot_id
 union all
 SELECT t.depot_id,count(distinct t.goods_id), sum(t.free_num)
-FROM 
+FROM
 (--  SA仓
 SELECT depot_id,goods_id,sku_id,
 sum(total_stock_num) total_stock_num,
-sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num 
-FROM  jolly_wms.who_wms_goods_stock_total_detail s --历史自由库存 ？jolly_wms.who_wms_goods_stock_total_detail_daily 
+sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) free_num
+FROM  jolly_wms.who_wms_goods_stock_total_detail s --历史自由库存 ？jolly_wms.who_wms_goods_stock_total_detail_daily
 where 1=1
-AND depot_id =7 
+AND depot_id =7
 AND total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
 group by depot_id, goods_id,sku_id
 ) t
@@ -1095,12 +1095,12 @@ group by t.depot_id
 SELECT to_date(FROM_UNIXTIME(change_time)) data_date,
 sum(case when  change_type=1 then change_num end) 备货入库件数,
 sum(case when  change_type=3 then change_num end) 退货入库件数 ,
-sum(case when  change_type=5 then change_num end) 销售出库件数 
+sum(case when  change_type=5 then change_num end) 销售出库件数
 FROM jolly_wms.who_wms_goods_stock_detail_log  a
-where 1=1 
+where 1=1
 AND FROM_UNIXTIME(change_time,'yyyyMMdd')>='20170701'
 AND FROM_UNIXTIME(change_time,'yyyyMMdd')< '20170717'
-group by to_date(FROM_UNIXTIME(change_time)) 
+group by to_date(FROM_UNIXTIME(change_time))
 
 
 -- 仓库每天总库存
@@ -1155,7 +1155,7 @@ ORDER BY ds;
 -- sa仓 jolly_wms.who_wms_goods_stock_total_detail
  */
 -- 总库存
-WITH 
+WITH
 -- cn仓在库库存
 t1 AS
 (SELECT depot_id
@@ -1173,11 +1173,11 @@ GROUP BY depot_id
 )
 -- union
 SELECT t1.* FROM t1
-uniON 
+uniON
 SELECT t2.* FROM t2;
 
 -- 自由库存
-WITH 
+WITH
 -- cn仓在库库存
 t1 AS
 (SELECT depot_id
@@ -1195,7 +1195,7 @@ GROUP BY depot_id
 )
 -- union
 SELECT t1.* FROM t1
-uniON 
+uniON
 SELECT t2.* FROM t2;
 
 
@@ -1253,7 +1253,7 @@ ORDER BY returned_depot_id;
  */
 
 -- 计算方式四
-WITH 
+WITH
 -- 退货在途的退货单
 t1 AS
 (SELECT returned_rec_id
@@ -1283,15 +1283,15 @@ ORDER BY t1.returned_depot_id;
 
 
 -- 内购商品cn仓自由库存
-WITH 
+WITH
 t1 AS
 (SELECT p1.sku_id
         ,p1.depot_id
         ,p1.depot_area_id
         ,p1.shelf_id
         ,p1.shelf_area_id
-        ,CONCAT_WS('-', cast(p1.depot_area_id AS string), 
-                                        cast(p1.shelf_id AS string), 
+        ,CONCAT_WS('-', cast(p1.depot_area_id AS string),
+                                        cast(p1.shelf_id AS string),
                                         cast(p1.shelf_area_id AS string)) AS depot_shelf_id
         ,p1.stock_num
         ,(p1.stock_num - p1.order_lock_num - p1.lock_allocate_num - p1.return_lock_num) AS free_num
@@ -1301,7 +1301,7 @@ WHERE p1.depot_id in (4, 5, 6)
 ),
 -- 关联得到shelf_area_sn
 t2 AS
-(SELECT t1.* 
+(SELECT t1.*
         ,p1.shelf_area_sn
 FROM t1
 LEFT JOIN jolly.who_wms_picking_goods_detail p1 ON t1.shelf_area_id = p1.shelf_area_id
@@ -1323,7 +1323,7 @@ GROUP BY sku_id
 -- jolly.who_wms_goods_stock_total_detail
 -- jolly_oms.who_wms_goods_stock_total_detail
 -- zydb.ods_who_wms_goods_stock_total_detail
-WITH 
+WITH
 -- wms
 t1 AS
 (SELECT depot_id
@@ -1359,7 +1359,7 @@ SELECT * FROM t2
 
 
 -- 查询sku在各个货位号的库存
-WITH 
+WITH
 -- 库存明细
 t1 AS
 (SELECT e.depot_id
@@ -1373,9 +1373,9 @@ FROM jolly.who_wms_depot_shelf_area a
         ,jolly.who_wms_goods_stock_detail e
 WHERE a.depot_shelf_id = b.shelf_id
      AND b.depot_area_id = c.depot_area_id
-     AND c.depot_id = d.depot_id 
-     AND a.shelf_area_id = e.shelf_area_id 
-     AND e.stock_num >0 
+     AND c.depot_id = d.depot_id
+     AND a.shelf_area_id = e.shelf_area_id
+     AND e.stock_num >0
      AND e.depot_id IN (4, 5, 6)
 ),
 --  sku与货位号的数量，看是否有sku在多个货位上
@@ -1390,7 +1390,7 @@ SELECT COUNT (sku_id)
 FROM t2
 WHERE shelf_num >=2;
 -- 有8000多个sku
-SELECT * 
+SELECT *
 FROM t1
 LIMIT 10;
 
@@ -1403,7 +1403,7 @@ LIMIT 10;
  */
 
 -- 订单派送跟踪表: jolly.who_order_shipping_tracking
-SELECT * 
+SELECT *
 FROM jolly.who_order_shipping_tracking
 LIMIT 10;
 -- invoice_no: 物流编号
@@ -1563,7 +1563,7 @@ GROUP BY
 
 
 SELECT substr(order_sn, 0, 3) AS order_sn
-        ,COUNT(order_sn) 
+        ,COUNT(order_sn)
 FROM zybi.dw_order_sub_order_fact
 GROUP BY substr(order_sn, 0, 3)
 ORDER BY COUNT(order_sn) desc;
@@ -1576,7 +1576,7 @@ ORDER BY COUNT(order_sn) desc;
 WITH t as
 (SELECT pur_order_sn
     ,COUNT(DISTINCT tracking_no) AS tracking_no
-FROM zydb.ods_wms_pur_deliver_receipt 
+FROM zydb.ods_wms_pur_deliver_receipt
 GROUP BY pur_order_sn
 )
 SELECT tracking_no
@@ -1589,7 +1589,7 @@ ORDER BY tracking_no;
 WITH t as
 (SELECT tracking_no
     ,COUNT(DISTINCT pur_order_sn) AS order_no
-FROM zydb.ods_wms_pur_deliver_receipt 
+FROM zydb.ods_wms_pur_deliver_receipt
 GROUP BY tracking_no
 )
 SELECT order_no
@@ -1617,12 +1617,12 @@ WHERE is_shiped = 1
 t2 as
 (SELECT region_id
         ,region_name
-FROM jolly.who_region 
+FROM jolly.who_region
 WHERE region_type = 2
     AND region_status = 1
 ),
 -- 关联jolly.who_order_user_info和t2，得到订单发往的城市名称
-t3 AS 
+t3 AS
 (SELECT t1.*
         ,t2.region_name AS city_name
 FROM t1
@@ -1639,14 +1639,14 @@ GROUP BY ship_date
         ,city_name
 )
 -- 查询部分数据
-SELECT * 
+SELECT *
 FROM t
 ORDER BY ship_date desc
         ,order_num desc;
 
 
 -- 查询某个国家的所有城市(子查询方式)
-WITH 
+WITH
 -- 先查询所有省份
 t1 as
 (SELECT region_id
@@ -1669,7 +1669,7 @@ SELECT p1.order_id
         ,p1.shipping_status
         ,p2.shipping_state
 FROM jolly.who_order_info p1
-LEFT JOIN jolly.who_order_shipping_tracking p2 
+LEFT JOIN jolly.who_order_shipping_tracking p2
             ON p1.order_id = p2.order_id
 WHERE p1.order_status = 1
     AND p1.pay_status = 1
@@ -1688,7 +1688,7 @@ SELECT FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') AS real_pay_date
         ,SUM(goods_num) AS goods_num
 FROM t1
 WHERE t1.real_pay_time >= UNIX_TIMESTAMP('2017-04-01')
-GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') 
+GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd')
 ORDER BY real_pay_date;
 
 
@@ -1739,7 +1739,7 @@ WHERE depot_id = 7
     AND gmt_created >= UNIX_TIMESTAMP('2017-06-01', 'yyyy-MM-dd')
     AND gmt_created <= UNIX_TIMESTAMP('2017-08-29', 'yyyy-MM-dd')
 GROUP BY FROM_UNIXTIME(gmt_created, 'yyyy-MM-dd')
-        ,FROM_UNIXTIME(gmt_created, 'HH') 
+        ,FROM_UNIXTIME(gmt_created, 'HH')
 ORDER BY date_BeiJing
         ,hour_BeiJing
 )
@@ -1748,7 +1748,7 @@ SELECT t2.date_BeiJing
         ,t2.order_num AS pay_order_num
         ,t3.order_num AS can_pick_order_num
 FROM t2
-JOIN t3 
+JOIN t3
 ON t2.date_BeiJing = t3.date_BeiJing AND t2.hour_BeiJing = t3.hour_BeiJing
 ORDER BY t2.date_BeiJing
         ,t2.hour_BeiJing;
@@ -1792,7 +1792,7 @@ SELECT t2.date_BeiJing
         ,t2.order_num AS pay_order_num
         ,t3.order_num AS can_pick_order_num
 FROM t2
-LEFT JOIN t3 
+LEFT JOIN t3
             ON t2.date_BeiJing = t3.date_BeiJing
 ORDER BY t2.date_BeiJing;
 
@@ -1801,7 +1801,7 @@ ORDER BY t2.date_BeiJing;
 
 -- =====================================================================================
 -- 上架开始和结束时间
-WITH t AS 
+WITH t AS
 (SELECT  b.depot_id
         ,b.pur_order_sn
         ,b.order_id
@@ -1835,7 +1835,7 @@ ORDER BY ship_date;
 -- 上架时间为负数的分布
 SELECT floor(onshelf_duration / 3600) AS on_shelf_hour
         ,COUNT(*) AS num
-FROM t 
+FROM t
 WHERE onshelf_duration <= 0
 GROUP BY floor(onshelf_duration / 3600)
 ORDER BY on_shelf_hour;
@@ -1878,7 +1878,7 @@ ORDER BY shipping_time;
 
 -- 寿元，对比2万个商品的销售
 
-WITH 
+WITH
 -- 订单和商品明细
 t1 AS
 (SELECT p1.order_id
@@ -1896,7 +1896,7 @@ WHERE p1.pay_time >= FROM_UNIXTIME(UNIX_TIMESTAMP('2017-09-29'))
      -- AND p1.order_status = 1
 GROUP BY p1.order_id
         ,p1.pay_time
-        ,TO_DATE(CAST(p1.pay_time AS STRING)) 
+        ,TO_DATE(CAST(p1.pay_time AS STRING))
         ,SUBSTR(CAST(p1.pay_time AS STRING), 12, 2)
         ,p2.goods_id
 ),
@@ -1912,7 +1912,7 @@ GROUP BY goods_id
         ,pay_date
         ,pay_hour
 )
-SELECT * 
+SELECT *
 FROM t2;
 
 
@@ -1920,7 +1920,7 @@ FROM t2;
 
 
 
-SELECT * 
+SELECT *
 FROM t2
 LIMIT 10;
 ORDER BY goods_id
@@ -1968,7 +1968,7 @@ ORDER BY p1.pay_id
 -- gmt_created：创建时间
 -- status：上架单状态：1-待上架,2-上架中,3-上架完成
 -- source_type：来源类型：1-批发订单作业单,2-普通采购单(非供应商备货的),3-调拨入库单,4-供应商备货采购单
-SELECT * 
+SELECT *
 FROM jolly.who_wms_on_shelf_info
 LIMIT 10;
 
@@ -1979,7 +1979,7 @@ LIMIT 10;
 -- user_id：猜测是上架员ID
 -- finish_time：上架完成时间
 -- FROM_type：来源类型：1-批发订单作业单,2-普通采购单(非供应商备货的),3-调拨入库单,4-供应商备货采购单
-SELECT * 
+SELECT *
 FROM jolly.who_wms_pur_deliver_info
 LIMIT 10;
 
@@ -2033,9 +2033,9 @@ SELECT p1.on_shelf_sn
                       WHEN p1.status = 2 THEN '上架中'
                       WHEN p1.status = 3 THEN '上架完成'
                       ELSE '其他' END) AS 上架状态
-        ,(CASE WHEN p1.source_type = 1 THEN '批发订单作业单' 
-                      WHEN p1.source_type = 2 THEN '普通采购单(非供应商备货)' 
-                      WHEN p1.source_type = 3 THEN '调拨入库单' 
+        ,(CASE WHEN p1.source_type = 1 THEN '批发订单作业单'
+                      WHEN p1.source_type = 2 THEN '普通采购单(非供应商备货)'
+                      WHEN p1.source_type = 3 THEN '调拨入库单'
                       WHEN p1.source_type = 4 THEN '供应商备货采购单'
                       ELSE '其他' END) AS 来源类型
         ,p1.on_shelf_admin_id AS 上架员ID
@@ -2048,7 +2048,7 @@ WHERE p1.gmt_created <= UNIX_TIMESTAMP(DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[
 ORDER BY p1.depot_id;
 
 
-WITH 
+WITH
 -- 四仓每天每人完成上架单数量, 商品数量, 上架时长（用于求平均上架时长）
 t1 AS
 (SELECT FROM_UNIXTIME(p1.on_shelf_finish_time, 'yyyy-MM-dd') AS onshelf_finish_date
@@ -2059,7 +2059,7 @@ t1 AS
         ,SUM(p1.total_num) AS onshelf_goods_num
         ,SUM((p1.on_shelf_finish_time - p1.gmt_created) / 3600) AS onshelf_hours
 FROM jolly.who_wms_on_shelf_info p1
-LEFT JOIN jolly.who_rbac_user p2 
+LEFT JOIN jolly.who_rbac_user p2
              ON p1.on_shelf_admin_id = p2.user_id
 WHERE p1.status = 3    -- 完成上架
      AND p1.on_shelf_finish_time >= UNIX_TIMESTAMP('2017-04-01')
@@ -2069,7 +2069,7 @@ GROUP BY FROM_UNIXTIME(p1.on_shelf_finish_time, 'yyyy-MM-dd')
         ,p2.user_name
 )
 
-SELECT * 
+SELECT *
 FROM t1
 ORDER BY onshelf_finish_date
         ,depot_id
@@ -2084,7 +2084,7 @@ ORDER BY onshelf_finish_date
 
 -- 后台登录用户表（登录执御的各个系统的用户列表）
 -- jolly.who_rbac_user
-SELECT * 
+SELECT *
 FROM jolly.who_rbac_user
 LIMIT 10;
 
@@ -2099,7 +2099,7 @@ LIMIT 10;
 
 -- 调拨单表：jolly.who_wms_allocate_order_info
 -- 问题：表中的arrive_time：到货时间是指什么时间？
-SELECT * 
+SELECT *
 FROM jolly.who_wms_allocate_order_info
 LIMIT 10;
 
@@ -2123,13 +2123,13 @@ WITH t1 AS
         ,FROM_UNIXTIME(p1.arrive_time) AS 到达调入仓时间
         ,FROM_UNIXTIME(p2.gmt_created) AS receive_time
 FROM jolly.who_wms_allocate_order_info p1
-LEFT JOIN zydb.ods_wms_pur_deliver_receipt p2 
+LEFT JOIN zydb.ods_wms_pur_deliver_receipt p2
              ON p1.allocate_order_sn = p2.pur_order_sn
 WHERE p1.gmt_created >= UNIX_TIMESTAMP('2017-01-01')
 --     AND p1.gmt_created < UNIX_TIMESTAMP('2017-10-09')
 )
 -- 查询明细
-SELECT * 
+SELECT *
 FROM t1
 WHERE receive_time IS NOT NULL
 LIMIT 10;
@@ -2206,7 +2206,7 @@ WHERE customer_order_id = 25181391
 ;
 
 
-SELECT * 
+SELECT *
 FROM jolly.who_order_info
 where order_id  = 25892073
 ;
@@ -2219,7 +2219,7 @@ WITH t1 AS
 (SELECT p1.customer_order_id
         ,p2.order_sn
         ,p1.shipping_status
-        ,p2.cod_check_status        
+        ,p2.cod_check_status
 FROM jolly_tms_center.tms_order_info p1
 LEFT JOIN jolly.who_order_info p2
 on p1.customer_order_id = p2.order_id
@@ -2233,7 +2233,7 @@ FROM t1
 GROUP BY shipping_status
         ,cod_check_status;
 -- 核查两个状态异常的订单
-SELECT * 
+SELECT *
 FROM t1
 WHERE cod_check_status = 0
      AND shipping_status = 3
@@ -2241,7 +2241,7 @@ LIMIT 5;
 
 
 -- tms_order_info
-SELECT * 
+SELECT *
 FROM jolly_tms_center.tms_order_info p1
 LIMIT 10;
 
@@ -2253,7 +2253,7 @@ where delivered_order_sn = 'GZ2DB171022092806186Y94IF'
 LIMIT 10;
 
 
-SELECT * 
+SELECT *
 FROM jolly.who_wms_on_shelf_info
 LIMIT 10;
 
@@ -2308,7 +2308,7 @@ FROM t1;
 -- 特定sku销量
 WITH t1 AS
 (SELECT p1.sku_id
-        ,p2.depot_id 
+        ,p2.depot_id
         ,SUM(CASE WHEN p2.pay_time < '2017-10-20' THEN p1.goods_number ELSE NULL END) AS sales_num_19
         ,SUM(CASE WHEN p2.pay_time >= '2017-10-20' THEN p1.goods_number ELSE NULL END) AS sales_num_26
 FROM jolly.who_order_goods p1
@@ -2316,9 +2316,9 @@ RIGHT JOIN zydb.dw_order_node_time p2 ON p1.order_id = p2.order_id
 WHERE p2.pay_time >= '2017-10-12'
      AND p2.pay_time < '2017-10-27'
 GROUP BY p1.sku_id
-        ,p2.depot_id 
+        ,p2.depot_id
 )
-SELECT * 
+SELECT *
 FROM t1
 WHERE sku_id IN ()
 ;
@@ -2339,16 +2339,16 @@ LIMIT 10;
 
 -- 东莞仓每月订单内商品数量的分布
 SELECT SUBSTR(shipping_time, 1, 7) AS month
-        ,(CASE WHEN goods_number <= 4 THEN '<=4件' 
+        ,(CASE WHEN goods_number <= 4 THEN '<=4件'
                       WHEN goods_number <= 8 THEN '5-8件'
                       WHEN goods_number >=9 THEN '>=9件'
                       ELSE '其他' END) AS goods_num_class
         ,COUNT(order_sn) AS order_num
-FROM zydb.dw_order_node_time 
+FROM zydb.dw_order_node_time
 WHERE depot_id = 4
      AND goods_number >=1
-GROUP BY SUBSTR(shipping_time, 1, 7) 
-        ,(CASE WHEN goods_number <= 4 THEN '<=4件' 
+GROUP BY SUBSTR(shipping_time, 1, 7)
+        ,(CASE WHEN goods_number <= 4 THEN '<=4件'
                       WHEN goods_number <= 8 THEN '5-8件'
                       WHEN goods_number >=9 THEN '>=9件'
                       ELSE '其他' END)
@@ -2357,16 +2357,16 @@ GROUP BY SUBSTR(shipping_time, 1, 7)
 
 -- 新仓库日报，提货订单数
 
-SELECT depod_id depot_id,count(*) pickup_orders FROM 
+SELECT depod_id depot_id,count(*) pickup_orders FROM
     zydb.dw_order_shipping_tracking_node a
-    left join  
+    left join
     zydb.dw_order_sub_order_fact b
     on a.order_id=b.order_id
     where lading_time>=FROM_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
     AND lading_time<date_add(FROM_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
     group by depod_id
 
--- 根据 jolly.who_wms_lading_order 
+-- 根据 jolly.who_wms_lading_order
 WITH t1 AS
 (SELECT p1.lading_sn
         ,p1.depot_id
@@ -2384,9 +2384,9 @@ WHERE p1.operate_time >= unix_timestamp('2017-11-01', 'yyyy-MM-dd')
 GROUP BY p1.lading_sn
         ,p1.depot_id
         ,FROM_UNIXTIME(p1.create_time, 'yyyy-MM-dd')
-        ,FROM_UNIXTIME(p1.create_time) 
-        ,FROM_UNIXTIME(p1.operate_time, 'yyyy-MM-dd') 
-        ,FROM_UNIXTIME(p1.operate_time) 
+        ,FROM_UNIXTIME(p1.create_time)
+        ,FROM_UNIXTIME(p1.operate_time, 'yyyy-MM-dd')
+        ,FROM_UNIXTIME(p1.operate_time)
 )
 SELECT operate_date
         ,create_date
@@ -2409,15 +2409,15 @@ WITH t1 AS
         ,(CASE WHEN p5.region_id = 1788 THEN 'Indonesia' ELSE 'Others' END) AS country
         ,COUNT(DISTINCT p2.order_sn) AS order_num
         ,SUM(p1.goods_number) AS goods_num
-FROM jolly.who_order_info p2 
-LEFT JOIN jolly.who_order_goods p1 
+FROM jolly.who_order_info p2
+LEFT JOIN jolly.who_order_goods p1
              ON p1.order_id = p2.order_id
-LEFT JOIN zydb.dim_jc_goods p3 
+LEFT JOIN zydb.dim_jc_goods p3
              ON p3.goods_id = p1.goods_id
-LEFT JOIN jolly.who_order_user_info p4 
-             ON p2.order_id = p4.order_id 
+LEFT JOIN jolly.who_order_user_info p4
+             ON p2.order_id = p4.order_id
           --AND p4.country = 1788
-LEFT JOIN jolly.who_region p5 
+LEFT JOIN jolly.who_region p5
              ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
 WHERE p5.region_id IS NOT NULL
      AND P2.shipping_time >= UNIX_TIMESTAMP('2017-08-01')
@@ -2438,7 +2438,7 @@ FROM t1;
 
 
 
-SELECT * 
+SELECT *
 FROM zydb.dw_delivered_order_info
 WHERE start_onself_time >= '2017-11-01'
 LIMIT 100;
@@ -2456,11 +2456,11 @@ WHERE pur_order_sn = 'GZ2FHD201711071801481083'
 ;
 
 SELECT FROM_unixtime(max(gmt_created))
-FROM zydb.ods_wms_pur_deliver_receipt 
+FROM zydb.ods_wms_pur_deliver_receipt
 --WHERE pur_order_sn = 'GZ2FHD201711071801481083'
 ;
 
-SELECT FROM_unixtime(gmt_created) 
+SELECT FROM_unixtime(gmt_created)
         ,pur_order_sn
 FROM jolly.who_wms_pur_deliver_receipt
 WHERE pur_order_sn = 'GZ2FHD201711071801481083'
@@ -2495,7 +2495,7 @@ order by depot_id;
 
 
 -- ?????????????&???????
-WITH 
+WITH
 -- GZ2 + DG1 + HK
 t1 AS
 (SELECT p1.depot_id
@@ -2523,7 +2523,7 @@ GROUP BY p1.depot_id
 -- UNION
 t3 AS
 (SELECT * FROM t1
-UNION ALL 
+UNION ALL
 SELECT * FROM t2
 )
 SELECT *
@@ -2540,7 +2540,7 @@ WHERE p1.depod_id IN (4, 5, 6, 7)
      AND p1.order_status = 1
      AND p1.pay_status IN (1, 3)
      AND (CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) >= '2017-08-01'
-GROUP BY p1.depod_id 
+GROUP BY p1.depod_id
         ,SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10)
 ;
 -- jolly.who_order_info
@@ -2555,7 +2555,7 @@ SELECT FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') AS real_pay_date
         ,SUM(goods_num) AS goods_num
 FROM t1
 WHERE t1.real_pay_time >= UNIX_TIMESTAMP('2017-04-01')
-GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd') 
+GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd')
 ORDER BY real_pay_date
 ;
 
@@ -2563,14 +2563,14 @@ ORDER BY real_pay_date
 -- ÿ?ǩ????
 SELECT FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd') AS data_date
         ,SUM(p2.goods_number) AS receive_num
-FROM jolly.who_order_shipping_tracking p1 
-LEFT JOIN zydb.dw_order_sub_order_fact p2 
+FROM jolly.who_order_shipping_tracking p1
+LEFT JOIN zydb.dw_order_sub_order_fact p2
              ON p1.order_id = p2.order_id
           AND p1.update_time > UNIX_TIMESTAMP(p2.shipping_time)
-WHERE p1.shipping_state=3 
+WHERE p1.shipping_state=3
      AND p1.update_time >= UNIX_TIMESTAMP('2017-08-01')
      AND p1.update_time < UNIX_TIMESTAMP(TO_DATE(NOW()))
-GROUP BY FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd') 
+GROUP BY FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd')
 LIMIT 10;
 
 
@@ -2617,7 +2617,7 @@ WHERE p1.returned_time >= UNIX_TIMESTAMP('2017-11-16')
 -- is_shiped IN (0, 4, 5)  已支付未配货
 
 SELECT *
-FROM t1 
+FROM t1
 WHERE is_shiped = 7
 LIMIT 10;
 
@@ -2636,7 +2636,7 @@ GROUP BY pay_to_return
 -- 01:00:00 — 02:00:00：上架X2件商品，配货Y2件商品， 配货Z2个订单
 -- 。。。。。。
 
-WITH 
+WITH
 -- 1.上架商品数
 t1 AS
 (SELECT p1.depot_id
@@ -2647,7 +2647,7 @@ FROM zydb.dw_delivered_receipt_onself p1
 WHERE p1.on_shelf_finish_time >= '2017-10-01'
      AND p1.on_shelf_finish_time < '2017-11-24'
 GROUP BY p1.depot_id
-        ,SUBSTR(p1.on_shelf_finish_time, 1, 10) 
+        ,SUBSTR(p1.on_shelf_finish_time, 1, 10)
         ,SUBSTR(p1.on_shelf_finish_time, 12, 2)
 ),
 -- 2.完成配货商品数和订单数
@@ -2683,7 +2683,7 @@ ORDER BY t1.depot_id
 -- 供应商与发货仓库对应表：jolly.who_esoloo_supplier_send_depot
 -- 商品发货仓库对应表：jolly.who_goods_send_depot
 
-WITH 
+WITH
 -- 会发货到HK仓的供应商代码
 t1 AS
 (SELECT supp_id
@@ -2706,7 +2706,7 @@ GROUP BY supp_id
 t3 AS
 (SELECT t1.*
 FROM t1
-INNER JOIN t2 
+INNER JOIN t2
                  ON t1.supp_id = t2.supp_id
 WHERE t2.depot_num = 1
 ),
@@ -2722,16 +2722,16 @@ FROM zydb.dim_jc_goods AS p1, t3
 WHERE p1.provide_code = t3.supp_code
 ),
 -- goods_id在印尼的下单量
-t5 AS 
+t5 AS
 (SELECT p1.goods_id
         ,COUNT(DISTINCT p2.order_id) AS order_num           -- 下单订单数
         ,SUM(p1.original_goods_number) AS org_goods_num             -- 下单商品数
-FROM zydb.dw_order_sub_order_fact p2 
-LEFT JOIN jolly.who_order_goods p1 
+FROM zydb.dw_order_sub_order_fact p2
+LEFT JOIN jolly.who_order_goods p1
              ON p1.order_id = p2.order_id
-LEFT JOIN jolly.who_order_user_info p4 
-             ON p2.order_id = p4.order_id 
-LEFT JOIN jolly.who_region p5 
+LEFT JOIN jolly.who_order_user_info p4
+             ON p2.order_id = p4.order_id
+LEFT JOIN jolly.who_region p5
              ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
 WHERE p5.region_id IS NOT NULL
      AND p2.add_time >= '2017-10-01'
@@ -2778,9 +2778,9 @@ WITH
 t2 AS
 (SELECT p1.order_id
         ,p1.sku_id
-        ,(CASE WHEN p1.type IN (1, 2, 3, 9) THEN 'pur' 
-                      WHEN p1.type IN (5, 6, 7, 10, 13) THEN 'wh' 
-                      WHEN p1.type IN (4,  11, 12) THEN 'sys' 
+        ,(CASE WHEN p1.type IN (1, 2, 3, 9) THEN 'pur'
+                      WHEN p1.type IN (5, 6, 7, 10, 13) THEN 'wh'
+                      WHEN p1.type IN (4,  11, 12) THEN 'sys'
                       ELSE 'other' END) AS oos_type
         ,p1.oos_num
 FROM jolly.who_wms_order_oos_log p1
@@ -2864,8 +2864,8 @@ t2 AS
         ,p1.sku_id
         ,p4.supp_name
         ,FROM_UNIXTIME(p1.create_time) AS add_time
-        ,(CASE WHEN p1.type = 5 THEN '拣货异常' 
-                      WHEN p1.type = 13 THEN '打包异常' 
+        ,(CASE WHEN p1.type = 5 THEN '拣货异常'
+                      WHEN p1.type = 13 THEN '打包异常'
                       ELSE '其他' END) AS oos_type
         ,p1.oos_num
 FROM jolly.who_wms_order_oos_log p1
@@ -2881,24 +2881,24 @@ WHERE p1.type IN (5, 13)
 )
 
 SELECT *
-FROM t2 
+FROM t2
 LIMIT 10;
 
 
 
 
 
-,(CASE WHEN p1.type = 1 THEN '采购单取消' 
-                      WHEN p1.type = 2 THEN '供应商门户确认缺货' 
-                      WHEN p1.type = 3 THEN '处理到货异常' 
-                      WHEN p1.type = 4 THEN '超期标记缺货' 
-                      WHEN p1.type = 5 THEN '拣货异常' 
-                      WHEN p1.type = 6 THEN '调拨取消' 
-                      WHEN p1.type = 7 THEN '盘亏' 
-                      WHEN p1.type = 9 THEN '采购延迟到货' 
-                      WHEN p1.type = 10 THEN '调拨延迟' 
-                      WHEN p1.type = 11 THEN '超卖' 
-                      WHEN p1.type = 12 THEN 'HK仓超卖' 
+,(CASE WHEN p1.type = 1 THEN '采购单取消'
+                      WHEN p1.type = 2 THEN '供应商门户确认缺货'
+                      WHEN p1.type = 3 THEN '处理到货异常'
+                      WHEN p1.type = 4 THEN '超期标记缺货'
+                      WHEN p1.type = 5 THEN '拣货异常'
+                      WHEN p1.type = 6 THEN '调拨取消'
+                      WHEN p1.type = 7 THEN '盘亏'
+                      WHEN p1.type = 9 THEN '采购延迟到货'
+                      WHEN p1.type = 10 THEN '调拨延迟'
+                      WHEN p1.type = 11 THEN '超卖'
+                      WHEN p1.type = 12 THEN 'HK仓超卖'
                       WHEN p1.type = 13 THEN '打包异常'
                       ELSE '其他' END) AS oos_type
 
@@ -2988,27 +2988,27 @@ GCC国家的代码和名称：
  */
 
 -- 每月销售额，销售数量
-WITH 
-t1 AS 
+WITH
+t1 AS
 (SELECT p5.region_id
         ,p5.region_name
         ,p3.cat_level1_name
         ,COUNT(p1.order_id) AS order_num
-        ,SUM(p1.goods_number) AS goods_num 
+        ,SUM(p1.goods_number) AS goods_num
 FROM zydb.dw_order_node_time p1
-LEFT JOIN zydb.dw_order_goods_fact p2 
+LEFT JOIN zydb.dw_order_goods_fact p2
              ON p1.order_id = p2.order_id
 LEFT JOIN zydb.dim_jc_goods p3
              ON p2.goods_id = p3.goods_id
-LEFT JOIN jolly.who_order_user_info p4 
-             ON p1.order_id = p4.order_id 
-LEFT JOIN jolly.who_region p5 
+LEFT JOIN jolly.who_order_user_info p4
+             ON p1.order_id = p4.order_id
+LEFT JOIN jolly.who_region p5
              ON p4.country = p5.region_id
 WHERE p1.order_status = 1
      AND p1.is_shiped = 1
      AND p1.pay_time >= '2017-05-27'
      AND p1.pay_time < '2017-06-26'
-     AND p5.region_type = 0 
+     AND p5.region_type = 0
      AND p5.region_status = 1
 GROUP BY  p5.region_id
         ,p5.region_name
@@ -3021,14 +3021,14 @@ WHERE region_id = 1878
 ;
 
 -- 类目销售结构
-WITH 
-t1 AS 
+WITH
+t1 AS
 (SELECT p3.cat_level1_name
         ,p3.cat_level2_name
         ,p3.supp_name
-        ,SUM(p2.goods_number) AS goods_num 
+        ,SUM(p2.goods_number) AS goods_num
 FROM zydb.dw_order_node_time p1
-INNER JOIN jolly.who_order_goods p2 
+INNER JOIN jolly.who_order_goods p2
                  ON p1.order_id = p2.order_id
 LEFT JOIN zydb.dim_jc_goods p3
              ON p2.goods_id = p3.goods_id
@@ -3058,7 +3058,7 @@ SELECT UCASE(p2.material_sn) AS material_sn2
         ,p3.volume
         ,p3.standard
         ,p3.unit_price
-        ,(CASE WHEN p3.status = 1 THEN '正常' 
+        ,(CASE WHEN p3.status = 1 THEN '正常'
                      WHEN p3.status = 2 THEN '禁用'
                      ELSE '其他' END) AS material_status
         ,COUNT(p1.order_id) AS order_num
@@ -3077,10 +3077,10 @@ GROUP BY UCASE(p2.material_sn)
         ,p3.volume
         ,p3.standard
         ,p3.unit_price
-        ,(CASE WHEN p3.status = 1 THEN '正常' 
+        ,(CASE WHEN p3.status = 1 THEN '正常'
                       WHEN p3.status = 2 THEN '禁用'
                       ELSE '其他' END)
-ORDER BY material_sn2 
+ORDER BY material_sn2
 LIMIT 100;
 
 
@@ -3112,7 +3112,7 @@ stored AS textfile
 load data inpath '/user/zybiro/load/temp/neo_returned_awb.csv' into table zybiro.neo_returned_awb
 -- 3.用上表关联， 查询所需结果；
 WITH t1 AS
-(SELECT p1.invoice_no 
+(SELECT p1.invoice_no
         ,(CASE WHEN p1.depod_id = 4 THEN 'GZ2'
                       WHEN p1.depod_id IN (5, 14) THEN 'DG1'
                       WHEN p1.depod_id = 6 THEN 'HK1'
@@ -3145,7 +3145,7 @@ LEFT JOIN t1
 -- 打包异常
 -- jolly.who_wms_pack_exception_detail
 
-WITH 
+WITH
 -- 拣货异常
 t1 AS
 (SELECT p1.sku_id
@@ -3179,7 +3179,7 @@ t3 AS
 UNION ALL
 SELECT t2.* FROM t2
 ),
-t4 AS 
+t4 AS
 -- 加上订单的信息
 (SELECT t3.sku_id
         ,t3.order_id
@@ -3223,7 +3223,7 @@ FROM t10
 ;
 
 -- 知希 产能计划数据  ===================================================================
-WITH 
+WITH
 -- 实际销售数据，不分仓
 -- 年、月、日销售额，销售订单数，销售商品数， 各月峰值：销售订单数、销售商品数
 t101 AS
@@ -3304,7 +3304,7 @@ WHERE ship_month IN ('05', '06', '08', '09', '11', '12')
 
 -- 历史库存数据，分仓（海外仓、国内仓）
 -- 各月峰值：库存sku数、库存件数
-t301 AS 
+t301 AS
 -- 国内仓
 (SELECT p1.data_date
         ,SUBSTR(p1.data_date, 1, 4) AS data_year
@@ -3365,7 +3365,7 @@ GROUP BY data_year
 SELECT *
 FROM t301
 WHERE t301.data_month IN ('05', '06', '08', '09', '11', '12')
-UNION ALL 
+UNION ALL
 SELECT *
 FROM t302
 WHERE t302.data_month IN ('05', '06', '08', '09', '11', '12')
@@ -3427,14 +3427,14 @@ FROM t302
 
 -- 把 jolly_wms.who_wms_goods_stock_detail p1表的数据保存，避免后续无法查询26日凌晨的库存数据
 CREATE TABLE zybiro.neo_who_wms_goods_stock_detail_sa_20171225
-AS 
+AS
 SELECT *
 FROM jolly_wms.who_wms_goods_stock_detail p1
 WHERE p1.stock_num > 0
-     AND p1.depot_id = 7 
+     AND p1.depot_id = 7
 ;
 
-WITH t1 AS 
+WITH t1 AS
 (SELECT j.cat_level1_name
         ,j.cat_level2_name
         ,j.cat_level3_name
@@ -3459,7 +3459,7 @@ FROM jolly_wms.who_wms_depot_shelf_area a
 WHERE a.depot_shelf_id = b.shelf_id
      AND b.depot_channel_id = c.channel_id
      AND c.depot_area_id = d.depot_area_id
-     AND a.shelf_area_id = e.shelf_area_id 
+     AND a.shelf_area_id = e.shelf_area_id
      AND e.goods_id = j.goods_id
      AND d.depot_area_type_id = 1       -- =1表示正品
 GROUP BY j.cat_level1_name
@@ -3522,7 +3522,7 @@ GROUP BY p1.cat1_name
                       WHEN p2.goods_season = 8 THEN '夏秋'
                       WHEN p2.goods_season = 9 THEN '夏冬'
                       WHEN p2.goods_season = 10 THEN '秋冬'
-                      ELSE '其他' END) 
+                      ELSE '其他' END)
 )
 SELECT *
 FROM t1
@@ -3539,20 +3539,20 @@ WITH t1 AS
         a.sku_id,
         a.TYPE,
         a.oos_num,
-        FROM_UNIXTIME(a.create_time) create_time, 
-        f.provide_code, 
+        FROM_UNIXTIME(a.create_time) create_time,
+        f.provide_code,
        f.cat_level1_name  cat_name,
        f.cat_level2_name sub_cat_name,
        b.depod_id,
       f.first_on_sale_time,
      c2.status,
      c2.is_stock,
-  t.free_num 
+  t.free_num
 FROM   jolly.who_wms_order_oos_log a
    inner join         zydb.dw_order_sub_order_fact b  on  a.order_id=b.order_id
   left  join    zydb.dw_order_goods_fact c        on  b.order_id=c.order_id  and a.sku_id=c.sku_id
-  left  join     jolly.who_sku_depot_coverage_area_status c2  on  c2.goods_id=c.goods_id and c2.sku_id=a.sku_id and depot_coverage_area_id =1 
-     left join       zydb.dim_jc_goods f              on  f.goods_id = c.goods_id 
+  left  join     jolly.who_sku_depot_coverage_area_status c2  on  c2.goods_id=c.goods_id and c2.sku_id=a.sku_id and depot_coverage_area_id =1
+     left join       zydb.dim_jc_goods f              on  f.goods_id = c.goods_id
   left join     zybiro.yf_oos_detail_stock   t       on b.depod_id = t.depot_id  and a.sku_id=t.sku_id
 WHERE  1=1
 --AND to_date(from_unixtime(a.create_time)) >= date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),1)
@@ -3575,29 +3575,29 @@ LIMIT 10;
 
 -- 解析揽件时间
 SELECT p1.*
-        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[3].col_008') 
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[3].col_008')
 FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail p1
-LIMIT 10; 
+LIMIT 10;
 
 -- 物流到货签收时间（非jollychic系统签收时间）
 -- 有15的取15，没15的取14，没14的取13。。。
 -- 或者更精准的选择：uniqId = 100
 SELECT p1.*
-        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[14].col_008') 
-        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[15].col_008') 
-        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[-1].col_008') 
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[14].col_008')
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[15].col_008')
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[-1].col_008')
 FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail p1
-LIMIT 20; 
+LIMIT 20;
 
 SELECT p1.*
         -- 一共多少个环节
         ,CAST(GET_JSON_OBJECT(p1.tracking_detail,'$.dataCount') AS INT)
         -- 取出各个环节的时间
-        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[:1].col_008') 
+        ,GET_JSON_OBJECT(p1.tracking_detail,'$.datas[:1].col_008')
         -- 最后一个时间是到货签收时间
         ,SUBSTR(GET_JSON_OBJECT(p1.tracking_detail,'$.datas[:1].col_008'), -18, 16)
 FROM jolly_tms_center.tms_domestic_order_shipping_tracking_detail p1
-LIMIT 20; 
+LIMIT 20;
 
 
 -- 锁定明细中的status
@@ -3645,11 +3645,12 @@ ORDER BY pay_month
 
 
 -- 仓库作业时长：质检时长、上架时长、拣货时长、打包时长、发货时长
-WITH 
--- 质检时长
+WITH
+-- 质检时长和质检数量
 t1 AS
 (SELECT SUBSTR(p1.on_shelf_start_time, 1, 7) AS data_month
-        ,SUM(((UNIX_TIMESTAMP(p1.on_shelf_start_time) - UNIX_TIMESTAMP(p1.start_receipt_time))/3600/24) * p1.num)/SUM(p1.num)*24 AS receipt_quality_duration
+        ,SUM(((UNIX_TIMESTAMP(p1.on_shelf_start_time) - UNIX_TIMESTAMP(p1.start_receipt_time))/3600/24) * p1.num)/SUM(p1.num)*24 AS qc_duration
+        ,SUM(p1.num) AS qc_num
 FROM zydb.dw_delivered_receipt_onself AS p1
 WHERE p1.on_shelf_start_time >= '2016-01-01'
      AND p1.on_shelf_start_time < '2018-01-01'
@@ -3659,19 +3660,65 @@ GROUP BY SUBSTR(p1.on_shelf_start_time, 1, 7)
 -- 上架时长
 t2 AS
 (SELECT SUBSTR(p1.on_shelf_finish_time, 1, 7) AS data_month
-        ,SUM(((UNIX_TIMESTAMP(p1.on_shelf_finish_time) - UNIX_TIMESTAMP(p1.on_shelf_start_time))/3600/24) * p1.on_shelf_num)/SUM(p1.on_shelf_num)*24 AS receipt_quality_duration
+        ,SUM(((UNIX_TIMESTAMP(p1.on_shelf_finish_time) - UNIX_TIMESTAMP(p1.on_shelf_start_time))/3600/24) * p1.on_shelf_num)/SUM(p1.on_shelf_num)*24 AS onshelf_duration
+        ,SUM(p1.on_shelf_num) AS onshelf_num
 FROM zydb.dw_delivered_receipt_onself AS p1
 WHERE p1.on_shelf_finish_time >= '2016-01-01'
      AND p1.on_shelf_finish_time < '2018-01-01'
      AND p1.on_shelf_finish_time > p1.on_shelf_start_time
 GROUP BY SUBSTR(p1.on_shelf_finish_time, 1, 7)
+),
+-- 拣货完成时间
+t3 AS
+(SELECT p1.picking_id
+        ,p2.order_id
+        ,p1.gmt_created AS pick_begin_time
+        ,p1.finish_time AS pick_finish_time
+FROM jolly.who_wms_picking_info AS p1
+INNER JOIN jolly.who_wms_picking_goods_detail AS p2
+        ON p1.picking_id = p2.picking_id
+GROUP BY p1.picking_id
+        ,p2.order_id
+        ,p1.gmt_created
+        ,p1.finish_time
+),
+-- 出库三个环节的时长
+-- 由于拣货完成时间缺失，使用总出库时长替代
+t4 AS
+(SELECT SUBSTR(p1.shipping_time, 1, 7) AS data_month
+        ,SUM((t3.pick_finish_time - UNIX_TIMESTAMP(p1.outing_stock_time))/3600/24)/COUNT(p1.order_id)*24 AS pick_duration
+        ,SUM((UNIX_TIMESTAMP(p1.order_pack_time) - t3.pick_finish_time)/3600/24)/COUNT(p1.order_id)*24 AS pack_duration
+        ,SUM((UNIX_TIMESTAMP(p1.shipping_time) - UNIX_TIMESTAMP(p1.order_pack_time))/3600/24)/COUNT(p1.order_id)*24 AS ship_duration
+        ,COUNT(p1.order_id) AS ship_order_num
+FROM zydb.dw_order_node_time p1
+LEFT JOIN t3
+       ON p1.order_id = t3.order_id
+WHERE p1.is_shiped = 1
+  AND p1.shipping_time >= '2016-01-01'
+  AND p1.shipping_time < '2018-01-01'
+  AND p1.shipping_time IS NOT NULL
+  AND p1.order_pack_time IS NOT NULL
+  AND t3.pick_finish_time IS NOT NULL
+  AND p1.outing_stock_time IS NOT NULL
+  AND p1.shipping_time > p1.order_pack_time
+  AND p1.order_pack_time > FROM_UNIXTIME(t3.pick_finish_time)
+  AND t3.pick_finish_time > UNIX_TIMESTAMP(p1.outing_stock_time)
+GROUP BY SUBSTR(p1.shipping_time, 1, 7)
 )
--- 拣货时长
 
-
-
-
-
-
-
+SELECT t1.data_month
+        ,t1.qc_duration + t2.onshelf_duration AS in_wh_duration
+        ,t1.qc_num
+        ,t2.onshelf_num
+        ,t3.onshelf_num
+        ,t4.pick_duration
+        ,t4.pack_duration
+        ,t4.ship_duration
+        ,t4.ship_order_num
+FROM t1
+LEFT JOIN t2
+       ON t1.data_month = t2.data_month
+LEFT JOIN t4
+       ON t1.data_month = t4.data_month
+ORDER BY data_month
 ;

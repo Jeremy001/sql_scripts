@@ -12,7 +12,7 @@
 -- 6.订单发运信息表 jolly.who_wms_order_shipping_info
 -- 7.物料信息表：jolly.who_wms_material
 
-WITH 
+WITH
 -- 明细数据
 t1 AS
 (SELECT p1.order_id    -- 订单id
@@ -21,7 +21,7 @@ t1 AS
         --,p2.result_code    -- 称重结果代码
         --,p2.remark    -- 称重结果说明
         --,p3.shipping_no    -- 货运单号
-        
+
         -- 以下是打包耗材的信息
         ,p3.material_id    -- 打包耗材ID
         ,p3.material_sn    -- 打包耗材编码
@@ -29,7 +29,7 @@ t1 AS
         ,p3.material_weight    -- 打包耗材重量
         ,p3.material_volume    -- 打包耗材体积
         ,p3.material_standard   -- 打包耗材的标准尺寸
-        
+
         -- 以下是包裹的信息，包括各个重量，体积，尺寸等
         ,p6.package_size    -- 包裹尺寸规格
         ,p6.package_num AS package_goods_num   -- 包裹内商品数量
@@ -68,7 +68,7 @@ t1 AS
         ,p5.cat_level3_id    -- 商品的三级类目id
         ,p5.goods_season    -- 商品季节
 FROM zydb.dw_order_sub_order_fact p1
-LEFT JOIN jolly.who_wms_weigh_package_info p2 
+LEFT JOIN jolly.who_wms_weigh_package_info p2
              ON p1.order_id = p2.order_id
 LEFT JOIN jolly.who_wms_order_package p3
              ON p1.order_id = p3.order_id
@@ -111,7 +111,7 @@ SELECT COUNT(*)
 FROM t1;
 
 -- 前20条数据
-SELECT * 
+SELECT *
 FROM t1
 WHERE package_type = 0            -- 打包耗材是箱子
      AND package_volume_weight >= 0.01       -- package_volume_weight>0的订单才是计抛的订单
@@ -120,8 +120,8 @@ LIMIT 20;
 
 
 -- 查询打包物料
--- jolly.who_wms_material 
-SELECT p1.* 
+-- jolly.who_wms_material
+SELECT p1.*
 FROM jolly.who_wms_material p1
 WHERE p1.material_type = 3    -- 3代表打包物料
      AND p1.status = 1    -- 1代表正常，非禁用
@@ -132,7 +132,7 @@ WHERE p1.material_type = 3    -- 3代表打包物料
 
 -- 商品尺寸表
 -- jolly.who_goods_size_property
-SELECT * 
+SELECT *
 FROM jolly.who_goods_size_property
 LIMIT 10;
 
@@ -146,7 +146,7 @@ LIMIT 20;
 
 -- 每天销售商品的属性值
 SELECT *
-FROM zybiro.t_yf_heiwu_auc_daily_repot_07 
+FROM zybiro.t_yf_heiwu_auc_daily_repot_07
 WHERE vname = 'MATERIAL'
 AND sku_id = cast(4681492 as STRING)
 LIMIT 100;
@@ -168,7 +168,7 @@ WHERE shipping_id = 40;
 -- 以上六个字段记录了每个段是由哪个物流商来承运
 
 -- 查询部分订单（已发运）
-SELECT * 
+SELECT *
 FROM zydb.dw_order_sub_order_fact
 WHERE pay_time >= '2017-11-11'
      AND is_shiped = 1
@@ -203,7 +203,7 @@ SELECT SUBSTR(p1.shipping_time, 1, 7) AS ship_month
 FROM zydb.dw_order_sub_order_fact p1
 WHERE p1.shipping_time >= '2017-01-01'
      AND p1.shipping_time < '2017-12-01'
-     AND p1.is_shiped = 1 
+     AND p1.is_shiped = 1
      AND p1.order_status = 1
 GROUP BY SUBSTR(p1.shipping_time, 1, 7)
 ORDER BY SUBSTR(p1.shipping_time, 1, 7);
@@ -214,7 +214,7 @@ ORDER BY SUBSTR(p1.shipping_time, 1, 7);
 
 -- 各承运商在9/10/11月有多少比例的订单抛重
 -- b.shipping_time：从2017-09-06 14:31:41开始
-WITH 
+WITH
 -- 订单包裹重量
 t1 AS
 (SELECT b.customer_order_id AS order_id
@@ -271,7 +271,7 @@ LIMIT 10
 -- 物流承运商价格表
 -- jolly_tms_center.tms_carrier_price_zone_algorithm
 -- 还不知道怎么使用这张表，计费规则据说非常复杂
-SELECT * 
+SELECT *
 FROM jolly_tms_center.tms_carrier_price_zone_algorithm
 WHERE zone_code = 'ARAMEX(HK)-2'
      --AND weight = 0.5
