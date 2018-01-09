@@ -24,7 +24,7 @@ CREATE TABLE zybiro.neo_all_chain_stock_daily
 ,data_date string);
 
 -- 插入数据 =================================================
-WITH 
+WITH
 -- 1.采购在途商品数量 & 成本金额（人民币）
 t100 AS
 (SELECT p1.depot_id
@@ -76,7 +76,7 @@ t200 AS
 (SELECT t203.depot_id
         ,(t203.instock_num + t204.allocate_onway_num) AS instock_num
         ,(t203.instock_cost + t204.allocate_onway_cost) AS instock_cost
-FROM t203 
+FROM t203
 INNER JOIN t204 ON t203.depot_id = t204.depot_id
 ),
 -- 4.退货在途
@@ -111,10 +111,10 @@ t4102 AS
         ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd')) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
-        ,(CASE WHEN p1.real_shipping_id = 40 THEN 'Aramex' 
-                     WHEN p1.real_shipping_id = 170 THEN 'fetchr'  
-                     WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA' 
-                     WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'  
+        ,(CASE WHEN p1.real_shipping_id = 40 THEN 'Aramex'
+                     WHEN p1.real_shipping_id = 170 THEN 'fetchr'
+                     WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA'
+                     WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
                      ELSE 'Others' END) AS shipping_name
         ,p4.region_name AS country_name
         ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END) AS depot_id
@@ -136,22 +136,22 @@ LEFT JOIN jolly.who_order_shipping_tracking p5
              ON p1.order_id = p5.order_id AND p5.shipping_state IN (3, 6, 8, 13)    -- 与在途待签收区分，避免重复计算
 LEFT JOIN t401 ON p1.order_id = t401.order_id
 WHERE p1.shipping_time < UNIX_TIMESTAMP(TO_DATE(CURRENT_TIMESTAMP()), 'yyyy-MM-dd')
-    AND p1.pay_id = 41 
+    AND p1.pay_id = 41
     AND p1.is_shiped = 1
     AND p1.cod_check_status in (4, 6)
 GROUP BY p1.order_id
         ,p1.order_sn
         ,p1.invoice_no
         ,(CASE WHEN p1.cod_check_status = 4 THEN '4投递失败' ELSE '6已拒收' END)
-        ,FROM_UNIXTIME(CASE WHEN p1.prepare_pay_time = 0 THEN p1.pay_time ELSE p1.prepare_pay_time END, 'yyyy-MM-dd') 
+        ,FROM_UNIXTIME(CASE WHEN p1.prepare_pay_time = 0 THEN p1.pay_time ELSE p1.prepare_pay_time END, 'yyyy-MM-dd')
         ,FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd')
         ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd'))
         ,t401.destination_date
         ,t401.destination_days
-        ,(CASE WHEN p1.real_shipping_id = 40 THEN 'Aramex' 
-                     WHEN p1.real_shipping_id = 170 THEN 'fetchr'  
-                     WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA' 
-                     WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'  
+        ,(CASE WHEN p1.real_shipping_id = 40 THEN 'Aramex'
+                     WHEN p1.real_shipping_id = 170 THEN 'fetchr'
+                     WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA'
+                     WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
                      ELSE 'Others' END)
         ,p4.region_name
         ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END)
@@ -170,34 +170,34 @@ GROUP BY depot_id
 -- 3.发货在途
 -- 发货在途待签收订单
 t301 AS
-(SELECT p1.order_id 
+(SELECT p1.order_id
         ,p2.depot_id
         ,p5.region_name AS country_name
-        ,(CASE WHEN p2.real_shipping_id = 40 THEN 'Aramex' 
-                     WHEN p2.real_shipping_id = 170 THEN 'fetchr'  
-                     WHEN p2.real_shipping_id IN (168, 171) THEN 'SMSA' 
-                     WHEN p2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'  
+        ,(CASE WHEN p2.real_shipping_id = 40 THEN 'Aramex'
+                     WHEN p2.real_shipping_id = 170 THEN 'fetchr'
+                     WHEN p2.real_shipping_id IN (168, 171) THEN 'SMSA'
+                     WHEN p2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
                      ELSE 'Others' END) AS shipping_name
         ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p2.shipping_time, 'yyyy-MM-dd')) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
 FROM jolly.who_order_shipping_tracking p1
-RIGHT JOIN jolly.who_order_info p2 
+RIGHT JOIN jolly.who_order_info p2
              ON p1.order_id = p2.order_id AND P2.depot_id IN (4, 5, 6, 7, 8, 14, 15) AND p2.order_status = 1
-LEFT JOIN t401 
+LEFT JOIN t401
              ON t401.order_id = p1.order_id
-LEFT JOIN jolly.who_order_user_info p4 
+LEFT JOIN jolly.who_order_user_info p4
              ON p1.order_id = p4.order_id
-LEFT JOIN jolly.who_region p5 
-             ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1 
+LEFT JOIN jolly.who_region p5
+             ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
 WHERE p1.shipping_state NOT IN (3, 6, 8, 13)    -- 不是已签收、已退回、已拒收和已丢失中的任何一项，就是还在途的
-GROUP BY p1.order_id 
+GROUP BY p1.order_id
         ,p2.depot_id
         ,p5.region_name
-        ,(CASE WHEN p2.real_shipping_id = 40 THEN 'Aramex' 
-                     WHEN p2.real_shipping_id = 170 THEN 'fetchr'  
-                     WHEN p2.real_shipping_id IN (168, 171) THEN 'SMSA' 
-                     WHEN p2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'  
+        ,(CASE WHEN p2.real_shipping_id = 40 THEN 'Aramex'
+                     WHEN p2.real_shipping_id = 170 THEN 'fetchr'
+                     WHEN p2.real_shipping_id IN (168, 171) THEN 'SMSA'
+                     WHEN p2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
                      ELSE 'Others' END)
         ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p2.shipping_time, 'yyyy-MM-dd'))
         ,t401.destination_date
@@ -215,7 +215,7 @@ t302 AS
         ,SUM(p3.goods_send_num * p3.in_price) AS deliver_onway_cost     -- 成本金额，人民币
         ,SUM(p3.goods_send_num * p3.goods_price * 6.6775) AS deliver_onway_amount    -- 销售金额，* 6.6775，转成人民币
 FROM t301
-LEFT JOIN jolly.who_order_goods p3 
+LEFT JOIN jolly.who_order_goods p3
              ON t301.order_id = p3.order_id
 WHERE t301.country_name IS NOT NULL
 GROUP BY t301.depot_id
@@ -324,14 +324,14 @@ VALUES(7, 627, 813030, 243109, 1629857, 164780.4, 29136346.85, 6432316.29, 52204
 
 
 -- 查询数据 ==================================================
-SELECT * 
+SELECT *
 FROM zybiro.neo_all_chain_stock_daily
 WHERE depot_id = 5
 ORDER BY data_date DESC
 ;
 
 -- 按月汇总求平均
-WITH t1 AS 
+WITH t1 AS
 (SELECT SUBSTR(data_date, 1, 7) AS month
         ,data_date
         ,SUM(purchase_onway_num) AS purchase_onway_num
@@ -345,7 +345,7 @@ WITH t1 AS
         ,SUM(deliver_onway_amount) AS deliver_onway_amount
         ,SUM(return_onway_amount) AS return_onway_amount
 FROM zybiro.neo_all_chain_stock_daily
-GROUP BY SUBSTR(data_date, 1, 7) 
+GROUP BY SUBSTR(data_date, 1, 7)
         ,data_date
 )
 SELECT month
@@ -360,7 +360,7 @@ SELECT month
         ,AVG(deliver_onway_amount) AS deliver_onway_amount
         ,AVG(return_onway_amount) AS return_onway_amount
 FROM t1
-GROUP BY month 
+GROUP BY month
 ORDER BY month;
 
 

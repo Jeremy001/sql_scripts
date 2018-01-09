@@ -1871,8 +1871,8 @@ AND is_shiped = 1
 AND is_problems_order IN (0, 2)
 AND order_status = 1
 AND pay_status IN (1, 3)
-AND shipping_time >= '2017-11-27'
-AND shipping_time < '2017-12-03'
+AND shipping_time >= '2018-01-01'
+AND shipping_time < '2018-01-08'
 ORDER BY shipping_time;
 
 
@@ -3668,7 +3668,8 @@ WHERE p1.on_shelf_finish_time >= '2016-01-01'
      AND p1.on_shelf_finish_time > p1.on_shelf_start_time
 GROUP BY SUBSTR(p1.on_shelf_finish_time, 1, 7)
 ),
--- 拣货完成时间
+/*-- 拣货完成时间
+-- 拣货完成时间不全，暂不取
 t3 AS
 (SELECT p1.picking_id
         ,p2.order_id
@@ -3684,25 +3685,47 @@ GROUP BY p1.picking_id
 ),
 -- 出库三个环节的时长
 -- 由于拣货完成时间缺失，使用总出库时长替代
+-- 部分outing_stock_time和shipping_time缺失，暂不可用
 t4 AS
 (SELECT SUBSTR(p1.shipping_time, 1, 7) AS data_month
-        ,SUM((t3.pick_finish_time - UNIX_TIMESTAMP(p1.outing_stock_time))/3600/24)/COUNT(p1.order_id)*24 AS pick_duration
-        ,SUM((UNIX_TIMESTAMP(p1.order_pack_time) - t3.pick_finish_time)/3600/24)/COUNT(p1.order_id)*24 AS pack_duration
-        ,SUM((UNIX_TIMESTAMP(p1.shipping_time) - UNIX_TIMESTAMP(p1.order_pack_time))/3600/24)/COUNT(p1.order_id)*24 AS ship_duration
+        --,SUM((t3.pick_finish_time - UNIX_TIMESTAMP(p1.outing_stock_time))/3600/24)/COUNT(p1.order_id)*24 AS pick_duration
+        --,SUM((UNIX_TIMESTAMP(p1.order_pack_time) - t3.pick_finish_time)/3600/24)/COUNT(p1.order_id)*24 AS pack_duration
+        ,SUM((UNIX_TIMESTAMP(p1.shipping_time) - UNIX_TIMESTAMP(p1.outing_stock_time))/3600/24)/COUNT(p1.order_id)*24 AS out_wh_duration
         ,COUNT(p1.order_id) AS ship_order_num
 FROM zydb.dw_order_node_time p1
+WHERE p1.is_shiped = 1
+  AND p1.shipping_time >= '2016-01-01'
+  AND p1.shipping_time < '2018-01-01'
+  AND p1.shipping_time IS NOT NULL
+  --AND p1.order_pack_time IS NOT NULL
+  --AND t3.pick_finish_time IS NOT NULL
+  AND p1.outing_stock_time IS NOT NULL
+  AND p1.shipping_time > p1.outing_stock_time
+  --AND p1.order_pack_time > FROM_UNIXTIME(t3.pick_finish_time)
+  --AND t3.pick_finish_time > UNIX_TIMESTAMP(p1.outing_stock_time)
+GROUP BY SUBSTR(p1.shipping_time, 1, 7)
+),*/
+-- 从原始业务表中取outing_stock_time和shipping_time
+-- 1.outing_stock_time
+t3 AS
+(SELECT p1.order_id
+        ,max(NVL(p1.gmt_created, 0)) AS outing_stock_time
+FROM jolly.who_wms_outing_stock_detail AS p1
+GROUP BY p1.order_id
+),
+-- 2.用子单表关联t3，取得出库时长和出库订单数
+t4 AS
+(SELECT SUBSTR(p1.shipping_time, 1, 7) AS data_month
+        ,SUM((UNIX_TIMESTAMP(p1.shipping_time) - t3.outing_stock_time)/3600/24)/COUNT(p1.order_id)*24 AS out_wh_duration
+        ,COUNT(p1.order_id) AS ship_order_num
+FROM zydb.dw_order_sub_order_fact AS p1
 LEFT JOIN t3
        ON p1.order_id = t3.order_id
 WHERE p1.is_shiped = 1
   AND p1.shipping_time >= '2016-01-01'
   AND p1.shipping_time < '2018-01-01'
   AND p1.shipping_time IS NOT NULL
-  AND p1.order_pack_time IS NOT NULL
-  AND t3.pick_finish_time IS NOT NULL
-  AND p1.outing_stock_time IS NOT NULL
-  AND p1.shipping_time > p1.order_pack_time
-  AND p1.order_pack_time > FROM_UNIXTIME(t3.pick_finish_time)
-  AND t3.pick_finish_time > UNIX_TIMESTAMP(p1.outing_stock_time)
+  AND p1.shipping_time > FROM_UNIXTIME(t3.outing_stock_time)
 GROUP BY SUBSTR(p1.shipping_time, 1, 7)
 )
 
@@ -3710,10 +3733,7 @@ SELECT t1.data_month
         ,t1.qc_duration + t2.onshelf_duration AS in_wh_duration
         ,t1.qc_num
         ,t2.onshelf_num
-        ,t3.onshelf_num
-        ,t4.pick_duration
-        ,t4.pack_duration
-        ,t4.ship_duration
+        ,t4.out_wh_duration
         ,t4.ship_order_num
 FROM t1
 LEFT JOIN t2

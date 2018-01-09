@@ -294,7 +294,8 @@ GROUP BY SUBSTR(shipping_time, 1, 7)
 ORDER BY SUBSTR(shipping_time, 1, 7)
 ;
 
-
+-- 核查商品重量
+-- 1.zydb.dim_jc_goods，同jolly.who_goods
 SELECT *
 FROM zydb.dim_jc_goods p1
 LIMIT 10;
@@ -303,7 +304,72 @@ SELECT count(p1.goods_id) AS total_goods_count
         ,sum(CASE WHEN p1.goods_weight IS NULL OR p1.goods_weight = 0 THEN 0 ELSE 1 END) AS weight_nnull_goods_count
 FROM zydb.dim_jc_goods p1
 ;
+-- 1045504 605301  57.90%
 
+-- 统计商品的各种属性，分析无重量的商品主要分布
+
+-- 1.从在售状态来看：1.以前的商品，已经下架的商品；2.当前在售商品；
+-- is_on_sale:商品销售状态,1销售,0下架
+-- is_forever_offsale:0临时下架，1永久下架
+
+-- 2.从添加时间来看，分年份和月份
+-- add_time
+
+WITH
+t1 AS
+(SELECT FROM_UNIXTIME(p1.add_time, 'yyyy') AS add_year
+        ,FROM_UNIXTIME(p1.add_time, 'yyyy-MM') AS add_month
+        ,p1.provider_code
+        ,(CASE WHEN p1.is_on_sale = 1 THEN 'yes' ELSE 'no' END) AS is_onsale
+        ,(CASE WHEN p1.is_forever_offsale = 1 THEN 'yes' ELSE 'no' END) AS is_forever_offsale
+        ,(CASE WHEN p1.goods_weight >= 0.00001 THEN 'yes' ELSE 'no' END) AS have_weight
+        ,COUNT(p1.goods_id) AS goods_count
+FROM jolly.who_goods AS p1
+GROUP BY FROM_UNIXTIME(p1.add_time, 'yyyy')
+        ,FROM_UNIXTIME(p1.add_time, 'yyyy-MM')
+        ,p1.provider_code
+        ,(CASE WHEN p1.is_on_sale = 1 THEN 'yes' ELSE 'no' END)
+        ,(CASE WHEN p1.is_forever_offsale = 1 THEN 'yes' ELSE 'no' END)
+        ,(CASE WHEN p1.goods_weight >= 0.00001 THEN 'yes' ELSE 'no' END)
+)
+SELECT *
+FROM t1
+;
+
+-- 3.分供应商来看，是不是某些供应商不提供商品重量的情况比较多
+WITH
+t1 AS
+(SELECT p1.provider_code
+        ,COUNT(p1.goods_id) AS total_goods_count
+        ,SUM(CASE WHEN p1.goods_weight >= 0.00001 THEN 1 ELSE 0 END) AS have_weight_goods_count
+        ,SUM(CASE WHEN p1.goods_weight >= 0.00001 THEN 1 ELSE 0 END) / COUNT(p1.goods_id) AS have_weight_rate
+        ,SUM(CASE WHEN p1.is_on_sale = 1 THEN 1 ELSE 0 END) AS onsale_goods_count
+        ,SUM(CASE WHEN p1.is_on_sale = 1 THEN 1 ELSE 0 END) AS / COUNT(p1.goods_id) AS onsale_goods_rate
+FROM jolly.who_goods AS p1
+GROUP BY p1.provider_code
+)
+SELECT *
+FROM t1
+ORDER BY total_goods_count DESC
+LIMIT 20
+;
+
+
+-- 在售商品表：zydb.dw_goods_on_sale
+-- 分区字段：ds,格式：'yyyymmdd'
+-- 有重复goods_id，因为同一个goods_id，在不同国家（仓库）的在售状态可能不同：A国在售B国不在售
+SELECT *
+FROM zydb.dw_goods_on_sale AS p1
+WHERE ds = '20180108'
+LIMIT 10;
+
+
+
+-- jolly.who_goods_onsale_log，查看商品在售状态修改记录
+
+
+
+-- 2.jolly.who_sku_relation
 SELECT *
 FROM jolly.who_sku_relation p1
 LIMIT 10;
