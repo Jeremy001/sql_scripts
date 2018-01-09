@@ -344,7 +344,7 @@ t1 AS
         ,SUM(CASE WHEN p1.goods_weight >= 0.00001 THEN 1 ELSE 0 END) AS have_weight_goods_count
         ,SUM(CASE WHEN p1.goods_weight >= 0.00001 THEN 1 ELSE 0 END) / COUNT(p1.goods_id) AS have_weight_rate
         ,SUM(CASE WHEN p1.is_on_sale = 1 THEN 1 ELSE 0 END) AS onsale_goods_count
-        ,SUM(CASE WHEN p1.is_on_sale = 1 THEN 1 ELSE 0 END) AS / COUNT(p1.goods_id) AS onsale_goods_rate
+        ,SUM(CASE WHEN p1.is_on_sale = 1 THEN 1 ELSE 0 END) / COUNT(p1.goods_id) AS onsale_goods_rate
 FROM jolly.who_goods AS p1
 GROUP BY p1.provider_code
 )
@@ -378,4 +378,94 @@ SELECT count(p1.rec_id) AS total_sku_count
         ,sum(CASE WHEN p1.sku_weight IS NULL OR p1.sku_weight = 0 THEN 0 ELSE 1 END) AS weight_nnull_sku_count
 FROM jolly.who_sku_relation p1
 ;
+
+-- jolly.who_sku_relation表中相同goods_id，不同sku_id的sku_weight相等，实际上是goods_weight
+-- 对于衣服、鞋子这些常规的商品，是同一个重量。大件商品，比如家居的额装饰画，不同尺寸是有不同重量的
+WITH
+t1 AS
+(SELECT p1.goods_id
+        ,COUNT(DISTINCT p1.sku_weight) AS goods_count
+FROM jolly.who_sku_relation AS p1
+GROUP BY p1.goods_id
+)
+SELECT COUNT(goods_id)
+FROM t1
+WHERE t1.goods_count >= 2
+;
+
+-- 关联jolly.who_goods和jolly.who_sku_relation，比较goods_weight和sku_weight
+WITH
+-- 两个goods_weight
+t1 AS
+(SELECT p1.goods_id
+        ,p1.goods_weight AS goods_weight_1
+        ,p2.goods_weight AS goods_weight_2
+FROM jolly.who_goods AS p1
+LEFT JOIN jolly.who_product_pool AS p2
+       ON p1.goods_id = p2.goods_id
+),
+-- join
+t2 AS
+(SELECT p1.rec_id
+        ,p1.sku_weight
+        ,(CASE WHEN t1.goods_weight_1 = 0 THEN t1.goods_weight_2 ELSE t1.goods_weight_1 END) AS goods_weight
+FROM jolly.who_sku_relation AS p1
+LEFT JOIN t1
+       ON t1.goods_id = p1.goods_id
+)
+-- 统计各种null和not_null
+SELECT COUNT(t2.rec_id) AS sku_count
+        ,SUM(CASE WHEN t2.sku_weight = 0 THEN 0 ELSE 1 END) AS notnull_sku
+        ,SUM(CASE WHEN t2.goods_weight = 0 THEN 0 ELSE 1 END) AS notnull_goods
+        ,SUM(CASE WHEN t2.goods_weight > 0 AND t2.sku_weight > 0 THEN 1 ELSE 0 END) AS notnull_both
+        ,SUM(CASE WHEN t2.goods_weight = 0 AND t2.sku_weight = 0 THEN 1 ELSE 0 END) AS null_both
+        ,SUM(CASE WHEN t2.goods_weight > 0 OR t2.sku_weight > 0 THEN 1 ELSE 0 END) AS notnull_sku_or_notnull_goods
+        ,SUM(CASE WHEN t2.goods_weight > 0 AND t2.sku_weight = 0 THEN 1 ELSE 0 END) AS null_sku_notnull_goods
+FROM t2
+;
+-- 7817266  2954399 7800055 2954184 17152   7787123 4832724
+-- 果然，看倒数第二个数字，如果用goods_weight来替换sku_weight，约可以覆盖99.6的sku
+
+
+-- 3.jolly.who_product_pool
+
+WITH
+t1 AS
+(SELECT FROM_UNIXTIME(p1.gmt_created, 'yyyy') AS add_year
+        ,FROM_UNIXTIME(p1.gmt_created, 'yyyy-MM') AS add_month
+        ,p1.supp_code
+        ,COUNT(p1.goods_id) AS total_goods_count
+        ,SUM(CASE WHEN p1.goods_weight >= 0.00001 THEN 1 ELSE 0 END) AS have_weight_goods_count
+        ,SUM(CASE WHEN p1.goods_weight >= 0.00001 THEN 1 ELSE 0 END) / COUNT(p1.goods_id) AS have_weight_rate
+FROM jolly.who_product_pool AS p1
+GROUP BY FROM_UNIXTIME(p1.gmt_created, 'yyyy')
+        ,FROM_UNIXTIME(p1.gmt_created, 'yyyy-MM')
+        ,p1.supp_code
+)
+SELECT *
+FROM t1
+;
+
+-- 关联who_goods和who_product_pool,得到两个表中的重量
+WITH
+t1 AS
+(SELECT p1.goods_id AS goods_id_1
+        ,p1.goods_weight AS goods_weight_1
+        ,p2.goods_weight AS goods_weight_2
+FROM jolly.who_goods AS p1
+LEFT JOIN jolly.who_product_pool AS p2
+       ON p1.goods_id = p2.goods_id
+)
+SELECT COUNT(t1.goods_id_1) AS goods_count
+        ,SUM(CASE WHEN t1.goods_weight_1 >= 0.00001 THEN 1 ELSE 0 END) AS notnull_1
+        ,SUM(CASE WHEN t1.goods_weight_2 >= 0.00001 THEN 1 ELSE 0 END) AS notnull_2
+        ,SUM(CASE WHEN t1.goods_weight_1 >= 0.00001 AND t1.goods_weight_2 >= 0.00001 THEN 1 ELSE 0 END) AS notnull_both
+        ,SUM(CASE WHEN t1.goods_weight_1 = 0 AND t1.goods_weight_2 = 0 THEN 1 ELSE 0 END) AS null_both
+        ,SUM(CASE WHEN t1.goods_weight_1 >= 0.00001 OR t1.goods_weight_2 >= 0.00001 THEN 1 ELSE 0 END) AS notnull_1_or_notnull_2
+        ,SUM(CASE WHEN t1.goods_weight_1 = 0 AND t1.goods_weight_2 >= 0.0001 THEN 1 ELSE 0 END) AS null_1_notnull_2
+FROM t1
+;
+-- 1045511  605308  765594  330887  2478    1040015 434707
+-- 果然，蓄水池表中的商品重量是最全的，有434707个goods_id在who_goods表中没有重量但在who_product_pool表中有商品重量
+-- 加上这部分数据，一共有1040015个goods_id是有重量的，占比99.47%（只差5000多个goods_id）；
 
