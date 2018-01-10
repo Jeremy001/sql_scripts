@@ -54,7 +54,7 @@ SELECT t1.*
         ,t2.*
 FROM t1
 LEFT JOIN t2
-             ON t1.order_id = t2.order_id 
+             ON t1.order_id = t2.order_id
              AND t1.sku_id = t2.sku_id
 WHERE t1.order_id = 40549547
 ;
@@ -92,7 +92,7 @@ SELECT t1.*
         ,t3.*
 FROM t1
 LEFT JOIN t2
-             ON t1.order_id = t2.order_id 
+             ON t1.order_id = t2.order_id
              AND t1.sku_id = t2.sku_id
 LEFT JOIN t3
              ON t2.source_rec_id = t3.rec_id
@@ -101,7 +101,7 @@ WHERE t1.order_id = 40549547
  */
 
 -- 4.入库各环节时间
-t4 AS 
+t4 AS
 (SELECT p1.delivered_order_id
         ,p1.delivered_order_sn
         ,p1.tracking_no
@@ -113,8 +113,8 @@ t4 AS
 FROM zydb.dw_delivered_receipt_onself AS p1
 LEFT JOIN jolly_spm.jolly_spm_pur_order_tracking_info AS p2
              ON p1.tracking_no = p2.tracking_no
-LEFT JOIN (SELECT * 
-                      FROM jolly.who_pur_set_value 
+LEFT JOIN (SELECT *
+                      FROM jolly.who_pur_set_value
                       WHERE type_id=16) AS p3
              ON p2.tracking_id = p3.value_id
 GROUP BY p1.delivered_order_id
@@ -125,7 +125,7 @@ GROUP BY p1.delivered_order_id
 ),
 
 -- 5. JOIN各表，获取各环节时间
-t5 AS 
+t5 AS
 (SELECT t1.order_id
         ,t1.order_sn
         ,t1.depot_id
@@ -158,7 +158,7 @@ t5 AS
         ,p7.outing_stock_time       -- 配货完成，可拣货时间
 FROM t1
 LEFT JOIN t2
-             ON t1.order_id = t2.order_id 
+             ON t1.order_id = t2.order_id
              AND t1.sku_id = t2.sku_id
 LEFT JOIN t3
              ON t2.source_rec_id = t3.rec_id
@@ -171,7 +171,7 @@ LEFT JOIN t4
 LEFT JOIN jolly_tms_center.tms_domestic_order_shipping_tracking_detail p6
              ON t4.tracking_no = p6.tracking_no
 LEFT JOIN zydb.dw_order_node_time p7
-             ON t1.order_id = p7.order_id 
+             ON t1.order_id = p7.order_id
 ),
 
 -- 通过group by，去除多个采购单、多个物流单导致的多条记录，取较大的时间
@@ -200,7 +200,7 @@ t6 AS
         ,MAX(t5.finish_check_time) AS finish_check_time
         ,MAX(t5.finish_onshelf_time) AS finish_onshelf_time
         ,t5.sku_lock_time
-        ,t5.outing_stock_time 
+        ,t5.outing_stock_time
 FROM t5
 GROUP BY t5.order_id
         ,t5.order_sn
@@ -221,7 +221,7 @@ GROUP BY t5.order_id
         ,t5.shipping_id
         ,t5.shipping_name
         ,t5.sku_lock_time
-        ,t5.outing_stock_time 
+        ,t5.outing_stock_time
 )
 
 -- 看几条记录
