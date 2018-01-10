@@ -28,8 +28,8 @@ WITH
 -- 1.采购在途商品数量 & 成本金额（人民币）
 t100 AS
 (SELECT p1.depot_id
-        ,SUM(p1.pur_shiped_order_onway_num) AS purchase_onway_num      -- 采购在途数量
-        ,SUM(p1.pur_shiped_order_onway_num * p2.in_price) AS purchase_onway_cost    --采购在途成本金额（人民币）
+        ,SUM(NVL(p1.pur_shiped_order_onway_num, 0)) AS purchase_onway_num      -- 采购在途数量
+        ,SUM(NVL(p1.pur_shiped_order_onway_num, 0) * NVL(p2.in_price, 0)) AS purchase_onway_cost    --采购在途成本金额（人民币）
 FROM jolly_oms.who_wms_goods_stock_onway_total p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
 --WHERE p1.depot_id IN (4, 5, 6, 7, 8, 14, 15)
@@ -39,18 +39,18 @@ GROUP BY p1.depot_id
 -- CN仓在库库存
 t201 AS
 (SELECT p1.depot_id
-        ,SUM(p1.total_stock_num) AS instock_num
-        ,SUM(p1.total_stock_num * p2.in_price) AS instock_cost
+        ,SUM(NVL(p1.total_stock_num, 0)) AS instock_num
+        ,SUM(NVL(p1.total_stock_num, 0) * NVL(p2.in_price, 0)) AS instock_cost
 FROM jolly.who_wms_goods_stock_total_detail p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
 WHERE p1.depot_id in (4, 5, 6, 14)
 GROUP BY p1.depot_id
 ),
--- SA仓在库库存
+-- 海外仓在库库存
 t202 AS
 (SELECT p1.depot_id
-        ,SUM(p1.stock_num) AS instock_num
-        ,SUM(p1.stock_num * p2.in_price) AS instock_cost
+        ,SUM(NVL(p1.stock_num, 0)) AS instock_num
+        ,SUM(NVL(p1.stock_num, 0) * NVL(p2.in_price, 0)) AS instock_cost
 FROM jolly_wms.who_wms_goods_stock_detail p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
 GROUP BY p1.depot_id
@@ -64,8 +64,8 @@ SELECT t202.* FROM t202
 -- 所有仓库调拨在途
 t204 AS
 (SELECT p1.depot_id
-        ,SUM(p1.allocate_order_onway_num) AS allocate_onway_num      -- 采购在途数量
-        ,SUM(p1.allocate_order_onway_num * p2.in_price) AS allocate_onway_cost    --采购在途成本金额（人民币）
+        ,SUM(NVL(p1.allocate_order_onway_num, 0)) AS allocate_onway_num      -- 调拨在途数量
+        ,SUM(NVL(p1.allocate_order_onway_num, 0) * NVL(p2.in_price, 0)) AS allocate_onway_cost    --调拨在途成本金额（人民币）
 FROM jolly_oms.who_wms_goods_stock_onway_total p1
 LEFT JOIN jolly.who_sku_relation p2 ON p1.sku_id = p2.rec_id
 --WHERE p1.depot_id in (4, 5, 6, 7, 8, 14, 15)
@@ -74,10 +74,10 @@ GROUP BY p1.depot_id
 -- 在库库存 = 实际在库库存 + 调出库存
 t200 AS
 (SELECT t203.depot_id
-        ,(t203.instock_num + t204.allocate_onway_num) AS instock_num
-        ,(t203.instock_cost + t204.allocate_onway_cost) AS instock_cost
+        ,(NVL(t203.instock_num, 0) + NVL(t204.allocate_onway_num, 0)) AS instock_num
+        ,(NVL(t203.instock_cost, 0) + NVL(t204.allocate_onway_cost, 0)) AS instock_cost
 FROM t203
-INNER JOIN t204 ON t203.depot_id = t204.depot_id
+LEFT JOIN t204 ON t203.depot_id = t204.depot_id
 ),
 -- 4.退货在途
 -- 订单达到目的国的天数
@@ -119,9 +119,9 @@ t4102 AS
         ,p4.region_name AS country_name
         ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END) AS depot_id
         ,'拒收或投递失败' AS return_type
-        ,SUM(p2.goods_send_num) AS return_onway_num
-        ,SUM(p2.goods_send_num * p2.in_price) AS return_onway_cost
-        ,SUM(p2.goods_send_num * p2.goods_price * 6.6775) AS return_onway_amount
+        ,SUM(NVL(p2.goods_send_num, 0)) AS return_onway_num
+        ,SUM(NVL(p2.goods_send_num, 0) * NVL(p2.in_price, 0)) AS return_onway_cost
+        ,SUM(NVL(p2.goods_send_num, 0) * NVL(p2.goods_price, 0) * 6.6775) AS return_onway_amount
 FROM jolly.who_order_info p1
 LEFT JOIN jolly.who_order_goods p2
             ON p1.order_id = p2.order_id
@@ -159,9 +159,9 @@ GROUP BY p1.order_id
 ),
 t400 AS
 (SELECT depot_id
-        ,SUM(return_onway_num) AS return_onway_num
-        ,SUM(return_onway_cost) AS return_onway_cost
-        ,SUM(return_onway_amount) AS return_onway_amount
+        ,SUM(NVL(return_onway_num, 0)) AS return_onway_num
+        ,SUM(NVL(return_onway_cost, 0)) AS return_onway_cost
+        ,SUM(NVL(return_onway_amount, 0)) AS return_onway_amount
 FROM t4102
 LEFT JOIN t4101 ON t4102.order_id = t4101.returned_order_id
 WHERE t4101.returned_order_id IS NULL
@@ -211,9 +211,9 @@ t302 AS
         ,t301.shiped_days
         ,t301.destination_days
         ,COUNT(DISTINCT t301.order_id) AS order_num
-        ,SUM(p3.goods_send_num) AS deliver_onway_num
-        ,SUM(p3.goods_send_num * p3.in_price) AS deliver_onway_cost     -- 成本金额，人民币
-        ,SUM(p3.goods_send_num * p3.goods_price * 6.6775) AS deliver_onway_amount    -- 销售金额，* 6.6775，转成人民币
+        ,SUM(NVL(p3.goods_send_num, 0)) AS deliver_onway_num
+        ,SUM(NVL(p3.goods_send_num, 0) * NVL(p3.in_price, 0)) AS deliver_onway_cost     -- 成本金额，人民币
+        ,SUM(NVL(p3.goods_send_num, 0) * NVL(p3.goods_price, 0) * 6.6775) AS deliver_onway_amount    -- 销售金额，* 6.6775，转成人民币
 FROM t301
 LEFT JOIN jolly.who_order_goods p3
              ON t301.order_id = p3.order_id
@@ -227,9 +227,9 @@ GROUP BY t301.depot_id
 -- 分仓库统计
 t300 AS
 (SELECT t302.depot_id
-        ,SUM(t302.deliver_onway_num) AS deliver_onway_num
-        ,SUM(t302.deliver_onway_cost) AS deliver_onway_cost
-        ,SUM(t302.deliver_onway_amount) AS deliver_onway_amount
+        ,SUM(NVL(t302.deliver_onway_num, 0)) AS deliver_onway_num
+        ,SUM(NVL(t302.deliver_onway_cost, 0)) AS deliver_onway_cost
+        ,SUM(NVL(t302.deliver_onway_amount, 0)) AS deliver_onway_amount
 FROM t302
 GROUP BY t302.depot_id
 )

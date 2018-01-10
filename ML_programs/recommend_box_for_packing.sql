@@ -469,3 +469,17 @@ FROM t1
 -- 果然，蓄水池表中的商品重量是最全的，有434707个goods_id在who_goods表中没有重量但在who_product_pool表中有商品重量
 -- 加上这部分数据，一共有1040015个goods_id是有重量的，占比99.47%（只差5000多个goods_id）；
 
+-- 商品的外包装尺寸在jolly.who_sku_goods_relation表中
+SELECT *
+FROM jolly.who_sku_goods_relation AS p1
+WHERE p1.goods_id = 2086448
+;
+
+
+
+
+
+
+
+
+
