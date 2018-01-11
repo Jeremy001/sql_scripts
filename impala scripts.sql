@@ -3742,3 +3742,15 @@ LEFT JOIN t4
        ON t1.data_month = t4.data_month
 ORDER BY data_month
 ;
+
+
+
+-- 个性化专题的评论【数据量少】
+SELECT *
+FROM jolly.who_edtion_comments p1
+LIMIT 20;
+
+-- 商品评论留言表【可用】
+SELECT *
+FROM jolly_split_order_user.who_goods_comment_message p1
+LIMIT 20;

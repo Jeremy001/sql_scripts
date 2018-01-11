@@ -1,10 +1,17 @@
 /*
--- 内容：采购需求各环节时间，数据用于分析发货到货对系统配货的影响，订单采购需求 --> 推送 --> 缺货 --> 发货 --> 到货 --> 系统配货
+-- 主题：采购需求发货-到货-配货节奏分析
+-- 内容：
+-- 1. 采购需求各环节时间，数据用于分析发货到货对系统配货的影响，订单采购需求 --> 推送 --> 缺货 --> 发货 --> 到货 --> 系统配货
+-- 2. 统计分析
 -- 作者：Neo王政鸣
--- 时间：2018-1-4
+-- 时间：2018-1-11
  */
 
--- impala，没有跨越的揽件时间 ==================================================================
+-- 1.明细数据 ===================================================================
+
+-- 1.1 impala，没有跨越的揽件时间 ================================================
+CREATE TABLE zybiro.neo_pur_demand_push_receipt_lock_detail
+AS
 WITH
 -- 1.支付订单（子单）
 -- 子单中每个sku的原始商品数量和最终数量，支付时间
@@ -25,12 +32,14 @@ FROM zydb.dw_order_sub_order_fact AS p1
 LEFT JOIN zydb.dw_order_goods_fact AS p2
        ON p1.order_id = p2.order_id
 WHERE p1.order_status = 1
-  --AND p1.order_id = 40683881
+  --AND p1.order_id IN (40683881, 27077099)
   AND p1.is_shiped = 1
   AND p1.is_problems_order = 2       -- 默认值为0,1是问题单,2非问题单
   AND p1.pay_status IN (1, 3)
-  AND p1.add_time >= '2017-10-01'
-  AND p1.add_time <= '2017-10-02'
+  AND ((p1.add_time >= '2017-09-12' AND p1.add_time <= '2017-10-11')     -- 黑五之前
+       OR (p1.add_time >= '2017-12-12' AND p1.add_time <= '2018-01-11')     -- 黑五之后
+      )
+
 ),
 -- 2.订单商品锁定明细
 -- 采购需求的原始商品需求数量
@@ -204,8 +213,8 @@ LIMIT 20;
 
 
 
--- hive ========================================================================
-CREATE TABLE zybiro.neo_pur_demand_peihuo_detail
+-- 1.2 hive 包含揽件时间 ========================================================
+CREATE TABLE zybiro.neo_pur_demand_push_receipt_lock_detail
 AS
 WITH
 -- 1.支付订单（子单）
@@ -413,4 +422,158 @@ LIMIT 20;
 pur_order_id  pur_order_sn
 3459918 GZ2FHD201712262050104014
  */
+
+-- 2.统计分析 =======================================================================================
+-- zybiro.neo_pur_demand_push_receipt_lock_detail
+SELECT *
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail
+WHERE order_id = 27077099
+;
+
+-- 2.1 每天汇总 =================================================================
+-- 订单数、商品件数
+-- 命中商品件数、商品命中率（命中商品：无需采购，org_num IS NULL）
+-- 需采购商品数、需采购商品占比（未命中商品：org_num >= 1）
+-- 采购需求推送数量(需求数量>=1且有推送时间：org_num >= 1 AND demand_push_time IS NOT NULL)
+SELECT p1.order_pay_date
+        ,COUNT(DISTINCT p1.order_id) AS order_num
+        ,SUM(p1.original_goods_number) AS org_goods_num
+        ,SUM(p1.goods_number) AS ship_goods_num
+        ,SUM(p1.original_goods_number - p1.org_num) AS aim_goods_num
+        ,SUM(p1.original_goods_number - p1.org_num) / SUM(p1.original_goods_number) AS aim_goods_rate
+        ,SUM(p1.original_goods_number) - SUM(p1.original_goods_number - p1.org_num) AS pur_goods_num
+        ,1 - SUM(p1.original_goods_number - p1.org_num) / SUM(p1.original_goods_number) AS pur_goods_rate
+        ,SUM(CASE WHEN p1.demand_push_time IS NULL THEN 0 ELSE p1.org_num END) AS push_goods_num
+        ,SUM(p1.oos_num) AS oos_goods_num
+        ,SUM(p1.send_num) AS send_goods_num
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+GROUP BY p1.order_pay_date
+ORDER BY p1.order_pay_date
+;
+-- 整单命中订单数、整单命中占比（整单所有商品都不需要采购，org_num = 0）
+WITH
+-- 汇总到订单级别
+t1 AS
+(SELECT (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END) AS black_friday      --黑五前后
+        ,p1.order_pay_date
+        ,p1.order_id
+        ,p1.order_sn
+        ,p1.order_pay_time
+        ,SUM(p1.original_goods_number) AS org_goods_num
+        ,SUM(p1.goods_number) AS ship_goods_num
+        ,MAX(p1.demand_create_time) AS demand_create_time
+        ,SUM(p1.org_num) AS demand_org_num
+        ,MAX(p1.demand_push_time) AS demand_push_time
+        ,MAX(p1.pur_send_time) AS demand_send_time
+        ,MIN(p1.receipt_time) AS receipt_time
+        ,p1.outing_stock_time
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+GROUP BY (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END)
+        ,p1.order_pay_date
+        ,p1.order_id
+        ,p1.order_sn
+        ,p1.order_pay_time
+        ,p1.outing_stock_time
+)
+-- 汇总到每一天
+SELECT t1.black_friday
+        ,t1.order_pay_date
+        ,(CASE WHEN t1.demand_org_num = 0 THEN 'yes' ELSE 'no' END) AS is_aim_order
+        ,COUNT(t1.order_id) AS order_num
+        ,SUM(CASE WHEN t1.demand_org_num = 0 THEN 1 ELSE 0 END) AS aim_order_num
+        ,SUM(UNIX_TIMESTAMP(t1.outing_stock_time) - UNIX_TIMESTAMP(t1.order_pay_time)) / 3600 AS peihuo_duration
+FROM t1
+GROUP BY t1.black_friday
+        ,t1.order_pay_date
+        ,(CASE WHEN t1.demand_org_num = 0 THEN 'yes' ELSE 'no' END)
+;
+/*
+黑五前后 非命中订单   命中订单
+before  51.33440842 14.70760713
+after   58.1125181  9.70300022
+*/
+
+
+-- 2.2 推送时长(小时)
+-- 黑五期间修改了推送时间间隔
+-- 修改前：推送时长一般在20分钟左右；
+-- 修改后：平均推送时长为5.5小时；
+-- 那么有疑问：修改前后的订单配货时长是否有较大差异？
+SELECT p1.order_pay_date
+        ,SUM((UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(P1.demand_create_time)) * org_num) / SUM(org_num) /3600 AS avg_push_duration
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+  AND p1.order_pay_date < '2018-01-10'
+  AND p1.demand_push_time IS NOT NULL
+  AND p1.demand_push_time >= p1.demand_create_time
+GROUP BY p1.order_pay_date
+ORDER BY p1.order_pay_date
+;
+
+-- 继续看一下推送时长的分布
+-- 数据量太大，300多万，抽样5万条看一下
+SELECT p1.order_pay_date
+        ,p1.order_id
+        ,p1.demand_create_time
+        ,p1.demand_push_time
+        ,(UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(P1.demand_create_time)) / 60 AS push_duration
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+  AND p1.order_pay_date < '2018-01-10'
+  AND p1.demand_push_time IS NOT NULL
+  AND p1.demand_push_time >= p1.demand_create_time
+GROUP BY p1.order_pay_date
+        ,p1.order_id
+        ,p1.demand_create_time
+        ,p1.demand_push_time
+ORDER BY RAND()         -- 结合order by rand()和limit n，可以实现抽样
+LIMIT 50000
+;
+
+
+-- 2.3 修改需求推送时间间隔前后，订单配货时长的差异分析
+-- 前后的配货时长(小时)
+-- 结果：有较大差异，但是单独比较是无意义的，因为前后的命中率不同，前有滚动备货命中率高，后无滚动备货命中率低；
+/*
+1   after   56.742999318904936
+2   before  44.41352989789221
+*/
+WITH
+-- 汇总到订单级别
+t1 AS
+(SELECT (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END) AS adjust_time
+        ,p1.order_pay_date
+        ,p1.order_id
+        ,p1.order_sn
+        ,p1.order_pay_time
+        ,p1.outing_stock_time
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+  AND p1.outing_stock_time >= p1.order_pay_time
+GROUP BY (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END)
+        ,p1.order_pay_date
+        ,p1.order_id
+        ,p1.order_sn
+        ,p1.order_pay_time
+        ,p1.outing_stock_time
+)
+SELECT t1.adjust_time
+        ,SUM(UNIX_TIMESTAMP(t1.outing_stock_time) - UNIX_TIMESTAMP(t1.order_pay_time)) / COUNT(t1.order_id) /3600 AS avg_peihuo_duration
+FROM t1
+GROUP BY t1.adjust_time
+;
+
+
+-- 2.4 采购需求发货时长分布
+-- 没有发货时间：未发货
+-- 有发货时间：统计send_num
+-- 应发数量：org_num - oos_num
+SELECT
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+
+
+
 
