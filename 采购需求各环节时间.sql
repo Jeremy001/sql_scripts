@@ -10,7 +10,7 @@
 -- 1.明细数据 ===================================================================
 
 -- 1.1 impala，没有跨越的揽件时间 ================================================
-CREATE TABLE zybiro.neo_pur_demand_push_receipt_lock_detail
+CREATE TABLE zybiro.neo_pur_demand_push_receipt_lock_detail_bak
 AS
 WITH
 -- 1.支付订单（子单）
@@ -31,11 +31,7 @@ t1 AS
 FROM zydb.dw_order_sub_order_fact AS p1
 LEFT JOIN zydb.dw_order_goods_fact AS p2
        ON p1.order_id = p2.order_id
-WHERE p1.order_status = 1
-  --AND p1.order_id IN (40683881, 27077099)
-  AND p1.is_shiped = 1
-  AND p1.is_problems_order = 2       -- 默认值为0,1是问题单,2非问题单
-  AND p1.pay_status IN (1, 3)
+WHERE p1.pay_status IN (1, 3)
   AND ((p1.add_time >= '2017-09-12' AND p1.add_time <= '2017-10-11')     -- 黑五之前
        OR (p1.add_time >= '2017-12-12' AND p1.add_time <= '2018-01-11')     -- 黑五之后
       )
@@ -113,13 +109,13 @@ t5 AS
         ,t1.order_pay_date
         ,t1.goods_id
         ,t1.sku_id
-        ,t1.original_goods_number
-        ,t1.goods_number
-        ,t2.org_num
+        ,NVL(t1.original_goods_number, 0) AS original_goods_number
+        ,NVL(t1.goods_number, 0) AS goods_number
+        ,NVL(t2.org_num, 0) AS org_num
         ,t3.supp_name
         ,t3.cat_level1_name
-        ,t3.oos_num
-        ,t3.send_num
+        ,NVL(t3.oos_num, 0) AS oos_num
+        ,NVL(t3.send_num, 0) AS send_num
         ,t3.demand_create_time
         ,t3.demand_push_time
         ,t3.demand_oos_time
@@ -214,7 +210,7 @@ LIMIT 20;
 
 
 -- 1.2 hive 包含揽件时间 ========================================================
-CREATE TABLE zybiro.neo_pur_demand_push_receipt_lock_detail
+CREATE TABLE zybiro.neo_pur_demand_push_receipt_lock_detail_bak
 AS
 WITH
 -- 1.支付订单（子单）
@@ -424,11 +420,19 @@ pur_order_id  pur_order_sn
  */
 
 -- 2.统计分析 =======================================================================================
--- zybiro.neo_pur_demand_push_receipt_lock_detail
+-- zybiro.neo_pur_demand_push_receipt_lock_detail_bak
 SELECT *
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak
 WHERE order_id = 27077099
 ;
+
+-- 2.0 这段时间的订单和商品汇总信息
+-- 多少天？多少个订单？多少个商品？订单命中率？商品命中率？
+-- 需采购商品数？推送商品数？推送比例？平均推送时长？
+-- 缺货商品数？缺货率？发货商品数？发货率？平均发货时长？
+-- 平均在途时长？平均配货时长？
+
+
 
 -- 2.1 每天汇总 =================================================================
 -- 订单数、商品件数
@@ -446,7 +450,7 @@ SELECT p1.order_pay_date
         ,SUM(CASE WHEN p1.demand_push_time IS NULL THEN 0 ELSE p1.org_num END) AS push_goods_num
         ,SUM(p1.oos_num) AS oos_goods_num
         ,SUM(p1.send_num) AS send_goods_num
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
 WHERE p1.depot_id IN (4, 5, 14)
 GROUP BY p1.order_pay_date
 ORDER BY p1.order_pay_date
@@ -468,7 +472,7 @@ t1 AS
         ,MAX(p1.pur_send_time) AS demand_send_time
         ,MIN(p1.receipt_time) AS receipt_time
         ,p1.outing_stock_time
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
 WHERE p1.depot_id IN (4, 5, 14)
 GROUP BY (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END)
         ,p1.order_pay_date
@@ -503,7 +507,7 @@ after   58.1125181  9.70300022
 -- 那么有疑问：修改前后的订单配货时长是否有较大差异？
 SELECT p1.order_pay_date
         ,SUM((UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(P1.demand_create_time)) * org_num) / SUM(org_num) /3600 AS avg_push_duration
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
 WHERE p1.depot_id IN (4, 5, 14)
   AND p1.order_pay_date < '2018-01-10'
   AND p1.demand_push_time IS NOT NULL
@@ -519,7 +523,7 @@ SELECT p1.order_pay_date
         ,p1.demand_create_time
         ,p1.demand_push_time
         ,(UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(P1.demand_create_time)) / 60 AS push_duration
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
 WHERE p1.depot_id IN (4, 5, 14)
   AND p1.order_pay_date < '2018-01-10'
   AND p1.demand_push_time IS NOT NULL
@@ -549,7 +553,7 @@ t1 AS
         ,p1.order_sn
         ,p1.order_pay_time
         ,p1.outing_stock_time
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
 WHERE p1.depot_id IN (4, 5, 14)
   AND p1.outing_stock_time >= p1.order_pay_time
 GROUP BY (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END)
@@ -571,7 +575,7 @@ GROUP BY t1.adjust_time
 -- 有发货时间：统计send_num
 -- 应发数量：org_num - oos_num
 SELECT
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail AS p1
+FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
 WHERE p1.depot_id IN (4, 5, 14)
 
 
