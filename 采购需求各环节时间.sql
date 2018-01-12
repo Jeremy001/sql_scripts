@@ -18,10 +18,12 @@ WITH
 -- 注意：
 -- (1).goods_number <> 0, oos_num = 0表示供应商标记缺货了，但是最终商品配货成功，标记缺货没有影响到最终配货，这种情况不会统计缺货率。
 -- (2).goods_number = 0 or goods_number < original_goods_number, oos_num = 0表示供应商标记缺货了且影响到了商品配货，这种情况会统计缺货率
-t1 AS
+t101 AS
 (SELECT p1.order_id
         ,p1.order_sn
         ,p1.depod_id AS depot_id
+        ,p1.order_status
+        ,p1.is_shiped
         ,(CASE WHEN p1.pay_id=41 THEN p1.pay_time ELSE p1.result_pay_time END) AS order_pay_time      -- 支付时间
         ,TO_DATE(CASE WHEN p1.pay_id=41 THEN p1.pay_time ELSE p1.result_pay_time END) AS order_pay_date      -- 支付日期
         ,p2.goods_id
@@ -32,11 +34,15 @@ FROM zydb.dw_order_sub_order_fact AS p1
 LEFT JOIN zydb.dw_order_goods_fact AS p2
        ON p1.order_id = p2.order_id
 WHERE p1.pay_status IN (1, 3)
-  AND ((p1.add_time >= '2017-09-12' AND p1.add_time <= '2017-10-11')     -- 黑五之前
-       OR (p1.add_time >= '2017-12-12' AND p1.add_time <= '2018-01-11')     -- 黑五之后
-      )
-
 ),
+-- 筛选支付时间在黑五前一个月和黑五后一个月
+t102 AS
+(SELECT t101.*
+FROM t101
+WHERE (t101.order_pay_date >= '2017-09-12' AND t101.order_pay_date < '2017-10-12')     -- 黑五之前
+   OR (t101.order_pay_date >= '2017-12-12' AND t101.order_pay_date < '2018-01-12')     -- 黑五之后
+),
+
 -- 2.订单商品锁定明细
 -- 采购需求的原始商品需求数量
 t2 AS
@@ -102,15 +108,17 @@ GROUP BY p1.delivered_order_id
 
 -- 5. JOIN各表，获取各环节时间
 t5 AS
-(SELECT t1.order_id
-        ,t1.order_sn
-        ,t1.depot_id
-        ,t1.order_pay_time
-        ,t1.order_pay_date
-        ,t1.goods_id
-        ,t1.sku_id
-        ,NVL(t1.original_goods_number, 0) AS original_goods_number
-        ,NVL(t1.goods_number, 0) AS goods_number
+(SELECT t102.order_id
+        ,t102.order_sn
+        ,t102.depot_id
+        ,t102.order_status
+        ,t102.is_shiped
+        ,t102.order_pay_time
+        ,t102.order_pay_date
+        ,t102.goods_id
+        ,t102.sku_id
+        ,NVL(t102.original_goods_number, 0) AS original_goods_number
+        ,NVL(t102.goods_number, 0) AS goods_number
         ,NVL(t2.org_num, 0) AS org_num
         ,t3.supp_name
         ,t3.cat_level1_name
@@ -132,10 +140,10 @@ t5 AS
         ,t4.finish_onshelf_time
         ,t2.sku_lock_time
         ,p7.outing_stock_time       -- 配货完成，可拣货时间
-FROM t1
+FROM t102
 LEFT JOIN t2
-       ON t1.order_id = t2.order_id
-      AND t1.sku_id = t2.sku_id
+       ON t102.order_id = t2.order_id
+      AND t102.sku_id = t2.sku_id
 LEFT JOIN t3
        ON t2.source_rec_id = t3.rec_id
 LEFT JOIN jolly_spm.jolly_spm_pur_order_goods AS p4       -- 采购单商品明细表
@@ -147,7 +155,7 @@ LEFT JOIN t4
 --LEFT JOIN jolly_tms_center.tms_domestic_order_shipping_tracking_detail p6
        --ON t4.tracking_no = p6.tracking_no
 LEFT JOIN zydb.dw_order_node_time p7
-       ON t1.order_id = p7.order_id
+       ON t102.order_id = p7.order_id
 ),
 
 -- 通过group by，去除多个采购单、多个物流单导致的多条记录，取较大的时间
@@ -155,6 +163,8 @@ t6 AS
 (SELECT t5.order_id
         ,t5.order_sn
         ,t5.depot_id
+        ,t5.order_status
+        ,t5.is_shiped
         ,t5.order_pay_time
         ,t5.order_pay_date
         ,t5.goods_id
@@ -181,6 +191,8 @@ FROM t5
 GROUP BY t5.order_id
         ,t5.order_sn
         ,t5.depot_id
+        ,t5.order_status
+        ,t5.is_shiped
         ,t5.order_pay_time
         ,t5.order_pay_date
         ,t5.goods_id
@@ -200,10 +212,9 @@ GROUP BY t5.order_id
         ,t5.outing_stock_time
 )
 
--- 看几条记录
 SELECT *
 FROM t6
-LIMIT 20;
+;
 
 
 
@@ -426,11 +437,11 @@ FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak
 WHERE order_id = 27077099
 ;
 
--- 2.0 这段时间的订单和商品汇总信息
+-- 2.0 这段时间的订单和商品汇总信息 ==============================================
 -- 多少天？多少个订单？多少个商品？订单命中率？商品命中率？
--- 需采购商品数？推送商品数？推送比例？平均推送时长？
--- 缺货商品数？缺货率？发货商品数？发货率？平均发货时长？
--- 平均在途时长？平均配货时长？
+-- 需采购商品数？推送商品数？推送比例？平均推送时长？推送时长分布(以小时计)？
+-- 缺货商品数？缺货率？发货商品数？发货率？平均发货时长？发货时长分布？
+-- 平均在途时长？在途时长分布？平均配货时长？配货时长分布？
 
 
 
@@ -439,7 +450,9 @@ WHERE order_id = 27077099
 -- 命中商品件数、商品命中率（命中商品：无需采购，org_num IS NULL）
 -- 需采购商品数、需采购商品占比（未命中商品：org_num >= 1）
 -- 采购需求推送数量(需求数量>=1且有推送时间：org_num >= 1 AND demand_push_time IS NOT NULL)
-SELECT p1.order_pay_date
+WITH
+t1 AS
+(SELECT p1.order_pay_date
         ,COUNT(DISTINCT p1.order_id) AS order_num
         ,SUM(p1.original_goods_number) AS org_goods_num
         ,SUM(p1.goods_number) AS ship_goods_num
@@ -454,16 +467,17 @@ FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
 WHERE p1.depot_id IN (4, 5, 14)
 GROUP BY p1.order_pay_date
 ORDER BY p1.order_pay_date
-;
+),
+
 -- 整单命中订单数、整单命中占比（整单所有商品都不需要采购，org_num = 0）
-WITH
 -- 汇总到订单级别
-t1 AS
+t2 AS
 (SELECT (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END) AS black_friday      --黑五前后
         ,p1.order_pay_date
         ,p1.order_id
         ,p1.order_sn
         ,p1.order_pay_time
+        ,(CASE WHEN SUM(p1.org_num) = 0 THEN 'yes' ELSE 'no' END) AS is_aim_order
         ,SUM(p1.original_goods_number) AS org_goods_num
         ,SUM(p1.goods_number) AS ship_goods_num
         ,MAX(p1.demand_create_time) AS demand_create_time
@@ -488,7 +502,7 @@ SELECT t1.black_friday
         ,COUNT(t1.order_id) AS order_num
         ,SUM(CASE WHEN t1.demand_org_num = 0 THEN 1 ELSE 0 END) AS aim_order_num
         ,SUM(UNIX_TIMESTAMP(t1.outing_stock_time) - UNIX_TIMESTAMP(t1.order_pay_time)) / 3600 AS peihuo_duration
-FROM t1
+FROM t2
 GROUP BY t1.black_friday
         ,t1.order_pay_date
         ,(CASE WHEN t1.demand_org_num = 0 THEN 'yes' ELSE 'no' END)

@@ -859,7 +859,12 @@ LIMIT 10;
 -- SA仓：jolly_wms.who_wms_goods_stock_detail_log
 -- 国内仓：jolly.who_wms_goods_stock_detail_log
 
-# change_type 变更类型 1:采购入库,2:收货异常入库,3:销售退货入库,4:盘盈入库, 5:销售订单出库,6:盘亏出库,7:货位转移,8:移库,9:手动入库,10: 移库到亚马逊,11:fba商品入库,12:库存退货,13:调拨出库,14:上架异常入库,15:调拨入库,16-批发订单入库,17-批发订单出库
+# change_type 变更类型
+-- 入库：p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18)
+-- 入库：1:采购入库, 2:收货异常入库, 3:销售退货入库,4:盘盈入库, 9:手动入库, 11:fba商品入库, 14:上架异常入库, 15:调拨入库, 16-批发订单入库, 18
+-- 出库：p1.change_type IN (5, 6, 12, 13, 17)
+-- 出库：5:销售订单出库,6:盘亏出库,,12:库存退货,13:调拨出库,17-批发订单出库
+-- 其他：7:货位转移,8:移库,10: 移库到亚马逊
 
 -- SA仓
 SELECT depot_id
@@ -873,13 +878,15 @@ GROUP BY depot_id
         ,change_type
 ORDER BY change_type;
 
--- SA仓每月入库商品数
-SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM') AS in_month
-        ,SUM(p1.change_num) AS in_num
+-- SA仓每月出入库商品数
+SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM') AS data_month
+        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS in_num
+        ,SUM(CASE WHEN p1.change_type IN (5, 6, 12, 13, 17) THEN p1.change_num ELSE 0 END) AS out_num
 FROM jolly_wms.who_wms_goods_stock_detail_log p1
-WHERE p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18)
+WHERE p1.change_time >= UNIX_TIMESTAMP('2017-01-01')
+  AND p1.change_time < UNIX_TIMESTAMP('2018-01-01')
 GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM')
-ORDER BY in_month;
+ORDER BY data_month;
 
 
 
@@ -3754,3 +3761,53 @@ LIMIT 20;
 SELECT *
 FROM jolly_split_order_user.who_goods_comment_message p1
 LIMIT 20;
+
+
+-- 右侯需求，2017年月度数据汇总 ==================================================
+-- 审核与配货时效，从付款至可拣货
+-- 发货时效1，从可拣货至发货
+-- 发货时效1，从付款至发货
+-- 运输与配送时效，从发货至签收
+-- 区分中国仓和沙特仓
+
+SELECT SUBSTR(p1.pay_time, 1, 7) AS pay_month
+        ,(CASE WHEN p1.depot_id IN (4, 5, 6, 14) THEN 'CN仓' ELSE 'SA仓' END) AS depot
+        ,COUNT(p1.order_id) AS pay_order_num    --付款子单数
+        ,SUM(CASE WHEN p1.outing_stock_time IS NULL THEN 0 ELSE 1 END) AS outing_stock_order_num    -- 有可出库时间订单数
+        ,SUM(CASE WHEN p1.outing_stock_time IS NULL THEN 0
+                  ELSE UNIX_TIMESTAMP(p1.outing_stock_time) - UNIX_TIMESTAMP(p1.pay_time)
+             END) AS pay_outing_stock_total_time    -- 从付款至可出库的总时间
+        ,SUM(CASE WHEN p1.shipping_time IS NULL OR p1.outing_stock_time IS NULL THEN 0 ELSE 1 END) AS ship_order_num1    --有发货时间的订单数
+        ,SUM(CASE WHEN p1.shipping_time IS NULL OR p1.outing_stock_time IS NULL THEN 0
+                  ELSE UNIX_TIMESTAMP(p1.shipping_time) - UNIX_TIMESTAMP(p1.outing_stock_time)
+             END) AS outing_stock_ship_total_time    -- 从可出库至发货的总时间
+        ,SUM(CASE WHEN p1.shipping_time IS NULL THEN 0 ELSE 1 END) AS ship_order_num2    --有发货时间的订单数
+        ,SUM(CASE WHEN p1.shipping_time IS NULL THEN 0
+                  ELSE UNIX_TIMESTAMP(p1.shipping_time) - UNIX_TIMESTAMP(p1.pay_time)
+             END) AS pay_ship_total_time    -- 从付款至发货的总时间
+        ,SUM(CASE WHEN p2.receipt_time IS NULL OR p1.shipping_time IS NULL THEN 0 ELSE 1 END) AS receipt_order_num     --有签收时间的订单数
+        ,SUM(CASE WHEN p2.receipt_time IS NULL OR p1.shipping_time IS NULL THEN 0
+                  ELSE UNIX_TIMESTAMP(p2.receipt_time) - UNIX_TIMESTAMP(p1.shipping_time)
+             END) AS ship_receipt_total_time    --从发货至签收的总时间
+        ,SUM(CASE WHEN p2.receipt_time IS NULL IS NULL THEN 0
+                  ELSE UNIX_TIMESTAMP(p2.receipt_time) - UNIX_TIMESTAMP(p1.pay_time)
+             END) AS pay_receipt_total_time    --从付款至签收的总时间
+FROM zydb.dw_order_node_time AS p1
+LEFT JOIN zydb.dw_order_shipping_tracking_node AS p2
+       ON p1.order_id = p2.order_id
+WHERE p1.pay_time >= '2017-01-01'
+  AND p1.pay_time < '2018-01-01'
+  AND p1.depot_id IN (4, 5, 6, 7, 14)
+GROUP BY SUBSTR(p1.pay_time, 1, 7)
+        ,(CASE WHEN p1.depot_id IN (4, 5, 6, 14) THEN 'CN仓' ELSE 'SA仓' END)
+ORDER BY pay_month
+        ,depot
+;
+
+
+
+
+
+
+
+

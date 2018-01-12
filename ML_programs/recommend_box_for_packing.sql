@@ -476,9 +476,27 @@ WHERE p1.goods_id = 2086448
 ;
 
 
+-- 更新goods_weight和sku_weight ================================================
+/*
+  1.jolly.who_goods表中的goods_weight如果为空，则用jolly.who_product_pool表的goods_weight替代；
+  2.对于sku_weight = goods_weight的类目,如果jolly.who_sku_relation表中的sku_weight为空，则用1得到的goods_weight来替代；
+*/
 
+-- 1.先更新goods_weight
+UPDATE who_goods
+SET goods_weight = p1.goods_weight
+FROM who_product_pool AS p1
+WHERE who_goods.goods_weight = 0
+  AND who_goods.goods_id = p1.goods_id
+;
 
-
+-- 2.再更新sku_weight
+UPDATE who_sku_relation
+SET sku_weight = p1.goods_weight
+FROM who_goods AS p1
+WHERE who_sku_relation.sku_weight = 0
+  AND who_sku_relation.goods_id = p1.goods_id
+;
 
 
 

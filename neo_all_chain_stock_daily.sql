@@ -111,11 +111,12 @@ t4102 AS
         ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd')) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
-        ,(CASE WHEN p1.real_shipping_id = 40 THEN 'Aramex'
-                     WHEN p1.real_shipping_id = 170 THEN 'fetchr'
-                     WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA'
-                     WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
-                     ELSE 'Others' END) AS shipping_name
+        ,(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 'Aramex'
+               WHEN p1.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
+               WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA'
+               WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
+               ELSE 'Others'
+          END) AS shipping_name
         ,p4.region_name AS country_name
         ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END) AS depot_id
         ,'拒收或投递失败' AS return_type
@@ -133,12 +134,13 @@ LEFT JOIN (SELECT region_id, region_name
                     AND region_status = 1) p4
             ON p3.country = p4.region_id
 LEFT JOIN jolly.who_order_shipping_tracking p5
-             ON p1.order_id = p5.order_id AND p5.shipping_state IN (3, 6, 8, 13)    -- 与在途待签收区分，避免重复计算
+             ON p1.order_id = p5.order_id
 LEFT JOIN t401 ON p1.order_id = t401.order_id
 WHERE p1.shipping_time < UNIX_TIMESTAMP(TO_DATE(CURRENT_TIMESTAMP()), 'yyyy-MM-dd')
     AND p1.pay_id = 41
     AND p1.is_shiped = 1
     AND p1.cod_check_status in (4, 6)
+    AND p5.shipping_state IN (3, 6, 8, 13)    -- 与在途待签收区分，避免重复计算
 GROUP BY p1.order_id
         ,p1.order_sn
         ,p1.invoice_no
@@ -148,11 +150,12 @@ GROUP BY p1.order_id
         ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd'))
         ,t401.destination_date
         ,t401.destination_days
-        ,(CASE WHEN p1.real_shipping_id = 40 THEN 'Aramex'
-                     WHEN p1.real_shipping_id = 170 THEN 'fetchr'
-                     WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA'
-                     WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
-                     ELSE 'Others' END)
+        ,(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 'Aramex'
+               WHEN p1.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
+               WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA'
+               WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
+               ELSE 'Others'
+          END)
         ,p4.region_name
         ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END)
         ,'拒收或投递失败'
@@ -173,17 +176,18 @@ t301 AS
 (SELECT p1.order_id
         ,p2.depot_id
         ,p5.region_name AS country_name
-        ,(CASE WHEN p2.real_shipping_id = 40 THEN 'Aramex'
-                     WHEN p2.real_shipping_id = 170 THEN 'fetchr'
-                     WHEN p2.real_shipping_id IN (168, 171) THEN 'SMSA'
-                     WHEN p2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
-                     ELSE 'Others' END) AS shipping_name
+        ,(CASE WHEN p2.real_shipping_id IN (40, 200) THEN 'Aramex'
+               WHEN p2.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
+               WHEN P2.real_shipping_id IN (168, 171) THEN 'SMSA'
+               WHEN P2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
+               ELSE 'Others'
+          END) AS shipping_name
         ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p2.shipping_time, 'yyyy-MM-dd')) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
 FROM jolly.who_order_shipping_tracking p1
 RIGHT JOIN jolly.who_order_info p2
-             ON p1.order_id = p2.order_id AND P2.depot_id IN (4, 5, 6, 7, 8, 14, 15) AND p2.order_status = 1
+             ON p1.order_id = p2.order_id
 LEFT JOIN t401
              ON t401.order_id = p1.order_id
 LEFT JOIN jolly.who_order_user_info p4
@@ -191,14 +195,17 @@ LEFT JOIN jolly.who_order_user_info p4
 LEFT JOIN jolly.who_region p5
              ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
 WHERE p1.shipping_state NOT IN (3, 6, 8, 13)    -- 不是已签收、已退回、已拒收和已丢失中的任何一项，就是还在途的
+  AND P2.depot_id IN (4, 5, 6, 7, 8, 14, 15)
+  AND p2.order_status = 1
 GROUP BY p1.order_id
         ,p2.depot_id
         ,p5.region_name
-        ,(CASE WHEN p2.real_shipping_id = 40 THEN 'Aramex'
-                     WHEN p2.real_shipping_id = 170 THEN 'fetchr'
-                     WHEN p2.real_shipping_id IN (168, 171) THEN 'SMSA'
-                     WHEN p2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
-                     ELSE 'Others' END)
+        ,(CASE WHEN p2.real_shipping_id IN (40, 200) THEN 'Aramex'
+               WHEN p2.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
+               WHEN P2.real_shipping_id IN (168, 171) THEN 'SMSA'
+               WHEN P2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
+               ELSE 'Others'
+          END)
         ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p2.shipping_time, 'yyyy-MM-dd'))
         ,t401.destination_date
         ,t401.destination_days
