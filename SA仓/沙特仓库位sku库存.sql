@@ -1,6 +1,6 @@
 
 -- SA仓商品库存（goods_id, sku_id, 货位号）
-WITH t AS 
+WITH t AS
 (SELECT j.goods_sn
         ,j.goods_id
         ,j.cat_level1_name
@@ -26,12 +26,12 @@ FROM jolly_wms.who_wms_depot_shelf_area a
 WHERE a.depot_shelf_id = b.shelf_id
      AND c.depot_area_id = g.depot_area_id
      AND g.channel_id=b.depot_channel_id
-     AND c.depot_id = d.depot_id 
-     AND a.shelf_area_id=e.shelf_area_id 
+     AND c.depot_id = d.depot_id
+     AND a.shelf_area_id=e.shelf_area_id
      AND e.sku_id = h.rec_id
      AND h.goods_id = j.goods_id
      AND c.depot_area_type_id = 1       -- =1表示正品
-     AND e.stock_num > 0 
+     AND e.stock_num > 0
      AND e.depot_id = 7
 ),
 -- 各个货位号的库存量

@@ -7,7 +7,7 @@
 -- 国内仓 =======================================================
 -- 查询sku在各个货位号的库存
 
-WITH 
+WITH
 -- 库存明细
 t1 AS
 (SELECT f.depot_id
@@ -30,13 +30,13 @@ WHERE a.depot_shelf_id = b.shelf_id
      AND f.stock_num > 0
 )
 
-SELECT * 
+SELECT *
 FROM t1
 LIMIT 10;
 
 -- 沙特仓 ==========================================================================
 -- 各库位号sku总库存
-WITH t AS 
+WITH t AS
 (SELECT e.sku_id
         ,j.cat_level1_name
         ,concat(d.depot_sn,'-',c.depot_area_sn,g.channel_sn,'-',b.shelf_sn,'-',a.shelf_area_sn) AS shelf_area_sn
@@ -52,11 +52,11 @@ FROM jolly_wms.who_wms_depot_shelf_area a
 WHERE a.depot_shelf_id = b.shelf_id
      AND c.depot_area_id = g.depot_area_id
      AND g.channel_id=b.depot_channel_id
-     AND c.depot_id = d.depot_id 
-     AND a.shelf_area_id=e.shelf_area_id 
+     AND c.depot_id = d.depot_id
+     AND a.shelf_area_id=e.shelf_area_id
      AND e.sku_id = h.rec_id
      AND h.goods_id = j.goods_id
-     AND e.stock_num>0 
+     AND e.stock_num>0
      AND e.depot_id=7
 )
 

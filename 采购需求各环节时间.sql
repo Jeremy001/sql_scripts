@@ -10,7 +10,7 @@
 -- 1.明细数据 ===================================================================
 
 -- 1.1 impala，没有跨越的揽件时间 ================================================
-CREATE TABLE zybiro.neo_pur_demand_push_receipt_lock_detail_bak
+CREATE TABLE zybiro.neo_pur_lock_detail
 AS
 WITH
 -- 1.支付订单（子单）
@@ -221,7 +221,7 @@ FROM t6
 
 
 -- 1.2 hive 包含揽件时间 ========================================================
-CREATE TABLE zybiro.neo_pur_demand_push_receipt_lock_detail_bak
+CREATE TABLE zybiro.neo_pur_lock_detail
 AS
 WITH
 -- 1.支付订单（子单）
@@ -431,9 +431,9 @@ pur_order_id  pur_order_sn
  */
 
 -- 2.统计分析 =======================================================================================
--- zybiro.neo_pur_demand_push_receipt_lock_detail_bak
+-- zybiro.neo_pur_lock_detail
 SELECT *
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak
+FROM zybiro.neo_pur_lock_detail
 WHERE order_id = 27077099
 ;
 
@@ -463,19 +463,25 @@ t1 AS
         ,SUM(CASE WHEN p1.demand_push_time IS NULL THEN 0 ELSE p1.org_num END) AS push_goods_num
         ,SUM(p1.oos_num) AS oos_goods_num
         ,SUM(p1.send_num) AS send_goods_num
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
+FROM zybiro.neo_pur_lock_detail AS p1
 WHERE p1.depot_id IN (4, 5, 14)
 GROUP BY p1.order_pay_date
 ORDER BY p1.order_pay_date
 ),
 
+-- 下单数
 -- 整单命中订单数、整单命中占比（整单所有商品都不需要采购，org_num = 0）
+-- 完成配货订单数、占比
+-- 发货订单数
 -- 汇总到订单级别
-t2 AS
-(SELECT (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END) AS black_friday      --黑五前后
+CREATE TABLE zybiro.neo_pur_lock_orders
+AS
+SELECT (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END) AS black_friday      --黑五前后
         ,p1.order_pay_date
         ,p1.order_id
         ,p1.order_sn
+        ,p1.order_status
+        ,p1.is_shiped
         ,p1.order_pay_time
         ,(CASE WHEN SUM(p1.org_num) = 0 THEN 'yes' ELSE 'no' END) AS is_aim_order
         ,SUM(p1.original_goods_number) AS org_goods_num
@@ -486,26 +492,58 @@ t2 AS
         ,MAX(p1.pur_send_time) AS demand_send_time
         ,MIN(p1.receipt_time) AS receipt_time
         ,p1.outing_stock_time
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
+FROM zybiro.neo_pur_lock_detail AS p1
 WHERE p1.depot_id IN (4, 5, 14)
 GROUP BY (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END)
         ,p1.order_pay_date
         ,p1.order_id
         ,p1.order_sn
+        ,p1.order_status
+        ,p1.is_shiped
         ,p1.order_pay_time
         ,p1.outing_stock_time
-)
+;
+
+-- 汇总黑五前后
+SELECT t2.black_friday
+        ,COUNT(t2.order_id) AS pay_order_num
+        ,SUM(t2.org_goods_num) AS pay_goods_num
+        ,SUM(CASE WHEN t2.is_aim_order = 'yes' THEN 1 ELSE 0 END) AS aim_order_num
+        ,SUM(t2.demand_org_num) AS demand_goods_num
+        ,SUM(CASE WHEN t2.outing_stock_time IS NOT NULL AND t2.outing_stock_time > t2.order_pay_time
+                  THEN 1
+                  ELSE 0
+             END) AS peihuo_order_num
+        ,SUM(CASE WHEN t2.outing_stock_time IS NOT NULL AND t2.outing_stock_time > t2.order_pay_time
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS peihuo_duration
+        ,SUM(CASE WHEN is_shiped = 1 THEN 1 ELSE 0 END) AS ship_order_num
+        ,SUM(t2.ship_goods_num) AS ship_goods_num
+FROM zybiro.neo_pur_lock_orders AS t2
+WHERE t2.order_pay_date < '2018-01-09'
+GROUP BY t2.black_friday
+;
+
+
 -- 汇总到每一天
-SELECT t1.black_friday
-        ,t1.order_pay_date
-        ,(CASE WHEN t1.demand_org_num = 0 THEN 'yes' ELSE 'no' END) AS is_aim_order
-        ,COUNT(t1.order_id) AS order_num
-        ,SUM(CASE WHEN t1.demand_org_num = 0 THEN 1 ELSE 0 END) AS aim_order_num
-        ,SUM(UNIX_TIMESTAMP(t1.outing_stock_time) - UNIX_TIMESTAMP(t1.order_pay_time)) / 3600 AS peihuo_duration
-FROM t2
-GROUP BY t1.black_friday
-        ,t1.order_pay_date
-        ,(CASE WHEN t1.demand_org_num = 0 THEN 'yes' ELSE 'no' END)
+SELECT t2.black_friday
+        ,t2.order_pay_date
+        ,COUNT(t2.order_id) AS pay_order_num
+        ,SUM(t2.org_goods_num) AS pay_goods_num
+        ,SUM(CASE WHEN t2.is_aim_order = 'yes' THEN 1 ELSE 0 END) AS aim_order_num
+        ,SUM(CASE WHEN t2.outing_stock_time IS NOT NULL AND t2.outing_stock_time > t2.order_pay_time
+                  THEN 1
+                  ELSE 0
+             END) AS peihuo_order_num
+        ,SUM(CASE WHEN t2.outing_stock_time IS NOT NULL AND t2.outing_stock_time > t2.order_pay_time
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS peihuo_duration
+        ,SUM(CASE WHEN is_shiped = 1 THEN 1 ELSE 0 END) AS ship_order_num
+FROM zybiro.neo_pur_lock_orders AS t2
+GROUP BY t2.black_friday
+        ,t2.order_pay_date
 ;
 /*
 黑五前后 非命中订单   命中订单
@@ -513,19 +551,334 @@ before  51.33440842 14.70760713
 after   58.1125181  9.70300022
 */
 
+-- 每天完成配货的订单数
+SELECT t2.black_friday
+        ,t2.order_pay_date
+        ,COUNT(t2.order_id) AS pay_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 0 THEN 1 ELSE 0 END) AS t0_peihuo_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 0
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS t0_peihuo_duration
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 1 THEN 1 ELSE 0 END) AS t1_peihuo_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 1
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS t1_peihuo_duration
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 2 THEN 1 ELSE 0 END) AS t2_peihuo_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 2
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS t2_peihuo_duration
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 3 THEN 1 ELSE 0 END) AS t3_peihuo_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 3
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS t3_peihuo_duration
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 4 THEN 1 ELSE 0 END) AS t4_peihuo_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 4
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS t4_peihuo_duration
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 5 THEN 1 ELSE 0 END) AS t5_peihuo_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 5
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS t5_peihuo_duration
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 6 THEN 1 ELSE 0 END) AS t6_peihuo_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) = 6
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS t6_peihuo_duration
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) >= 7 THEN 1 ELSE 0 END) AS t7_peihuo_order_num
+        ,SUM(CASE WHEN DATEDIFF(t2.outing_stock_time, t2.order_pay_time) >= 7
+                  THEN (UNIX_TIMESTAMP(t2.outing_stock_time) - UNIX_TIMESTAMP(t2.order_pay_time)) / 3600
+                  ELSE 0
+             END) AS t7_peihuo_duration
+FROM zybiro.neo_pur_lock_orders AS t2
+GROUP BY t2.black_friday
+        ,t2.order_pay_date
+ORDER BY t2.order_pay_date
+;
+
+
+
+
+-- 汇总各个节点的时效
+SELECT p1.order_pay_date
+        -- create_2_push_duration
+        ,SUM(p1.org_num) AS demand_goods_num
+        ,SUM(CASE WHEN p1.demand_push_time IS NULL OR p1.demand_push_time < p1.demand_create_time
+                  THEN 0
+                  ELSE p1.org_num
+             END) AS push_goods_num
+        ,SUM(CASE WHEN p1.demand_push_time IS NULL OR p1.demand_push_time < p1.demand_create_time
+                  THEN 0
+                  ELSE (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(P1.demand_create_time)) * p1.org_num /3600
+             END) AS push_goods_duration
+        -- push_2_send_duration
+        ,SUM(p1.org_num - p1.oos_num) AS need_send_num
+        ,SUM(p1.oos_num) AS oos_num
+        ,SUM(CASE WHEN p1.pur_send_time IS NULL OR p1.pur_send_time < p1.demand_push_time
+                  THEN 0
+                  ELSE p1.send_num
+             END) AS real_send_num
+        ,SUM(CASE WHEN p1.pur_send_time IS NULL OR p1.pur_send_time < p1.demand_push_time
+                  THEN 0
+                  ELSE (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time)) * p1.send_num / 3600
+             END) AS send_goods_duration
+        -- send_2_receipt_duration
+        ,SUM(CASE WHEN p1.receipt_time IS NULL OR p1.receipt_time < p1.pur_send_time
+                  THEN 0
+                  ELSE p1.send_num
+             END) AS receipt_num
+        ,SUM(CASE WHEN p1.receipt_time IS NULL OR p1.receipt_time < p1.pur_send_time
+                  THEN 0
+                  ELSE (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time)) * p1.send_num / 3600
+             END) AS receipt_goods_duration
+FROM zybiro.neo_pur_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+GROUP BY p1.order_pay_date
+ORDER BY p1.order_pay_date
+;
+
+
+-- 采购需求各节点时效和量
+SELECT p1.order_pay_date
+        -- create_2_push:小时：0/2/4/6/8/10+
+        ,SUM(p1.org_num) AS demand_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 > 0
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 2
+                  THEN p1.org_num
+                  ELSE 0
+             END) AS t0_push_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 > 0
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 2
+                  THEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600
+                  ELSE 0
+             END) AS t0_push_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=2
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 4
+                  THEN p1.org_num
+                  ELSE 0
+             END) AS t2_push_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=2
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 4
+                  THEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600
+                  ELSE 0
+             END) AS t2_push_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=4
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 6
+                  THEN p1.org_num
+                  ELSE 0
+             END) AS t4_push_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=4
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 6
+                  THEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600
+                  ELSE 0
+             END) AS t4_push_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=6
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 8
+                  THEN p1.org_num
+                  ELSE 0
+             END) AS t6_push_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=6
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 8
+                  THEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600
+                  ELSE 0
+             END) AS t6_push_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=8
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 10
+                  THEN p1.org_num
+                  ELSE 0
+             END) AS t8_push_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=8
+                   AND (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 < 10
+                  THEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600
+                  ELSE 0
+             END) AS t8_push_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=10
+                  THEN p1.org_num
+                  ELSE 0
+             END) AS t10_push_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600 >=10
+                  THEN (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.demand_create_time))/3600
+                  ELSE 0
+             END) AS t10_push_goods_duration
+        -- push_2_send：小时：0/12/24/36/48/60/72+
+        ,SUM(p1.org_num - p1.oos_num) AS need_send_num
+        ,SUM(p1.oos_num) AS oos_num
+        ,SUM(CASE WHEN p1.pur_send_time IS NULL OR p1.pur_send_time < p1.demand_push_time
+                  THEN 0
+                  ELSE p1.send_num
+             END) AS real_send_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 > 0
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 12
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t0_send_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 > 0
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 12
+                  THEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600
+                  ELSE 0
+             END) AS t0_send_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=12
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 24
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t12_send_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=12
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 24
+                  THEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600
+                  ELSE 0
+             END) AS t12_send_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=24
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 36
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t24_send_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=24
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 36
+                  THEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600
+                  ELSE 0
+             END) AS t24_send_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=36
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 48
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t36_send_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=36
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 48
+                  THEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600
+                  ELSE 0
+             END) AS t36_send_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=48
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 60
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t48_send_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=48
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 60
+                  THEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600
+                  ELSE 0
+             END) AS t48_send_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=60
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 72
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t60_send_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=60
+                   AND (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 < 72
+                  THEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600
+                  ELSE 0
+             END) AS t60_send_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=72
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t72_send_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600 >=72
+                  THEN (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600
+                  ELSE 0
+             END) AS t72_send_goods_duration
+        -- send_2_receipt：小时：0/12/24/36/48/60/72+
+        ,SUM(CASE WHEN p1.receipt_time IS NULL OR p1.receipt_time < p1.pur_send_time
+                  THEN 0
+                  ELSE p1.send_num
+             END) AS receipt_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 > 0
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 12
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t0_receipt_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 > 0
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 12
+                  THEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600
+                  ELSE 0
+             END) AS t0_receipt_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=12
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 24
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t12_receipt_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=12
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 24
+                  THEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600
+                  ELSE 0
+             END) AS t12_receipt_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=24
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 36
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t24_receipt_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=24
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 36
+                  THEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600
+                  ELSE 0
+             END) AS t24_receipt_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=36
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 48
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t36_receipt_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=36
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 48
+                  THEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600
+                  ELSE 0
+             END) AS t36_receipt_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=48
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 60
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t48_receipt_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=48
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 60
+                  THEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600
+                  ELSE 0
+             END) AS t48_receipt_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=60
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 72
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t60_receipt_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=60
+                   AND (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 < 72
+                  THEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600
+                  ELSE 0
+             END) AS t60_receipt_goods_duration
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=72
+                  THEN p1.send_num
+                  ELSE 0
+             END) AS t72_receipt_goods_num
+        ,SUM(CASE WHEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600 >=72
+                  THEN (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600
+                  ELSE 0
+             END) AS t72_receipt_goods_duration
+FROM zybiro.neo_pur_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+GROUP BY p1.order_pay_date
+ORDER BY p1.order_pay_date
+;
+
+
 
 -- 2.2 推送时长(小时)
 -- 黑五期间修改了推送时间间隔
 -- 修改前：推送时长一般在20分钟左右；
 -- 修改后：平均推送时长为5.5小时；
 -- 那么有疑问：修改前后的订单配货时长是否有较大差异？
+
 SELECT p1.order_pay_date
-        ,SUM((UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(P1.demand_create_time)) * org_num) / SUM(org_num) /3600 AS avg_push_duration
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
+        ,SUM(p1.org_num) AS demand_goods_num
+        ,SUM(CASE WHEN p1.demand_push_time IS NULL OR p1.demand_push_time < p1.demand_create_time
+                  THEN 0
+                  ELSE p1.org_num
+             END) AS push_goods_num
+        ,SUM(CASE WHEN p1.demand_push_time IS NULL OR p1.demand_push_time < p1.demand_create_time
+                  THEN 0
+                  ELSE (UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(P1.demand_create_time)) * p1.org_num /3600
+             END) AS push_goods_duration
+FROM zybiro.neo_pur_lock_detail AS p1
 WHERE p1.depot_id IN (4, 5, 14)
-  AND p1.order_pay_date < '2018-01-10'
-  AND p1.demand_push_time IS NOT NULL
-  AND p1.demand_push_time >= p1.demand_create_time
 GROUP BY p1.order_pay_date
 ORDER BY p1.order_pay_date
 ;
@@ -537,7 +890,7 @@ SELECT p1.order_pay_date
         ,p1.demand_create_time
         ,p1.demand_push_time
         ,(UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(P1.demand_create_time)) / 60 AS push_duration
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
+FROM zybiro.neo_pur_lock_detail AS p1
 WHERE p1.depot_id IN (4, 5, 14)
   AND p1.order_pay_date < '2018-01-10'
   AND p1.demand_push_time IS NOT NULL
@@ -550,48 +903,49 @@ ORDER BY RAND()         -- 结合order by rand()和limit n，可以实现抽样
 LIMIT 50000
 ;
 
-
--- 2.3 修改需求推送时间间隔前后，订单配货时长的差异分析
--- 前后的配货时长(小时)
--- 结果：有较大差异，但是单独比较是无意义的，因为前后的命中率不同，前有滚动备货命中率高，后无滚动备货命中率低；
-/*
-1   after   56.742999318904936
-2   before  44.41352989789221
-*/
-WITH
--- 汇总到订单级别
-t1 AS
-(SELECT (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END) AS adjust_time
-        ,p1.order_pay_date
-        ,p1.order_id
-        ,p1.order_sn
-        ,p1.order_pay_time
-        ,p1.outing_stock_time
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
-WHERE p1.depot_id IN (4, 5, 14)
-  AND p1.outing_stock_time >= p1.order_pay_time
-GROUP BY (CASE WHEN p1.order_pay_date < '2017-10-13' THEN 'before' ELSE 'after' END)
-        ,p1.order_pay_date
-        ,p1.order_id
-        ,p1.order_sn
-        ,p1.order_pay_time
-        ,p1.outing_stock_time
-)
-SELECT t1.adjust_time
-        ,SUM(UNIX_TIMESTAMP(t1.outing_stock_time) - UNIX_TIMESTAMP(t1.order_pay_time)) / COUNT(t1.order_id) /3600 AS avg_peihuo_duration
-FROM t1
-GROUP BY t1.adjust_time
-;
-
-
--- 2.4 采购需求发货时长分布
+-- 2.3 采购需求发货时长分布
 -- 没有发货时间：未发货
 -- 有发货时间：统计send_num
 -- 应发数量：org_num - oos_num
-SELECT
-FROM zybiro.neo_pur_demand_push_receipt_lock_detail_bak AS p1
+
+---- 2.3.1 发货商品数量和平均时长
+SELECT p1.order_pay_date
+        ,SUM(p1.org_num - p1.oos_num) AS need_send_num
+        ,SUM(CASE WHEN p1.pur_send_time IS NULL OR p1.pur_send_time < p1.demand_push_time
+                  THEN 0
+                  ELSE p1.send_num
+             END) AS real_send_num
+        ,SUM(CASE WHEN p1.pur_send_time IS NULL OR p1.pur_send_time < p1.demand_push_time
+                  THEN 0
+                  ELSE (UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time)) * p1.send_num / 3600
+             END) AS send_goods_duration
+FROM zybiro.neo_pur_lock_detail AS p1
 WHERE p1.depot_id IN (4, 5, 14)
+GROUP BY p1.order_pay_date
+ORDER BY p1.order_pay_date
+;
+
+---- 2.3.2 发货时长分布
 
 
+-- 2.4 采购需求到货时长
+-- 无到货签收时间：未到货
+-- 有到货签收时间：默认到货签收数量 = send_num，忽略质检上架过程中发现的异常
+
+---- 2.4.1 到货签收商品数量和平均时长
+SELECT p1.order_pay_date
+        ,SUM(CASE WHEN p1.receipt_time IS NULL OR p1.receipt_time < p1.pur_send_time
+                  THEN 0
+                  ELSE p1.send_num
+             END) AS receipt_num
+        ,SUM(CASE WHEN p1.receipt_time IS NULL OR p1.receipt_time < p1.pur_send_time
+                  THEN 0
+                  ELSE (UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time)) * p1.send_num / 3600
+             END) AS receipt_goods_duration
+FROM zybiro.neo_pur_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+GROUP BY p1.order_pay_date
+ORDER BY p1.order_pay_date
+;
 
 

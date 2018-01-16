@@ -866,6 +866,16 @@ LIMIT 10;
 -- 出库：5:销售订单出库,6:盘亏出库,,12:库存退货,13:调拨出库,17-批发订单出库
 -- 其他：7:货位转移,8:移库,10: 移库到亚马逊
 
+-- 出库
+CASE p1.change_type WHEN 5 THEN '销售订单出库'
+                    WHEN 6 THEN '盘亏出库'
+                    WHEN 12 THEN '库存退货'
+                    WHEN 13 THEN '调拨出库'
+                    WHEN 17 THEN '批发订单出库'
+                    ELSE '其他'
+END
+
+
 -- SA仓
 SELECT depot_id
         ,change_type
@@ -888,7 +898,36 @@ WHERE p1.change_time >= UNIX_TIMESTAMP('2017-01-01')
 GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM')
 ORDER BY data_month;
 
-
+-- 东莞仓昨日出库数据统计
+SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS out_wh_date
+        ,p1.depot_id
+        ,p2.depot_area_sn
+        ,(CASE p1.change_type WHEN 5 THEN '销售订单出库'
+                              WHEN 6 THEN '盘亏出库'
+                              WHEN 12 THEN '库存退货'
+                              WHEN 13 THEN '调拨出库'
+                              WHEN 17 THEN '批发订单出库'
+                              ELSE '其他'
+          END) AS out_wh_type
+        ,SUM(p1.change_num) AS out_wh_num
+FROM jolly.who_wms_goods_stock_detail_log AS p1
+LEFT JOIN jolly.who_wms_depot_area AS p2
+       ON p1.depot_area_id = p2.depot_area_id
+WHERE p1.change_time >= UNIX_TIMESTAMP('2018-01-15')
+  AND p1.change_time < UNIX_TIMESTAMP('2018-01-16')
+  AND p1.depot_id IN (5, 14)
+  AND p1.change_type IN (5, 6, 12, 13, 17)
+GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
+        ,p1.depot_id
+        ,p2.depot_area_sn
+        ,(CASE p1.change_type WHEN 5 THEN '销售订单出库'
+                              WHEN 6 THEN '盘亏出库'
+                              WHEN 12 THEN '库存退货'
+                              WHEN 13 THEN '调拨出库'
+                              WHEN 17 THEN '批发订单出库'
+                              ELSE '其他'
+          END)
+;
 
 
 -- 每天采购入库
