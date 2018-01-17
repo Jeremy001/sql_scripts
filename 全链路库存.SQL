@@ -220,13 +220,62 @@ GROUP BY depot_id
 ),
 
 
+
+
+
 -- 毛毛需求
 -- 1.待退回的明细数据，先处理2015-2016年发货的订单
-SELECT *
+-- 销售退货签收表, 查询各个退货退款订单的状态和签收时间
+-- join jolly and jolly_wms
+t501 AS
+(SELECT p1.*
+        ,(CASE p1.status WHEN 1 THEN '1已签收'
+                         WHEN 2 THEN '2已匹配'
+                         WHEN 3 THEN '3部分收货'
+                         WHEN 4 THEN '4全部收货'
+                         WHEN 5 THEN '5客服处理中'
+                         WHEN 6 THEN '6签收失败'
+                         ELSE '其他'
+          END) AS sale_return_status
+        ,FROM_UNIXTIME(p1.gmt_created) AS return_receipt_time
+FROM jolly.who_wms_sale_returned_receipt_info AS p1
+WHERE p1.order_id >= 1
+UNION ALL
+SELECT p1.*
+        ,(CASE p1.status WHEN 1 THEN '1已签收'
+                         WHEN 2 THEN '2已匹配'
+                         WHEN 3 THEN '3部分收货'
+                         WHEN 4 THEN '4全部收货'
+                         WHEN 5 THEN '5客服处理中'
+                         WHEN 6 THEN '6签收失败'
+                         ELSE '其他'
+          END) AS sale_return_status
+        ,FROM_UNIXTIME(p1.gmt_created) AS return_receipt_time
+FROM jolly_wms.who_wms_sale_returned_receipt_info AS p1
+WHERE p1.order_id >= 1
+),
+t502 AS
+(SELECT t501.order_id
+        ,t501.order_sn
+        ,MAX(CONCAT_WS('--', p2.user_name, t501.sale_return_status, t501.return_receipt_time)) AS sale_return_info1
+        ,MIN(CONCAT_WS('--', p2.user_name, t501.sale_return_status, t501.return_receipt_time)) AS sale_return_info2
+FROM t501
+LEFT JOIN jolly.who_rbac_user AS p2
+       ON t501.admin_id = p2.user_id
+GROUP BY t501.order_id
+        ,t501.order_sn
+)
+
+-- 结果
+SELECT t4102.*
+        ,t502.sale_return_info1
+        ,t502.sale_return_info2
 FROM t4102
-WHERE shipping_date >= '2015-01-01'
-  AND shipping_date < '2017-01-01'
-  AND order_id NOT IN (SELECT * FROM t4101)
+LEFT JOIN t502
+       ON t4102.order_id = t502.order_id
+WHERE t4102.shipping_date >= '2015-01-01'
+  AND t4102.shipping_date < '2017-01-01'
+  AND t4102.order_id NOT IN (SELECT * FROM t4101)
 LIMIT 20
 ;
 

@@ -898,6 +898,7 @@ WHERE p1.change_time >= UNIX_TIMESTAMP('2017-01-01')
 GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM')
 ORDER BY data_month;
 
+
 -- 东莞仓昨日出库数据统计
 SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS out_wh_date
         ,p1.depot_id
