@@ -3847,6 +3847,42 @@ ORDER BY pay_month
 
 
 
+-- 迪拜仓出库订单商品测算 ========================================================
+-- zydb.dw_order_sub_order_fact.country_name = 'United Arab Emirates'
+WITH
+-- 1.Dubai仓当前库存明细
+t1 AS
+(SELECT p1.sku_id
+        ,SUM(p1.stock_num) AS total_stock_num
+FROM jolly_wms.who_wms_goods_stock_detail AS p1
+WHERE p1.depot_id = 15
+GROUP BY p1.sku_id
+),
+-- 1.近两周下单的订单和sku明细,sku需是当前库存中的
+t2 AS
+(SELECT p2.sku_id
+        ,p1.order_id
+        ,SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10) AS pay_date
+        ,p2.goods_number
+FROM zydb.dw_order_sub_order_fact AS p1
+LEFT JOIN zydb.dw_order_goods_fact AS p2
+       ON p1.order_id = p2.order_id
+WHERE p1.order_status = 1
+  AND p1.pay_status IN (1, 3)
+  AND p1.country_name = 'United Arab Emirates'
+  AND (CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) >= '2018-01-02'
+  AND (CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) < '2018-01-16'
+  AND p2.sku_id IN (SELECT t1.sku_id FROM t1)   --在当前库存的sku列表中
+)
+-- 导出1和2的结果，进行数据对比
+SELECT *
+FROM t1
+;
+SELECT *
+FROM t2
+;
+
+
 
 
 
