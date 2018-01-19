@@ -860,10 +860,11 @@ LIMIT 10;
 -- 国内仓：jolly.who_wms_goods_stock_detail_log
 
 # change_type 变更类型
+-- 总：1:采购入库,2:收货异常入库,3:销售退货入库,4:盘盈入库, 5:销售订单出库,6:盘亏出库,7:货位转移,8:移库,9:手动入库,10: 移库到亚马逊,11:FBA商品入库,12:库存退货,13:调拨出库,14:上架异常入库,15:调拨入库,16-批发订单入库,17-批发订单出库,18-无订单退货入库,19-报废出库,20 - FBA出库
 -- 入库：p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18)
--- 入库：1:采购入库, 2:收货异常入库, 3:销售退货入库,4:盘盈入库, 9:手动入库, 11:fba商品入库, 14:上架异常入库, 15:调拨入库, 16-批发订单入库, 18
--- 出库：p1.change_type IN (5, 6, 12, 13, 17)
--- 出库：5:销售订单出库,6:盘亏出库,,12:库存退货,13:调拨出库,17-批发订单出库
+-- 入库：1:采购入库, 2:收货异常入库, 3:销售退货入库,4:盘盈入库, 9:手动入库, 11:fba商品入库, 14:上架异常入库, 15:调拨入库, 16-批发订单入库,18-无订单退货入库
+-- 出库：p1.change_type IN (5, 6, 12, 13, 17, 19, 20)
+-- 出库：5:销售订单出库,6:盘亏出库,,12:库存退货,13:调拨出库,17-批发订单出库,18-无订单退货入库,19-报废出库,20 - FBA出库
 -- 其他：7:货位转移,8:移库,10: 移库到亚马逊
 
 -- 出库
@@ -899,36 +900,54 @@ GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM')
 ORDER BY data_month;
 
 
--- 东莞仓昨日出库数据统计
-SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS out_wh_date
+
+-- 东莞仓昨日出入库和库存统计 ========================================================================
+WITH
+-- 1.出入库数量
+t1 AS
+(SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS data_date
         ,p1.depot_id
         ,p2.depot_area_sn
-        ,(CASE p1.change_type WHEN 5 THEN '销售订单出库'
-                              WHEN 6 THEN '盘亏出库'
-                              WHEN 12 THEN '库存退货'
-                              WHEN 13 THEN '调拨出库'
-                              WHEN 17 THEN '批发订单出库'
-                              ELSE '其他'
-          END) AS out_wh_type
-        ,SUM(p1.change_num) AS out_wh_num
+        -- 1.1 出库各类型数量
+        ,SUM(CASE p1.change_type WHEN 5 THEN p1.change_num ELSE 0 END) AS out_num_xiaoshou
+        ,SUM(CASE p1.change_type WHEN 6 THEN p1.change_num ELSE 0 END) AS out_num_pankui
+        ,SUM(CASE p1.change_type WHEN 12 THEN p1.change_num ELSE 0 END) AS out_num_tuihuo
+        ,SUM(CASE p1.change_type WHEN 13 THEN p1.change_num ELSE 0 END) AS out_num_diaobo
+        ,SUM(CASE p1.change_type WHEN 17 THEN p1.change_num ELSE 0 END) AS out_num_pifa
+        ,SUM(CASE p1.change_type WHEN 19 THEN p1.change_num ELSE 0 END) AS out_num_baofei
+        ,SUM(CASE p1.change_type WHEN 20 THEN p1.change_num ELSE 0 END) AS out_num_FBA
+        ,SUM(CASE WHEN p1.change_type IN (5, 6, 12, 13, 17, 19, 20) THEN p1.change_num ELSE 0 END) AS out_num_total
+        -- 1.2 入库各类型数量
+        ,SUM(CASE p1.change_type WHEN 1 THEN p1.change_num ELSE 0 END) AS in_num_caigou
+        ,SUM(CASE p1.change_type WHEN 2 THEN p1.change_num ELSE 0 END) AS in_num_shouhuoyichang
+        ,SUM(CASE p1.change_type WHEN 3 THEN p1.change_num ELSE 0 END) AS in_num_xiaoshoutuihuo
+        ,SUM(CASE p1.change_type WHEN 4 THEN p1.change_num ELSE 0 END) AS in_num_panying
+        ,SUM(CASE p1.change_type WHEN 9 THEN p1.change_num ELSE 0 END) AS in_num_shoudong
+        ,SUM(CASE p1.change_type WHEN 11 THEN p1.change_num ELSE 0 END) AS in_num_FBA
+        ,SUM(CASE p1.change_type WHEN 14 THEN p1.change_num ELSE 0 END) AS in_num_shangjiayichang
+        ,SUM(CASE p1.change_type WHEN 15 THEN p1.change_num ELSE 0 END) AS in_num_diaobo
+        ,SUM(CASE p1.change_type WHEN 16 THEN p1.change_num ELSE 0 END) AS in_num_pifa
+        ,SUM(CASE p1.change_type WHEN 18 THEN p1.change_num ELSE 0 END) AS in_num_wudingdan
+        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS in_num_total
 FROM jolly.who_wms_goods_stock_detail_log AS p1
 LEFT JOIN jolly.who_wms_depot_area AS p2
        ON p1.depot_area_id = p2.depot_area_id
 WHERE p1.change_time >= UNIX_TIMESTAMP('2018-01-15')
   AND p1.change_time < UNIX_TIMESTAMP('2018-01-16')
   AND p1.depot_id IN (5, 14)
-  AND p1.change_type IN (5, 6, 12, 13, 17)
 GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
         ,p1.depot_id
         ,p2.depot_area_sn
-        ,(CASE p1.change_type WHEN 5 THEN '销售订单出库'
-                              WHEN 6 THEN '盘亏出库'
-                              WHEN 12 THEN '库存退货'
-                              WHEN 13 THEN '调拨出库'
-                              WHEN 17 THEN '批发订单出库'
-                              ELSE '其他'
-          END)
+),
+-- 2.库存量-总库存
+SELECT p1.stock_num
+FROM zydb.ods_who_wms_goods_stock_detail AS p1
+
 ;
+
+
+
+国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail
 
 
 -- 每天采购入库
@@ -1021,6 +1040,8 @@ ORDER BY cat_level1_name
 
 # 库存快照表：zydb.ods_who_wms_goods_stock_detail
 # 每天一个快照，几点的？
+
+zydb.ods_who_wms_goods_stock_detail；zydb.ods_who_wms_goods_stock_total_detail
 
 SELECT *
 FROM zydb.ods_who_wms_goods_stock_detail
