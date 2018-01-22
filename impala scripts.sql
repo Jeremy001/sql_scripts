@@ -889,10 +889,21 @@ GROUP BY depot_id
         ,change_type
 ORDER BY change_type;
 
+-- Dubai仓
+-- 迪拜仓每天出入库量
+SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS data_date
+        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS in_num
+        ,SUM(CASE WHEN p1.change_type IN (5, 6, 12, 13, 17, 19, 20) THEN p1.change_num ELSE 0 END) AS out_num
+FROM jolly_wms.who_wms_goods_stock_detail_log p1
+WHERE p1.depot_id = 15
+GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
+ORDER BY data_date DESC;
+
+
 -- SA仓每月出入库商品数
 SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM') AS data_month
         ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS in_num
-        ,SUM(CASE WHEN p1.change_type IN (5, 6, 12, 13, 17) THEN p1.change_num ELSE 0 END) AS out_num
+        ,SUM(CASE WHEN p1.change_type IN (5, 6, 12, 13, 17, 19, 20) THEN p1.change_num ELSE 0 END) AS out_num
 FROM jolly_wms.who_wms_goods_stock_detail_log p1
 WHERE p1.change_time >= UNIX_TIMESTAMP('2017-01-01')
   AND p1.change_time < UNIX_TIMESTAMP('2018-01-01')
@@ -905,7 +916,7 @@ ORDER BY data_month;
 WITH
 -- 1.出入库数量
 t1 AS
-(SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS data_date
+(SELECT FROM_UNIXTIME(p1.change_time, 'yyyyMMdd') AS data_date
         ,p1.depot_id
         ,p2.depot_area_sn
         -- 1.1 出库各类型数量
@@ -940,10 +951,38 @@ GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
         ,p2.depot_area_sn
 ),
 -- 2.库存量-总库存
-SELECT p1.stock_num
+t2 AS
+(SELECT p1.data_date
+        ,p1.depot_id
+        ,p2.depot_area_sn
+        ,SUM(p1.stock_num) AS total_stock_num
 FROM zydb.ods_who_wms_goods_stock_detail AS p1
+LEFT JOIN jolly.who_wms_depot_area AS p2
+       ON p1.depot_area_id = p2.depot_area_id
+WHERE p1.depot_id IN (5, 14)
+  AND p1.data_date >= '20180115'
+  AND p1.data_date < '20180116'
+GROUP BY p1.data_date
+        ,p1.depot_id
+        ,p2.depot_area_sn
+),
+-- 3.库存量-自由库存
+t3 AS
+(SELECT p1.data_date
+        ,p1.depot_id
+        ,p2.depot_area_sn
+        ,SUM(p1.total_stock_num-p1.total_order_lock_num-p1.total_allocate_lock_num-p1.total_return_lock_num) AS free_stock_num
+FROM zydb.ods_who_wms_goods_stock_total_detail AS p1
+LEFT JOIN jolly.who_wms_depot_area AS p2
+       ON p1.depot_area_id = p2.depot_area_id
+WHERE p1.depot_id IN (5, 14)
+  AND p1.data_date >= '20180115'
+  AND p1.data_date < '20180116'
+GROUP BY p1.data_date
+        ,p1.depot_id
+        ,p2.depot_area_sn
+),
 
-;
 
 
 
@@ -3905,6 +3944,28 @@ FROM t2
 
 
 
+-- 盘盈盘亏记录
+-- jolly.who_wms_check_stock_detail_log
+-- jolly_wms.who_wms_check_stock_detail_log
+-- 这些盘盈盘亏记录会汇总到库存变更记录表中：
+-- SA仓：jolly_wms.who_wms_goods_stock_detail_log
+-- 国内仓：jolly.who_wms_goods_stock_detail_log
+SELECT *
+FROM jolly.who_wms_check_stock_detail_log
+LIMIT 10;
 
+SELECT p1.goods_id
+        ,p1.goods_sn
+        ,p1.sku_id
+        ,p1.sku_value
+        ,p1.check_stock_status
+        ,p1.change_num
+        ,from_unixtime(p1.op_time) AS op_time
+FROM jolly.who_wms_check_stock_detail_log AS p1
+WHERE p1.depot_id IN (5, 14)
+  AND p1.check_stock_status IN (1, 2)
+  AND p1.op_time >= unix_timestamp('2018-01-21')
+  AND p1.op_time < unix_timestamp('2018-01-22')
+;
 
 
