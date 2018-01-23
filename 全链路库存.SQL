@@ -1320,3 +1320,48 @@ WHERE p1.is_shiped = 1
      AND p1.shipping_time < UNIX_TIMESTAMP(TRUNC(NOW(), 'DD'))
      AND p1.cod_check_status in (4, 6)
 LIMIT 100;
+
+
+-- UAE拒收和投递失败量
+-- 拒收：取拒收时间
+-- 投递失败：取第一次派送时间
+WITH
+-- 拒收和投递失败的订单
+t1 AS
+(SELECT p1.order_id
+        ,SUBSTR(CASE WHEN p1.cod_check_status = 4 THEN p6.deliver_time
+                     ELSE p6.refuse_time END, 1, 10) AS fail_refuse_date
+        ,p4.region_name AS country_name
+        ,SUM(NVL(p2.goods_send_num, 0)) AS return_onway_num
+FROM jolly.who_order_info p1
+LEFT JOIN jolly.who_order_goods p2
+       ON p1.order_id = p2.order_id
+LEFT JOIN jolly.who_order_user_info p3
+       ON p1.order_id = p3.order_id
+LEFT JOIN (SELECT region_id, region_name
+           FROM jolly.who_region
+           WHERE region_type = 0 AND region_status = 1) p4
+       ON p3.country = p4.region_id
+LEFT JOIN jolly.who_order_shipping_tracking p5
+       ON p1.order_id = p5.order_id
+LEFT JOIN zydb.dw_order_shipping_tracking_node AS p6
+       ON p1.order_id = p6.order_id
+WHERE p1.pay_id = 41
+  AND p1.is_shiped = 1
+  AND p1.cod_check_status IN (4, 6)
+  AND p5.shipping_state IN (3, 6, 8, 13)    -- 与在途待签收区分，避免重复计算
+GROUP BY p1.order_id
+        ,SUBSTR(CASE WHEN p1.cod_check_status = 4 THEN p6.deliver_time
+                     ELSE p6.refuse_time END, 1, 10)
+        ,p4.region_name
+)
+
+SELECT t1.fail_refuse_date
+        ,COUNT(t1.order_id) AS order_num
+        ,SUM(t1.return_onway_num) AS return_onway_num
+FROM t1
+WHERE t1.country_name = 'United Arab Emirates'
+  AND t1.fail_refuse_date >= '2017-10-01'
+GROUP BY t1.fail_refuse_date
+ORDER BY t1.fail_refuse_date DESC
+;
