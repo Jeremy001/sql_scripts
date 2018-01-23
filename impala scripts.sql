@@ -3959,6 +3959,63 @@ SELECT *
 FROM t2
 ;
 
+-- 迪拜仓类目库存结构
+WITH
+-- 1.Dubai仓当前库存结构
+t101 AS
+(SELECT p1.sku_id
+        ,p1.goods_id
+        ,p2.cate_level1_name
+        ,SUM(p1.stock_num) AS total_stock_num
+FROM jolly_wms.who_wms_goods_stock_detail AS p1
+LEFT JOIN zydb.dim_goods AS p2
+       ON p1.goods_id = p2.goods_id
+WHERE p1.depot_id = 15
+GROUP BY p1.sku_id
+        ,p1.goods_id
+        ,p2.cate_level1_name
+),
+-- 一级类目，sku数，商品件数
+t102 AS
+(SELECT t101.cate_level1_name
+        ,COUNT(t101.sku_id) AS sku_count
+        ,SUM(t101.total_stock_num) AS total_stock_num
+FROM t101
+GROUP BY t101.cate_level1_name
+),
+-- 2.UAE市场类目销售结构
+t201 AS
+(SELECT p3.cate_level1_name
+        ,SUM(CASE WHEN p1.pay_time >= '2017-01-01' AND p1.pay_time < '2017-02-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201701
+        ,SUM(CASE WHEN p1.pay_time >= '2017-02-01' AND p1.pay_time < '2017-03-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201702
+        ,SUM(CASE WHEN p1.pay_time >= '2017-03-01' AND p1.pay_time < '2017-04-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201703
+        ,SUM(CASE WHEN p1.pay_time >= '2018-01-01' AND p1.pay_time < '2018-02-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201801
+FROM zydb.dw_order_node_time AS p1
+LEFT JOIN zydb.dw_order_goods_fact AS p2
+       ON p1.order_id = p2.order_id
+LEFT JOIN zydb.dim_goods AS p3
+       ON p2.goods_id = p3.goods_id
+WHERE p1.country_name = 'United Arab Emirates'
+  AND p1.order_status = 1
+  AND p1.pay_status IN (1, 3)
+GROUP BY p3.cate_level1_name
+)
+-- 3. full outer join, 得到库存和销售结构
+SELECT COALESCE(t102.cate_level1_name, t201.cate_level1_name) AS cat_level1_name
+        ,t102.sku_count
+        ,t102.total_stock_num
+        ,t201.goods_num_201701
+        ,t201.goods_num_201702
+        ,t201.goods_num_201703
+        ,t201.goods_num_201801
+FROM t102
+FULL OUTER JOIN t201
+             ON t102.cate_level1_name = t201.cate_level1_name
+ORDER BY cat_level1_name
+;
+
+
+
 
 
 -- 盘盈盘亏记录
