@@ -3965,7 +3965,11 @@ WITH
 t101 AS
 (SELECT p1.sku_id
         ,p1.goods_id
+        ,p1.goods_sn
+        ,p1.goods_name
         ,p2.cate_level1_name
+        ,p2.cate_level2_name
+        ,p2.cate_level3_name
         ,SUM(p1.stock_num) AS total_stock_num
 FROM jolly_wms.who_wms_goods_stock_detail AS p1
 LEFT JOIN zydb.dim_goods AS p2
@@ -3973,7 +3977,11 @@ LEFT JOIN zydb.dim_goods AS p2
 WHERE p1.depot_id = 15
 GROUP BY p1.sku_id
         ,p1.goods_id
+        ,p1.goods_sn
+        ,p1.goods_name
         ,p2.cate_level1_name
+        ,p2.cate_level2_name
+        ,p2.cate_level3_name
 ),
 -- 一级类目，sku数，商品件数
 t102 AS
