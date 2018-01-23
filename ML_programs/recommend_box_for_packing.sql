@@ -2,10 +2,10 @@
 内容：打包数据挖掘项目
 时间：20171129
 作者：Neo王政鸣
- */
+*/
 
 -- 1.包裹称重信息表：jolly.who_wms_weigh_package_info
--- 2.订单包裹打包信息表：jolly.who_wms_order_package
+-- 2.订单包裹打包信息表：jolly.who_wms_order_package, 如果进行了裁箱，那么表中的纸箱尺寸是裁箱后的尺寸；
 -- 3.订单商品表：jolly.who_order_goods
 -- 4.订单表：jolly.who_order_info
 -- 5.商品属性表：zydb.dim_jc_goods
@@ -17,7 +17,7 @@ WITH
 t1 AS
 (SELECT p1.order_id    -- 订单id
         --,p1.order_sn    -- 订单编号
-        ,p1.depot_id    -- 订单所属仓库id
+        --,p1.depod_id    -- 订单所属仓库id
         --,p2.result_code    -- 称重结果代码
         --,p2.remark    -- 称重结果说明
         --,p3.shipping_no    -- 货运单号
@@ -499,5 +499,80 @@ WHERE who_sku_relation.sku_weight = 0
 ;
 
 
+
+-- 计算裁箱比例
+-- 裁箱只会裁纸箱的高度
+-- 纸箱的尺寸aa*bb*cc
+WITH
+-- 耗材
+t1 AS
+(SELECT p1.material_sn
+        ,CAST(SUBSTR(p1.standard, 7, 2) AS int) AS height_standard
+        ,p1.standard AS material_size_standard
+        ,p1.material_shape
+FROM jolly.who_wms_material p1
+WHERE p1.material_type = 3    -- 3代表打包物料
+  AND p1.status = 1    -- 1代表正常，非禁用
+),
+-- join得到结果
+t2 AS
+(SELECT p1.order_id    -- 订单id
+        ,SUBSTR(p1.order_pack_time, 1, 7) AS pack_month
+        ,p3.material_id    -- 打包耗材ID
+        ,p3.material_sn    -- 打包耗材编码
+        ,p3.material_name    -- 打包耗材名称
+        ,t1.material_size_standard
+        ,p3.material_standard AS material_size_new
+        ,t1.height_standard
+        ,CAST(SUBSTR(p3.material_standard, 7, 2) AS int) AS height_new   -- 纸箱的最终高度，若裁箱，则高度小于标准高度
+        ,(t1.height_standard - CAST(SUBSTR(p3.material_standard, 7, 2) AS int)) AS height_minus      --标准尺寸-裁箱后尺寸，裁箱几厘米？
+FROM zydb.dw_order_sub_order_fact p1
+LEFT JOIN jolly.who_wms_order_package p3
+       ON p1.order_id = p3.order_id
+LEFT JOIN t1
+       ON p3.material_sn = t1.material_sn
+WHERE p1.is_shiped = 1
+     AND p1.order_status = 1
+     AND p1.depod_id IN (4, 5, 14)
+     AND p1.order_pack_time >= '2017-07-01'        -- 2017年
+     AND p1.order_pack_time < '2018-01-01'        -- 2017年
+     AND t1.material_shape = 1
+)
+-- 汇总-月度裁箱比例
+SELECT t2.pack_month
+        ,COUNT(*) AS total_num
+        ,SUM(CASE WHEN t2.height_minus >= 1 THEN 1 ELSE 0 END) AS caixiang_num
+        ,SUM(CASE WHEN t2.height_minus >= 1 THEN 1 ELSE 0 END) / COUNT(*) AS caixiang_rate
+FROM t2
+WHERE t2.height_minus >= 0
+GROUP BY t2.pack_month
+ORDER BY t2.pack_month
+;
+-- 汇总-各规格的裁箱比例
+SELECT t2.material_size_standard
+        ,COUNT(*) AS total_num
+        ,SUM(CASE WHEN t2.height_minus >= 1 THEN 1 ELSE 0 END) AS caixiang_num
+        ,SUM(CASE WHEN t2.height_minus >= 1 THEN 1 ELSE 0 END) / COUNT(*) AS caixiang_rate
+FROM t2
+WHERE t2.height_minus >= 0
+GROUP BY t2.material_size_standard
+ORDER BY t2.material_size_standard
+;
+
+-- 汇总-各规格裁箱尺寸:裁1cm/2cm/3cm/4cm/5cm/5+cm
+SELECT t2.material_size_standard
+        ,COUNT(*) AS total_num
+        ,SUM(CASE WHEN t2.height_minus >= 1 THEN 1 ELSE 0 END) AS caixiang_num
+        ,SUM(CASE WHEN t2.height_minus = 1 THEN 1 ELSE 0 END) AS caixiang_num_1cm
+        ,SUM(CASE WHEN t2.height_minus = 2 THEN 1 ELSE 0 END) AS caixiang_num_2cm
+        ,SUM(CASE WHEN t2.height_minus = 3 THEN 1 ELSE 0 END) AS caixiang_num_3cm
+        ,SUM(CASE WHEN t2.height_minus = 4 THEN 1 ELSE 0 END) AS caixiang_num_4cm
+        ,SUM(CASE WHEN t2.height_minus = 5 THEN 1 ELSE 0 END) AS caixiang_num_5cm
+        ,SUM(CASE WHEN t2.height_minus >= 6 THEN 1 ELSE 0 END) AS caixiang_num_6cm
+FROM t2
+WHERE t2.height_minus >= 0
+GROUP BY t2.material_size_standard
+ORDER BY t2.material_size_standard
+;
 
 

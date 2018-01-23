@@ -946,10 +946,11 @@ LEFT JOIN jolly.who_wms_depot_area AS p2
 WHERE p1.change_time >= UNIX_TIMESTAMP('2018-01-15')
   AND p1.change_time < UNIX_TIMESTAMP('2018-01-16')
   AND p1.depot_id IN (5, 14)
-GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd')
+GROUP BY FROM_UNIXTIME(p1.change_time, 'yyyyMMdd')
         ,p1.depot_id
         ,p2.depot_area_sn
 ),
+
 -- 2.库存量-总库存
 t2 AS
 (SELECT p1.data_date
@@ -967,26 +968,42 @@ GROUP BY p1.data_date
         ,p2.depot_area_sn
 ),
 -- 3.库存量-自由库存
-t3 AS
-(SELECT p1.data_date
-        ,p1.depot_id
-        ,p2.depot_area_sn
-        ,SUM(p1.total_stock_num-p1.total_order_lock_num-p1.total_allocate_lock_num-p1.total_return_lock_num) AS free_stock_num
-FROM zydb.ods_who_wms_goods_stock_total_detail AS p1
-LEFT JOIN jolly.who_wms_depot_area AS p2
-       ON p1.depot_area_id = p2.depot_area_id
-WHERE p1.depot_id IN (5, 14)
-  AND p1.data_date >= '20180115'
-  AND p1.data_date < '20180116'
-GROUP BY p1.data_date
-        ,p1.depot_id
-        ,p2.depot_area_sn
-),
+-- 自由库存快照表中没有货位号，所以去查询
 
+-- 4.合并1和2
+t0 AS
+(SELECT t2.*
+        ,t1.out_num_xiaoshou
+        ,t1.out_num_pankui
+        ,t1.out_num_tuihuo
+        ,t1.out_num_diaobo
+        ,t1.out_num_pifa
+        ,t1.out_num_baofei
+        ,t1.out_num_FBA
+        ,t1.out_num_total
+        ,t1.in_num_caigou
+        ,t1.in_num_shouhuoyichang
+        ,t1.in_num_xiaoshoutuihuo
+        ,t1.in_num_panying
+        ,t1.in_num_shoudong
+        ,t1.in_num_FBA
+        ,t1.in_num_shangjiayichang
+        ,t1.in_num_diaobo
+        ,t1.in_num_pifa
+        ,t1.in_num_wudingdan
+        ,t1.in_num_total
+FROM t2
+LEFT JOIN t1
+       ON t1.data_date = t2.data_date
+      AND t1.depot_id = t2.depot_id
+      AND t1.depot_area_sn = t2.depot_area_sn
+)
 
+-- 前10条记录
+SELECT *
+FROM t0
+LIMIT 10;
 
-
-国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail
 
 
 -- 每天采购入库
