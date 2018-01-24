@@ -192,13 +192,13 @@ LIMIT 10;
 -- 2017年总发运订单数及主要物流商发运订单数
 -- Aramex: real_shipping_id IN (40, 200)
 -- Naqel: real_shipping_id IN (172, 174, 176)
--- Fetchr: real_shipping_id IN (170, 201)
+-- Fetchr: real_shipping_id IN (170, 201, 257)
 -- SMSA: real_shipping_id IN (168, 171)
 SELECT SUBSTR(p1.shipping_time, 1, 7) AS ship_month
         ,COUNT(p1.order_id) AS total_order_num
         ,SUM(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 1 ELSE 0 END) AS aramex_order_num
         ,SUM(CASE WHEN p1.real_shipping_id IN (172, 174, 176) THEN 1 ELSE 0 END) AS naqel_order_num
-        ,SUM(CASE WHEN p1.real_shipping_id IN (170, 201) THEN 1 ELSE 0 END) AS fetchr_order_num
+        ,SUM(CASE WHEN p1.real_shipping_id IN (170, 201, 257) THEN 1 ELSE 0 END) AS fetchr_order_num
         ,SUM(CASE WHEN p1.real_shipping_id IN (168, 171) THEN 1 ELSE 0 END) AS smsa_order_num
 FROM zydb.dw_order_sub_order_fact p1
 WHERE p1.shipping_time >= '2017-01-01'
@@ -366,7 +366,6 @@ LIMIT 10;
 
 
 -- jolly.who_goods_onsale_log，查看商品在售状态修改记录
-
 
 
 -- 2.jolly.who_sku_relation
@@ -574,5 +573,8 @@ WHERE t2.height_minus >= 0
 GROUP BY t2.material_size_standard
 ORDER BY t2.material_size_standard
 ;
+
+
+-- 总体数据：各月发出包裹数，纸箱包裹数，抛重包裹数
 
 
