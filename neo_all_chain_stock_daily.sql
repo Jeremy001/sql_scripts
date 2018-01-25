@@ -195,8 +195,6 @@ LEFT JOIN jolly.who_order_user_info p4
 LEFT JOIN jolly.who_region p5
              ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
 WHERE p1.shipping_state NOT IN (3, 6, 8, 13)    -- 不是已签收、已退回、已拒收和已丢失中的任何一项，就是还在途的
-  AND P2.depot_id IN (4, 5, 6, 7, 8, 14, 15)
-  AND p2.order_status = 1
 GROUP BY p1.order_id
         ,p2.depot_id
         ,p5.region_name
