@@ -28,7 +28,7 @@ t1 AS
         ,p3.material_name    -- 打包耗材名称
         ,p3.material_weight    -- 打包耗材重量
         ,p3.material_volume    -- 打包耗材体积
-        ,p3.material_standard   -- 打包耗材的标准尺寸
+        ,p3.material_standard   -- 打包耗材的最终尺寸
 
         -- 以下是包裹的信息，包括各个重量，体积，尺寸等
         ,p6.package_size    -- 包裹尺寸规格
@@ -69,39 +69,39 @@ t1 AS
         ,p5.goods_season    -- 商品季节
 FROM zydb.dw_order_sub_order_fact p1
 LEFT JOIN jolly.who_wms_weigh_package_info p2
-             ON p1.order_id = p2.order_id
+       ON p1.order_id = p2.order_id
 LEFT JOIN jolly.who_wms_order_package p3
-             ON p1.order_id = p3.order_id
+       ON p1.order_id = p3.order_id
 LEFT JOIN jolly.who_wms_order_shipping_info p6
-             ON p1.order_id = p6.order_id
+       ON p1.order_id = p6.order_id
 LEFT JOIN jolly.who_order_goods p4
-             ON p1.order_id = p4.order_id
+       ON p1.order_id = p4.order_id
 LEFT JOIN zydb.dim_jc_goods p5
-             ON p4.goods_id = p5.goods_id
+       ON p4.goods_id = p5.goods_id
 LEFT JOIN jolly_tms_center.tms_shipping p7
-             ON p1.real_shipping_id = p7.shipping_id
+       ON p1.real_shipping_id = p7.shipping_id
 LEFT JOIN jolly_tms_center.tms_carrier p8
-             ON p7.carrier_domestic_transport_id = p8.carrier_id
+       ON p7.carrier_domestic_transport_id = p8.carrier_id
 LEFT JOIN jolly_tms_center.tms_carrier p9
-             ON p7.carrier_domestic_transport_id = p9.carrier_id
+       ON p7.carrier_domestic_transport_id = p9.carrier_id
 LEFT JOIN jolly_tms_center.tms_carrier p10
-             ON p7.carrier_domestic_transport_id = p10.carrier_id
+       ON p7.carrier_domestic_transport_id = p10.carrier_id
 LEFT JOIN jolly_tms_center.tms_carrier p11
-             ON p7.carrier_domestic_transport_id = p11.carrier_id
+       ON p7.carrier_domestic_transport_id = p11.carrier_id
 LEFT JOIN jolly_tms_center.tms_carrier p12
-             ON p7.carrier_domestic_transport_id = p12.carrier_id
+       ON p7.carrier_domestic_transport_id = p12.carrier_id
 LEFT JOIN jolly_tms_center.tms_carrier p13
-             ON p7.carrier_domestic_transport_id = p13.carrier_id
+       ON p7.carrier_domestic_transport_id = p13.carrier_id
 WHERE p1.is_shiped = 1
-     AND p1.order_status = 1
-     AND p1.depod_id IN (4, 5, 6, 14)
-     AND p1.pay_time >= '2017-01-01'        -- 2017年
+  AND p1.order_status = 1
+  AND p1.depod_id IN (4, 5, 6, 14)
+  AND p1.pay_time >= '2017-01-01'        -- 2017年
 )
 
 SELECT t1.*
 FROM t1
 LEFT JOIN jolly.who_sku_relation p1
-             ON t1.sku_id = p1.rec_id
+       ON t1.sku_id = p1.rec_id
 
 
 
@@ -532,10 +532,10 @@ LEFT JOIN t1
        ON p3.material_sn = t1.material_sn
 WHERE p1.is_shiped = 1
      AND p1.order_status = 1
-     AND p1.depod_id IN (4, 5, 14)
+     AND p1.depod_id IN (4, 5, 6, 14)
      AND p1.order_pack_time >= '2017-07-01'        -- 2017年
      AND p1.order_pack_time < '2018-01-01'        -- 2017年
-     AND t1.material_shape = 1
+     AND p3.material_volume >= 0.0001
 )
 -- 汇总-月度裁箱比例
 SELECT t2.pack_month
@@ -576,5 +576,19 @@ ORDER BY t2.material_size_standard
 
 
 -- 总体数据：各月发出包裹数，纸箱包裹数，抛重包裹数
+SELECT SUBSTR(p1.order_pack_time, 1, 7) AS pack_month
+        ,COUNT(p1.order_id) AS order_num
+        ,SUM(CASE WHEN p3.material_volume = 0 THEN 1 ELSE 0 END) AS pakdai_num
+        ,SUM(CASE WHEN p3.material_volume = 0 THEN 0 ELSE 1 END) AS zhixiang_num
+        ,SUM(CASE WHEN p3.material_volume = 0 THEN 0 ELSE 1 END) / COUNT(p1.order_id) AS zhixiang_rate
+FROM zydb.dw_order_node_time p1
+LEFT JOIN jolly.who_wms_order_package p3
+       ON p1.order_id = p3.order_id
+WHERE p1.is_shiped = 1
+  AND p1.depot_id IN (4, 5, 6, 14)
+  AND p1.order_pack_time >= '2017-01-01'        -- 2017年
+GROUP BY SUBSTR(p1.order_pack_time, 1, 7)
+ORDER BY pack_month
+;
 
 
