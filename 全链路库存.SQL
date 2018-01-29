@@ -643,6 +643,7 @@ SELECT country_name
         ,SUM(deliver_onway_cost) AS deliver_onway_cost
         ,SUM(deliver_onway_amount) AS deliver_onway_amount
 FROM t301
+WHERE depot_id >= 4
 GROUP BY country_name
 ORDER BY order_num;
 -- 2.承运商
@@ -652,6 +653,7 @@ SELECT shipping_name
         ,SUM(deliver_onway_cost) AS deliver_onway_cost
         ,SUM(deliver_onway_amount) AS deliver_onway_amount
 FROM t301
+WHERE depot_id >= 4
 GROUP BY shipping_name
 ORDER BY order_num;
 -- 3.发货天数
@@ -671,6 +673,7 @@ SELECT (CASE WHEN shiped_days >= 90 THEN '90天以上'
         ,SUM(deliver_onway_cost) AS deliver_onway_cost
         ,SUM(deliver_onway_amount) AS deliver_onway_amount
 FROM t301
+WHERE depot_id >= 4
 GROUP BY (CASE WHEN shiped_days >= 90 THEN '90天以上'
                       WHEN (shiped_days >= 80 AND shiped_days < 90) THEN '80-90天'
                       WHEN (shiped_days >= 70 AND shiped_days < 80) THEN '70-80天'

@@ -3983,20 +3983,24 @@ GROUP BY p1.sku_id
         ,p2.cate_level2_name
         ,p2.cate_level3_name
 ),
--- 一级类目，sku数，商品件数
+-- 一级类目, 二级类目, sku数, 商品件数
 t102 AS
 (SELECT t101.cate_level1_name
+        ,t101.cate_level2_name
         ,COUNT(t101.sku_id) AS sku_count
         ,SUM(t101.total_stock_num) AS total_stock_num
 FROM t101
 GROUP BY t101.cate_level1_name
+        ,t101.cate_level2_name
 ),
 -- 2.UAE市场类目销售结构
 t201 AS
 (SELECT p3.cate_level1_name
+        ,p3.cate_level2_name
         ,SUM(CASE WHEN p1.pay_time >= '2017-01-01' AND p1.pay_time < '2017-02-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201701
         ,SUM(CASE WHEN p1.pay_time >= '2017-02-01' AND p1.pay_time < '2017-03-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201702
         ,SUM(CASE WHEN p1.pay_time >= '2017-03-01' AND p1.pay_time < '2017-04-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201703
+        ,SUM(CASE WHEN p1.pay_time >= '2017-04-01' AND p1.pay_time < '2017-05-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201704
         ,SUM(CASE WHEN p1.pay_time >= '2018-01-01' AND p1.pay_time < '2018-02-01' THEN p2.goods_number ELSE 0 END) AS goods_num_201801
 FROM zydb.dw_order_node_time AS p1
 LEFT JOIN zydb.dw_order_goods_fact AS p2
@@ -4007,19 +4011,23 @@ WHERE p1.country_name = 'United Arab Emirates'
   AND p1.order_status = 1
   AND p1.pay_status IN (1, 3)
 GROUP BY p3.cate_level1_name
+        ,p3.cate_level2_name
 )
 -- 3. full outer join, 得到库存和销售结构
 SELECT COALESCE(t102.cate_level1_name, t201.cate_level1_name) AS cat_level1_name
+        ,COALESCE(t102.cate_level2_name, t201.cate_level2_name) AS cat_level2_name
         ,t102.sku_count
         ,t102.total_stock_num
         ,t201.goods_num_201701
         ,t201.goods_num_201702
         ,t201.goods_num_201703
-        ,t201.goods_num_201801
+        ,t201.goods_num_201704
 FROM t102
 FULL OUTER JOIN t201
              ON t102.cate_level1_name = t201.cate_level1_name
+            AND t102.cate_level2_name = t201.cate_level2_name
 ORDER BY cat_level1_name
+        ,cat_level2_name
 ;
 
 
@@ -4051,3 +4059,60 @@ WHERE p1.depot_id IN (5, 14)
 ;
 
 
+-- 迪拜仓备货商品销售预测
+WITH
+-- 预测销售数量
+t1 AS
+(SELECT p1.goods_id
+        ,p1.sku_id
+        ,SUM(CASE WHEN p1.data_date >= '2018-04-01' AND p1.data_date < '2018-05-01' THEN p1.goods_number ELSE 0 END) AS sale_num_04
+        ,SUM(CASE WHEN p1.data_date >= '2018-05-01' AND p1.data_date < '2018-06-01' THEN p1.goods_number ELSE 0 END) AS sale_num_05
+        ,SUM(CASE WHEN p1.data_date >= '2018-04-01' AND p1.data_date < '2018-06-01' THEN p1.goods_number ELSE 0 END) AS sale_num_0405
+FROM zybiro.neo_dubai_beihuo_sale_predict AS p1
+GROUP BY p1.goods_id
+        ,p1.sku_id
+),
+-- join, 得到备货商品的备货量和预测销量
+t2 AS
+(SELECT p1.*
+        ,t1.sale_num_04
+        ,t1.sale_num_05
+        ,t1.sale_num_0405
+        ,p2.cate_level1_name
+        ,p2.cate_level2_name
+FROM zybiro.neo_dubai_beihuo_sku_detail2 AS p1
+LEFT JOIN t1
+       ON p1.sku_id = t1.sku_id
+LEFT JOIN zydb.dim_goods AS p2
+       ON p1.goods_id = p2.goods_id
+)
+
+SELECT t2.cate_level1_name
+        ,t2.cate_level2_name
+        ,SUM(t2.beihuo_num) AS beihuo_num
+        ,SUM(t2.sale_num_04) AS sale_num_04
+        ,SUM(t2.sale_num_05) AS sale_num_05
+        ,SUM(t2.sale_num_0405) AS sale_num_0405
+FROM t2
+GROUP BY t2.cate_level1_name
+        ,t2.cate_level2_name
+;
+
+-- 哪些sku的近期销售为0？
+WITH
+t1 AS
+(SELECT a.goods_id
+        ,a.sku_id
+        ,SUM(a.goods_number) AS goods_num
+FROM zybiro.neo_dubai_beihuo_sale_predict a
+WHERE a.data_date >= '2017-10-01'
+  AND a.data_date < '2018-01-01'
+GROUP BY a.goods_id
+        ,a.sku_id
+)
+
+SELECT goods_id
+        ,sku_id
+FROM t1
+WHERE goods_num = 0
+;
