@@ -4087,16 +4087,11 @@ LEFT JOIN zydb.dim_goods AS p2
        ON p1.goods_id = p2.goods_id
 )
 
-SELECT t2.cate_level1_name
-        ,t2.cate_level2_name
-        ,SUM(t2.beihuo_num) AS beihuo_num
-        ,SUM(t2.sale_num_04) AS sale_num_04
-        ,SUM(t2.sale_num_05) AS sale_num_05
-        ,SUM(t2.sale_num_0405) AS sale_num_0405
+SELECT *
 FROM t2
-GROUP BY t2.cate_level1_name
-        ,t2.cate_level2_name
 ;
+-- 导出到excel中处理
+
 
 -- 哪些sku的近期销售为0？
 WITH
@@ -4116,3 +4111,35 @@ SELECT goods_id
 FROM t1
 WHERE goods_num = 0
 ;
+
+
+-- 沙特仓备货商品销售预测
+WITH
+-- 预测销售数量
+t1 AS
+(SELECT p1.goods_id
+        ,p1.sku_id
+        ,SUM(CASE WHEN p1.data_date >= '2018-04-01' AND p1.data_date < '2018-05-01' THEN p1.goods_number ELSE 0 END) AS sale_num_04
+        ,SUM(CASE WHEN p1.data_date >= '2018-04-01' AND p1.data_date < '2018-06-01' THEN p1.goods_number ELSE 0 END) AS sale_num_0405
+FROM zybiro.neo_sa_beihuo_sale_predict AS p1
+GROUP BY p1.goods_id
+        ,p1.sku_id
+),
+-- join, 得到备货商品的备货量和预测销量
+t2 AS
+(SELECT p1.*
+        ,t1.sale_num_04
+        ,t1.sale_num_0405
+        ,p2.cate_level1_name
+        ,p2.cate_level2_name
+FROM zybiro.neo_sa_beihuo_sku_detail2 AS p1
+LEFT JOIN t1
+       ON p1.sku_id = t1.sku_id
+LEFT JOIN zydb.dim_goods AS p2
+       ON p1.goods_id = p2.goods_id
+)
+
+SELECT *
+FROM t2
+;
+-- 导出到excel中处理
