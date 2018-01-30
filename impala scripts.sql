@@ -2272,9 +2272,31 @@ ORDER BY to_depot_id;
 
 
 
+-- ============================================== 仓库作业环节相关数据（顶） ===================================================
+
+-- 1.到货签收质检
+
+-- 1.1 到货签收单 jolly.who_wms_delivered_receipt_info
+
+-- 1.2 到货单表 jolly.who_wms_delivered_order_info
+
+-- 1.3 到货单详情表 jolly.who_wms_delivered_order_goods
+
+-- jolly.who_wms_pur_deliver_receipt
+-- jolly.who_wms_pur_deliver_goods
+
+
+-- 2.质检
 
 
 
+
+
+
+
+
+
+-- ============================================== 仓库作业环节相关数据（底） ===================================================
 
 -- zydb.dw_goods_on_sale
 -- 在售商品每天的售价: prst_price
@@ -3144,33 +3166,62 @@ FROM t1
 WHERE region_id = 1878
 ;
 
--- 类目销售结构
 WITH
+-- 2017年类目销售结构
 t1 AS
-(SELECT p3.cat_level1_name
-        ,p3.cat_level2_name
-        ,p3.supp_name
-        ,SUM(p2.goods_number) AS goods_num
+(SELECT p3.cate_level1_name
+        ,p3.cate_level2_name
+        ,p3.cate_level3_name
+        ,p3.cate_level4_name
+        ,SUM(p2.goods_number) AS sales_goods_num
 FROM zydb.dw_order_node_time p1
 INNER JOIN jolly.who_order_goods p2
-                 ON p1.order_id = p2.order_id
-LEFT JOIN zydb.dim_jc_goods p3
-             ON p2.goods_id = p3.goods_id
+        ON p1.order_id = p2.order_id
+LEFT JOIN zydb.dim_goods p3
+       ON p2.goods_id = p3.goods_id
 WHERE p1.order_status = 1
-     AND p1.is_shiped = 1
-     AND p1.pay_time >= '2017-11-01'
-     AND p1.pay_time < '2017-12-01'
-GROUP BY p3.cat_level1_name
-        ,p3.cat_level2_name
-        ,p3.supp_name
+  --AND p1.is_shiped = 1
+  AND p1.depot_id IN (5, 14)
+  AND p1.pay_time >= '2017-01-01'
+  AND p1.pay_time <  '2018-01-01'
+GROUP BY p3.cate_level1_name
+        ,p3.cate_level2_name
+        ,p3.cate_level3_name
+        ,p3.cate_level4_name
+),
+-- 当前库存结构
+t2 AS
+(SELECT p2.cate_level1_name
+        ,p2.cate_level2_name
+        ,p2.cate_level3_name
+        ,p2.cate_level4_name
+        ,SUM(p1.stock_num) AS stock_goods_num
+FROM zydb.ods_who_wms_goods_stock_detail AS p1
+LEFT JOIN zydb.dim_goods AS p2
+       ON p1.goods_id = p2.goods_id
+WHERE p1.data_date = '20180129'
+  AND p1.depot_id IN (5, 14)
+GROUP BY p2.cate_level1_name
+        ,p2.cate_level2_name
+        ,p2.cate_level3_name
+        ,p2.cate_level4_name
 )
--- 类目销售结构
-SELECT *
+-- full outer join
+SELECT COALESCE(t1.cate_level1_name, t2.cate_level1_name) AS cate_level1_name
+        ,COALESCE(t1.cate_level2_name, t2.cate_level2_name) AS cate_level2_name
+        ,COALESCE(t1.cate_level3_name, t2.cate_level3_name) AS cate_level3_name
+        ,COALESCE(t1.cate_level4_name, t2.cate_level4_name) AS cate_level4_name
+        ,t1.sales_goods_num
+        ,t2.stock_goods_num
 FROM t1
-ORDER BY cat_level1_name
-        ,cat_level2_name
-        ,goods_num DESC
+FULL OUTER JOIN t2
+             ON t1.cate_level1_name = t2.cate_level1_name
+            AND t1.cate_level2_name = t2.cate_level2_name
+            AND t1.cate_level3_name = t2.cate_level3_name
+            AND t1.cate_level4_name = t2.cate_level4_name
 ;
+
+
 
 -- 打包耗材使用比例
 
@@ -3922,6 +3973,30 @@ ORDER BY pay_month
 ;
 
 
+-- 配货时长分布 =================================================================
+WITH
+-- 1.各订单配货时长
+t1 AS
+(SELECT p1.order_id
+        ,p1.outing_stock_time
+        ,p1.pay_time
+        ,SUBSTR(p1.outing_stock_time, 1, 10) AS peihuo_date
+        ,DATEDIFF(p1.outing_stock_time, p1.pay_time) AS peihuo_days
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.outing_stock_time >= '2018-01-01'
+  AND p1.outing_stock_time <  '2018-01-29'
+  AND p1.order_status = 1
+  AND p1.pay_status IN (1, 3)
+)
+SELECT t1.peihuo_date
+        ,t1.peihuo_days
+        ,COUNT(t1.order_id) AS order_num
+FROM t1
+GROUP BY t1.peihuo_date
+        ,t1.peihuo_days
+ORDER BY t1.peihuo_date
+        ,t1.peihuo_days
+;
 
 
 -- 迪拜仓出库订单商品测算 ========================================================
