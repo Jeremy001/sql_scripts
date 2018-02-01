@@ -18,8 +18,6 @@ t1 AS
 (SELECT p1.order_id    -- 订单id
         --,p1.order_sn    -- 订单编号
         --,p1.depod_id    -- 订单所属仓库id
-        --,p2.result_code    -- 称重结果代码
-        --,p2.remark    -- 称重结果说明
         --,p3.shipping_no    -- 货运单号
 
         -- 以下是打包耗材的信息
@@ -37,11 +35,10 @@ t1 AS
         ,p6.total_packages    -- 包裹数量
         ,p6.total_volume    -- 包裹总体积
         ,p6.package_volume_weight    -- 包裹抛重，即根据体积计算
-        ,p2.weight      -- 包裹重量
-        ,(CASE WHEN (CEIL(p6.package_volume_weight * 2) / 2) > (CEIL(p2.weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
+        ,(CASE WHEN (CEIL(p6.package_volume_weight * 2) / 2) > (CEIL(p6.express_paper_weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
         ,p6.package_type    -- 0箱子， 1袋子  -- 根据秋瑾的信息，total_volume >0表示箱子， total_volume=0:其他
-        --,p6.package_weight    -- 包裹重量
-        --,p6.express_paper_weight    -- 面单重量，即承运商用于计算费用的重量
+        ,p6.package_weight    -- 包裹重量
+        ,p6.express_paper_weight    -- 面单重量，即承运商用于计算费用的重量
         ,p6.real_shipping_id    -- 物流承运商id
         ,p6.real_shipping_name    -- 物流承运商名称
         --,p6.real_shipping_price    -- 系统计算出的实际运费
@@ -68,8 +65,6 @@ t1 AS
         ,p5.cat_level3_id    -- 商品的三级类目id
         ,p5.goods_season    -- 商品季节
 FROM zydb.dw_order_sub_order_fact p1
-LEFT JOIN jolly.who_wms_weigh_package_info p2
-       ON p1.order_id = p2.order_id
 LEFT JOIN jolly.who_wms_order_package p3
        ON p1.order_id = p3.order_id
 LEFT JOIN jolly.who_wms_order_shipping_info p6
@@ -590,5 +585,67 @@ WHERE p1.is_shiped = 1
 GROUP BY SUBSTR(p1.order_pack_time, 1, 7)
 ORDER BY pack_month
 ;
+
+
+-- 模型效果评估 =================================================================
+
+CREATE TABLE zybiro.neo_material_new
+AS
+SELECT p1.id_new
+        ,p1.guige
+FROM zybiro.neo_wms_material_new AS p1
+GROUP BY p1.id_new
+        ,p1.guige
+
+-- 新旧耗材ID对比表：zybiro.neo_material_new
+-- 订单推荐纸箱id表：zybiro.neo_recomend_material_list
+
+WITH
+-- 耗材
+t1 AS
+(SELECT p1.material_sn
+        ,CAST(SUBSTR(p1.standard, 7, 2) AS int) AS height_standard
+        ,p1.standard AS material_size_standard
+        ,p1.material_shape
+FROM jolly.who_wms_material p1
+WHERE p1.material_type = 3    -- 3代表打包物料
+  AND p1.status = 1    -- 1代表正常，非禁用
+),
+-- join得到结果
+t2 AS
+(SELECT p1.order_id    -- 订单id
+        ,p2.package_weight
+        ,p3.material_id AS real_material_id    --真实使用的打包耗材ID
+        ,t1.material_size_standard
+        ,p3.material_standard AS material_size_new
+        ,t1.height_standard
+        ,CAST(SUBSTR(p3.material_standard, 7, 2) AS int) AS height_new   -- 纸箱的最终高度，若裁箱，则高度小于标准高度
+        ,(t1.height_standard - CAST(SUBSTR(p3.material_standard, 7, 2) AS int)) AS height_minus      --标准尺寸-裁箱后尺寸，裁箱几厘米？
+        ,p1.material_id1 AS recom_material_id1    --推荐的第1个纸箱
+        ,p4.guige AS recom_material_size1
+FROM zybiro.neo_recomend_material_list p1
+LEFT JOIN jolly.who_wms_order_shipping_info p2
+       ON p1.order_id = p2.order_id
+LEFT JOIN jolly.who_wms_order_package p3
+       ON p1.order_id = p3.order_id
+LEFT JOIN t1
+       ON p3.material_sn = t1.material_sn
+LEFT JOIN zybiro.neo_material_new AS p4
+       ON p1.material_id1 = p4.id_new
+)
+
+SELECT *
+FROM t2
+;
+
+-- 纸箱尺寸长度
+SELECT LENGTH(t2.material_size_standard) AS size_len
+        ,COUNT(order_id)
+FROM t2
+GROUP BY LENGTH(t2.material_size_standard)
+ORDER BY size_len
+;
+
+
 
 

@@ -456,6 +456,7 @@ FROM t1
 
 SELECT *
 FROM t1
+ORDER BY create_time
 LIMIT 10
 ;
 
