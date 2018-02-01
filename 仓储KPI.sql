@@ -1,3 +1,7 @@
+/*
+内容：仓储kpi底层数据表sql
+作者：Steven王世鑫
+*/
 
 insert overwrite   rpt_depot_order_tmp_kpi
 Select
@@ -415,3 +419,62 @@ group by pur_order_sn
 )p7
 on p1.data_date=p7.data_date
 ;
+
+
+-- 一些明细数据的提取 ===========================================================
+
+-- 1.异常和缺货订单明细
+-- jolly.who_wms_order_oos_log，订单缺货日志表
+-- type:取消类型: 1-采购单取消,2-供应商门户确认缺货,3-处理到货异常,4-审核超过7天未配货的商品标记缺货,5-拣货异常,6-调拨取消,7-盘亏
+-- 其中属于仓库责任的取消类型是5、6、7这三个
+WITH
+t1 AS
+(SELECT p1.order_id
+        ,FROM_UNIXTIME(p1.create_time) AS create_time
+        ,p1.oos_num
+        ,(CASE WHEN p1.type = 5 THEN '5-拣货异常'
+               WHEN p1.type = 6 THEN '6-调拨取消'
+               WHEN p1.type = 7 THEN '7-盘亏'
+               ELSE '其他'
+          END) AS oos_type
+FROM jolly.who_wms_order_oos_log AS p1
+WHERE p1.type IN (5, 6, 7)
+  AND p1.create_time >= UNIX_TIMESTAMP('2017-12-01', 'yyyy-MM-dd')
+  AND p1.create_time <  UNIX_TIMESTAMP('2018-01-01', 'yyyy-MM-dd')
+GROUP BY p1.order_id
+        ,FROM_UNIXTIME(p1.create_time)
+        ,p1.oos_num
+        ,(CASE WHEN p1.type = 5 THEN '5-拣货异常'
+               WHEN p1.type = 6 THEN '6-调拨取消'
+               WHEN p1.type = 7 THEN '7-盘亏'
+               ELSE '其他'
+          END)
+)
+SELECT COUNT(*)
+FROM t1
+;
+
+SELECT *
+FROM t1
+LIMIT 10
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

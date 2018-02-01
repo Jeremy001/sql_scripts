@@ -3974,6 +3974,7 @@ ORDER BY pay_month
 
 
 -- 配货时长分布 =================================================================
+-- 根据配货日期来统计
 WITH
 -- 1.各订单配货时长
 t1 AS
@@ -3997,6 +3998,33 @@ GROUP BY t1.peihuo_date
 ORDER BY t1.peihuo_date
         ,t1.peihuo_days
 ;
+
+-- 配货时长分布 =================================================================
+-- 根据下单日期来统计
+WITH
+-- 1.各订单配货时长
+t1 AS
+(SELECT p1.order_id
+        ,p1.outing_stock_time
+        ,p1.pay_time
+        ,SUBSTR(p1.pay_time, 1, 10) AS pay_date
+        ,DATEDIFF(p1.outing_stock_time, p1.pay_time) AS peihuo_days
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.pay_time >= '2018-01-01'
+  AND p1.pay_time <  '2018-01-29'
+  AND p1.order_status = 1
+  AND p1.pay_status IN (1, 3)
+)
+SELECT t1.pay_date
+        ,t1.peihuo_days
+        ,COUNT(t1.order_id) AS order_num
+FROM t1
+GROUP BY t1.pay_date
+        ,t1.peihuo_days
+ORDER BY t1.pay_date
+        ,t1.peihuo_days
+;
+
 
 
 -- 迪拜仓出库订单商品测算 ========================================================
@@ -4218,3 +4246,17 @@ SELECT *
 FROM t2
 ;
 -- 导出到excel中处理
+
+
+
+-- 仓储KPI数据
+SELECT *
+FROM zydb.rpt_warehousing_depart_kpi AS p1
+WHERE p1.data_date >= '20171201'
+  AND p1.data_date <= '20171231'
+;
+
+
+
+
+
