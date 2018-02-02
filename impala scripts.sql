@@ -4014,6 +4014,7 @@ WHERE p1.pay_time >= '2018-01-01'
   AND p1.pay_time <  '2018-01-29'
   AND p1.order_status = 1
   AND p1.pay_status IN (1, 3)
+  AND p1.depot_id IN (4, 5, 6, 14)
 )
 SELECT t1.pay_date
         ,t1.peihuo_days
@@ -4258,5 +4259,41 @@ WHERE p1.data_date >= '20171201'
 
 
 
-
+-- 供应链日报-老，仓库发货异常率
+-- 拣货异常订单，导致订单发生退货/未发货
+WITH
+-- 异常订单数
+t1 AS
+(SELECT SUBSTR(p1.shipping_time, 1, 7) AS ship_month
+        ,COUNT(DISTINCT p1.order_id) abnormal_order --发货异常订单数
+FROM zydb.rpt_scm_order_tmp AS p1
+INNER JOIN jolly.who_wms_returned_order_info AS p2
+        ON p1.order_id = p2.returned_order_id
+--And p2.returned_order_status  In(3,6,7,8) --modified by hanshizhong 20170308 WMS调整退货标识
+       AND p2.return_reason IN (24)
+WHERE p1.is_shiped = 1
+  AND p1.depod_id = 4
+  AND p1.shipping_time >= '2017-11-01'
+  AND p1.shipping_time <  '2018-01-01'
+GROUP BY SUBSTR(p1.shipping_time, 1, 7)
+),
+-- 发货订单数
+t2 AS
+(SELECT SUBSTR(p1.shipping_time, 1, 7) AS ship_month
+        ,COUNT(p1.order_id) AS ship_orders
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.is_shiped = 1
+  AND p1.depot_id = 4
+  AND p1.shipping_time >= '2017-11-01'
+  AND p1.shipping_time <  '2018-01-01'
+GROUP BY SUBSTR(p1.shipping_time, 1, 7)
+)
+SELECT t2.*
+        ,t1.abnormal_order
+        ,t1.abnormal_order / t2.ship_orders AS abnormal_order_rate
+FROM t2
+LEFT JOIN t1
+       ON t1.ship_month = t2.ship_month
+ORDER BY t2.ship_month
+;
 

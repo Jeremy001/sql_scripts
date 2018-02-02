@@ -599,6 +599,7 @@ GROUP BY p1.id_new
 
 -- 新旧耗材ID对比表：zybiro.neo_material_new
 -- 订单推荐纸箱id表：zybiro.neo_recomend_material_list
+-- 推荐结果表：zybiro.neo_recommend_order_list_result
 
 WITH
 -- 耗材
@@ -647,5 +648,28 @@ ORDER BY size_len
 ;
 
 
-
-
+SELECT p1.recom_material_id1
+        ,p1.recom_material_size1
+        ,p1.is_caixiang
+        ,p1.is_paozhong
+        ,(CASE WHEN p1.material_volume_standard < p1.material_volume_recom1 THEN 'smaller'
+               WHEN p1.material_volume_standard = p1.material_volume_recom1 THEN 'equal'
+               WHEN p1.material_volume_standard > p1.material_volume_recom1 THEN 'bigger'
+               ELSE 'Others'
+          END) AS size_duibi
+        ,COUNT(p1.order_id) AS order_num
+FROM zybiro.neo_recommend_order_list_result AS p1
+WHERE p1.material_volume_standard IS NOT NULL
+  AND p1.material_volume_recom1 IS NOT NULL
+  AND p1.recom_material_id1 IS NOT NULL
+GROUP BY p1.recom_material_id1
+        ,p1.recom_material_size1
+        ,p1.is_caixiang
+        ,p1.is_paozhong
+        ,(CASE WHEN p1.material_volume_standard < p1.material_volume_recom1 THEN 'smaller'
+               WHEN p1.material_volume_standard = p1.material_volume_recom1 THEN 'equal'
+               WHEN p1.material_volume_standard > p1.material_volume_recom1 THEN 'bigger'
+               ELSE 'Others'
+          END)
+ORDER BY p1.recom_material_id1
+;
