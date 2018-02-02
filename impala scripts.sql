@@ -2925,9 +2925,10 @@ t2 AS
 (SELECT p1.order_id
         ,p1.sku_id
         ,(CASE WHEN p1.type IN (1, 2, 3, 9) THEN 'pur'
-                      WHEN p1.type IN (5, 6, 7, 10, 13) THEN 'wh'
-                      WHEN p1.type IN (4,  11, 12) THEN 'sys'
-                      ELSE 'other' END) AS oos_type
+               WHEN p1.type IN (5, 6, 7, 10, 13) THEN 'wh'
+               WHEN p1.type IN (4,  11, 12) THEN 'sys'
+               ELSE 'other'
+          END) AS oos_type
         ,p1.oos_num
 FROM jolly.who_wms_order_oos_log p1
 WHERE p1.create_time >= UNIX_TIMESTAMP('2017-11-16')
@@ -3032,21 +3033,24 @@ LIMIT 10;
 
 
 
-
+-- 订单缺货日志表 jolly.who_wms_order_oos_log
 
 ,(CASE WHEN p1.type = 1 THEN '采购单取消'
-                      WHEN p1.type = 2 THEN '供应商门户确认缺货'
-                      WHEN p1.type = 3 THEN '处理到货异常'
-                      WHEN p1.type = 4 THEN '超期标记缺货'
-                      WHEN p1.type = 5 THEN '拣货异常'
-                      WHEN p1.type = 6 THEN '调拨取消'
-                      WHEN p1.type = 7 THEN '盘亏'
-                      WHEN p1.type = 9 THEN '采购延迟到货'
-                      WHEN p1.type = 10 THEN '调拨延迟'
-                      WHEN p1.type = 11 THEN '超卖'
-                      WHEN p1.type = 12 THEN 'HK仓超卖'
-                      WHEN p1.type = 13 THEN '打包异常'
-                      ELSE '其他' END) AS oos_type
+       WHEN p1.type = 2 THEN '供应商门户确认缺货'
+       WHEN p1.type = 3 THEN '处理到货异常'
+       WHEN p1.type = 4 THEN '超期标记缺货'
+       WHEN p1.type = 5 THEN '拣货异常'
+       WHEN p1.type = 6 THEN '调拨取消'
+       WHEN p1.type = 7 THEN '盘亏'
+       WHEN p1.type = 9 THEN '采购延迟到货'
+       WHEN p1.type = 10 THEN '调拨延迟'
+       WHEN p1.type = 11 THEN '超卖'
+       WHEN p1.type = 12 THEN 'HK仓超卖'
+       WHEN p1.type = 13 THEN '打包异常'
+       ELSE '其他'
+  END) AS oos_type
+
+
 
 
 
@@ -4005,6 +4009,10 @@ WITH
 -- 1.各订单配货时长
 t1 AS
 (SELECT p1.order_id
+        ,(CASE WHEN p1.depot_id = 4 THEN 4
+               WHEN p1.depot_id = 6 THEN 6
+               ELSE 5
+          END) AS depot_id
         ,p1.outing_stock_time
         ,p1.pay_time
         ,SUBSTR(p1.pay_time, 1, 10) AS pay_date
@@ -4017,12 +4025,15 @@ WHERE p1.pay_time >= '2018-01-01'
   AND p1.depot_id IN (4, 5, 6, 14)
 )
 SELECT t1.pay_date
+        ,t1.depot_id
         ,t1.peihuo_days
         ,COUNT(t1.order_id) AS order_num
 FROM t1
 GROUP BY t1.pay_date
+        ,t1.depot_id
         ,t1.peihuo_days
 ORDER BY t1.pay_date
+        ,t1.depot_id
         ,t1.peihuo_days
 ;
 
