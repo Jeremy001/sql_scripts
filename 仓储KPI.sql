@@ -461,8 +461,13 @@ LIMIT 10
 ;
 
 
+-- 2017年12月kpi数据
 
-
+SELECT *
+FROM zydb.rpt_warehousing_depart_kpi
+WHERE data_date >= '20171201'
+  AND data_date <= '20171231'
+;
 
 
 

@@ -4308,3 +4308,153 @@ LEFT JOIN t1
 ORDER BY t2.ship_month
 ;
 
+-- 订单表中的发货状态is_shiped:是否已发货,0未发货,1已发货,2部分发货,3待发货,4部分匹配,5完全匹配,6拣货完成,7待拣货,8拣货中
+
+
+
+-- 卡塔尔国家，完成配货订单，未配货商品，商品明细 ===============================================================
+-- 对于未配货的sku，展示未配齐sku、数量、供应商名称
+WITH
+-- 订单信息
+t01 AS
+(SELECT p1.pay_time
+        ,DATEDIFF(NOW(), p1.pay_time) AS pay_duration
+        ,p1.order_id
+        ,p1.order_sn
+        ,p1.site_id
+        ,p1.depot_id
+        ,p1.is_shiped
+        ,p1.order_status
+        ,p1.pay_status
+        ,p1.is_problems_order
+        ,p1.goods_number AS order_goods_num
+        ,p1.is_cod
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.country_name = 'Qatar'
+  AND p1.pay_time >= '2018-01-24'
+  AND p1.is_shiped <> 1
+),
+-- 订单未配齐总数量
+t02 AS
+(SELECT order_id
+        ,SUM(num) AS total_still_need_num
+FROM jolly.who_wms_goods_need_lock_detail
+GROUP BY order_id
+),
+-- 未配齐sku和数量
+t03 AS
+(SELECT p1.order_id
+        ,p1.sku_id
+        ,p1.num AS sku_still_need_num
+FROM jolly.who_wms_goods_need_lock_detail AS p1
+WHERE p1.num >= 1
+),
+-- JOIN得到供应商名称
+t04 AS
+(SELECT TO_DATE(t01.pay_time) AS pay_date
+        ,t01.order_id
+        ,t01.order_sn
+        ,t01.depot_id
+        ,t01.is_cod
+        ,t01.site_id
+        ,(CASE WHEN t01.is_problems_order = 1 THEN '是'
+               WHEN t01.is_problems_order = 2 THEN '否'
+               ELSE '其他'
+          END) AS is_problems_order
+        ,(CASE WHEN t01.is_shiped = 0 THEN '未配货'
+               WHEN t01.is_shiped = 1 THEN '已发货'
+               WHEN t01.is_shiped = 2 THEN '部分发货'
+               WHEN t01.is_shiped = 3 THEN '待发货'
+               WHEN t01.is_shiped = 4 THEN '部分匹配'
+               WHEN t01.is_shiped = 5 THEN '完全匹配'
+               WHEN t01.is_shiped = 6 THEN '拣货完成'
+               WHEN t01.is_shiped = 7 THEN '待拣货'
+               WHEN t01.is_shiped = 8 THEN '拣货中'
+               ELSE NULL
+          END) AS is_shiped
+        ,t01.order_goods_num
+        ,t02.total_still_need_num
+        ,t03.sku_id
+        ,p1.goods_number AS sku_goods_num
+        ,t03.sku_still_need_num
+        ,p4.cat_level1_name
+        ,p4.supp_name
+FROM t01
+LEFT JOIN t02
+       ON t01.order_id = t02.order_id
+LEFT JOIN t03
+       ON t01.order_id = t03.order_id
+LEFT JOIN jolly.who_order_goods AS p1
+       ON t03.order_id = p1.order_id AND t03.sku_id = p1.sku_id
+LEFT JOIN jolly.who_sku_relation p3
+       ON t03.sku_id = p3.rec_id
+LEFT JOIN zydb.dim_jc_goods p4
+       ON p3.goods_id = p4.goods_id
+)
+
+-- 最终结果
+SELECT *
+FROM t04
+ORDER BY pay_date
+;
+
+
+
+SELECT *
+FROM jolly.who_wms_order_oos_log AS p1
+LIMIT 10;
+
+
+
+-- 供应链2018年kpi计算 胡云蕾 ===================================================
+-- 1.沙特仓订单时效
+-- 2.沙特仓订单缺货率
+
+WITH
+-- 1.订单时效
+t01 AS
+(SELECT SUBSTR(p1.pay_time, 1, 7) AS pay_month
+        ,COUNT(p1.order_id) AS order_num
+        ,AVG((UNIX_TIMESTAMP(p1.outing_stock_time) - UNIX_TIMESTAMP(p1.pay_time))/3600) AS peihuo_pay_hour
+        ,AVG((UNIX_TIMESTAMP(p1.shipping_time) - UNIX_TIMESTAMP(p1.outing_stock_time))/3600) AS ship_peihuo_hour
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.is_shiped = 1
+  AND p1.depot_id = 7
+  AND p1.pay_time >= '2017-01-01'
+  AND p1.pay_time <  '2018-01-01'
+  AND p1.shipping_time IS NOT NULL
+  AND p1.outing_stock_time IS NOT NULL
+  AND p1.outing_stock_time >= p1.pay_time
+  AND p1.shipping_time >= p1.outing_stock_time
+GROUP BY SUBSTR(p1.pay_time, 1, 7)
+),
+-- 2.缺货订单
+t02 AS
+(SELECT SUBSTR(p1.pay_time, 1, 7) AS pay_month
+        ,COUNT(DISTINCT p2.order_id) AS oos_order_num
+FROM zydb.dw_order_node_time AS p1
+INNER JOIN jolly.who_wms_order_oos_log AS p2
+        ON p1.order_id = p2.order_id
+WHERE p1.is_shiped = 1
+  AND p1.depot_id = 7
+  AND p1.pay_time >= '2017-01-01'
+  AND p1.pay_time <  '2018-01-01'
+  AND p1.shipping_time IS NOT NULL
+  AND p1.outing_stock_time IS NOT NULL
+  AND p1.outing_stock_time >= p1.pay_time
+  AND p1.shipping_time >= p1.outing_stock_time
+GROUP BY SUBSTR(p1.pay_time, 1, 7)
+)
+SELECT t01.*
+        ,(t01.peihuo_pay_hour + t01.ship_peihuo_hour) AS ship_pay_hour
+        ,t02.oos_order_num
+        ,(t02.oos_order_num / t01.order_num) AS oos_order_rate
+FROM t01
+LEFT JOIN t02
+       ON t01.pay_month = t02.pay_month
+ORDER BY t01.pay_month
+;
+
+
+
+

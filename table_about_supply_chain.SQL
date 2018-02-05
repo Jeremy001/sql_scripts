@@ -53,7 +53,8 @@ ORDER BY GOODS_ID;
 
 -- 这个订单中有没有商品需要采购？
 -- 订单采购商品审核锁定明细表WHO_WMS_GOODS_NEED_LOCK_DETAIL
-SELECT * FROM JOLLY.WHO_WMS_GOODS_NEED_LOCK_DETAIL
+SELECT *
+FROM jolly.who_wms_goods_need_lock_detail
 WHERE ORDER_ID = 10264765;
 -- 12个商品中：3个已有库存，6个需要采购，3个需要调拨，商品件数为9（num）
 -- SOURCE_TYPE = 1：采购；SOURCE_TYPE = 2：调拨；
