@@ -15,11 +15,11 @@ t1 AS
         ,CONCAT(e.depot_sn, '-', d.depot_area_sn, c.channel_sn, '-', b.shelf_sn, '-', a.shelf_area_sn) as shelf_area_sn
         ,(f.stock_num - f.order_lock_num - f.lock_allocate_num - f.return_lock_num) AS free_num
 FROM jolly.who_wms_depot_shelf_area a
-            ,jolly.who_wms_depot_shelf b
-            ,jolly.who_wms_depot_channel c
-            ,jolly.who_wms_depot_area d
-            ,jolly.who_wms_depot e
-            ,jolly.who_wms_goods_stock_detail f
+    ,jolly.who_wms_depot_shelf b
+    ,jolly.who_wms_depot_channel c
+    ,jolly.who_wms_depot_area d
+    ,jolly.who_wms_depot e
+    ,jolly.who_wms_goods_stock_detail f
 WHERE a.depot_shelf_id = b.shelf_id
      AND b.depot_channel_id = c.channel_id
      AND c.depot_area_id = d.depot_area_id

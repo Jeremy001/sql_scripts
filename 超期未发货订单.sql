@@ -7,7 +7,7 @@
 
 -- 订单级别，未发货订单和相关信息 ===============================================================
 -- 对于未配货的sku，展示未配齐sku、数量、供应商名称
-WITH 
+WITH
 -- who_order_info 和 who_order_user_info， 取子单的信息
 t01 AS
 (SELECT p1.order_id
@@ -78,13 +78,13 @@ t04 AS
         ,(CASE WHEN t01.is_problems_order = 1 THEN '是'
                       WHEN t01.is_problems_order = 2 THEN '否'
                       ELSE '其他' END) AS is_problems_order
-        ,(CASE WHEN t01.is_shiped = 0 THEN '未配货' 
+        ,(CASE WHEN t01.is_shiped = 0 THEN '未配货'
                       WHEN t01.is_shiped = 1 THEN '已发货'
                       WHEN t01.is_shiped = 2 THEN '部分发货'
                       WHEN t01.is_shiped = 3 THEN '待发货'
                       WHEN t01.is_shiped = 4 THEN '部分匹配'
                       WHEN t01.is_shiped = 5 THEN '完全匹配'
-                      WHEN t01.is_shiped = 6 THEN '拣货完成' 
+                      WHEN t01.is_shiped = 6 THEN '拣货完成'
                       WHEN t01.is_shiped = 7 THEN '待拣货'
                       WHEN t01.is_shiped = 8 THEN '拣货中'
                       ELSE NULL END) AS is_shiped
@@ -102,7 +102,7 @@ FROM t01
 LEFT JOIN t02
              ON t01.order_id = t02.order_id
 LEFT JOIN jolly.who_order_goods p5
-             ON t01.order_id = p5.order_id 
+             ON t01.order_id = p5.order_id
 LEFT JOIN t03
              ON p5.order_id = t03.order_id AND p5.sku_id = t03.sku_id
 LEFT JOIN jolly.who_sku_relation p3

@@ -410,7 +410,7 @@ ORDER BY CREDIT_RANK;
 2   4
 3   2
     1
- */
+*/
 
 -- ORDER_PLATFORM, 1:淘宝,2:天猫,3:独立平台,4:线下采购单,5:1688,6:代拍链接,0:其他
 -- 这个其他是什么鬼？有了这个选项，绝大多数都选择了这个类型，太坑了！
@@ -1141,22 +1141,22 @@ GROUP BY depot_id;
 
 
 ----------------- 各仓库 总库存 和 自由库存，历史和当前值取法
-国内仓，求总库存表：   (hadoop) zydb.ods_who_wms_goods_stock_detail       stock_num          (可以查：当前最新和历史每天快照)
-
+国内仓，求总库存表：   (hadoop) zydb.ods_who_wms_goods_stock_detail
+stock_num          (可以查：当前最新和历史每天快照)
 
 国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail ( data FROM 201704)  (可以查：当前最新和历史每天快照)
 --ZYDB.ODS_WHO_WMS_GOODS_STOCK_TOTAL_DETAIL表中20170813 - 20170822的库存数据可能不太准确
-                                        free_num = total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
+free_num = total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
 
-                                或  jolly.who_wms_goods_stock_total_detail             (可以查：当前最新)
+或  jolly.who_wms_goods_stock_total_detail             (可以查：当前最新)
 
 *******************************
 沙特仓，求总库存: (hadoop)   jolly_wms.who_wms_goods_stock_detail    stock_num     (可以查：当前最新)  --无法求沙特历史某天快照总库存
 
 沙特仓，求自由库: (hadoop)   jolly_wms.who_wms_goods_stock_total_detail            (可以查：当前最新)
-                                       free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
+free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
 
-                             jolly_wms.who_wms_goods_stock_total_detail_daily      (可以查：当前最新和历史每天快照)
+jolly_wms.who_wms_goods_stock_total_detail_daily      (可以查：当前最新和历史每天快照)
                      free_num= total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
 
 zydb.ods_who_wms_goods_stock_detail
@@ -2274,7 +2274,7 @@ ORDER BY to_depot_id;
 
 -- ============================================== 仓库作业环节相关数据（顶） ===================================================
 
--- 1.到货签收质检
+-- 1.到货签收
 
 -- 1.1 到货签收单 jolly.who_wms_delivered_receipt_info
 
@@ -2282,8 +2282,9 @@ ORDER BY to_depot_id;
 
 -- 1.3 到货单详情表 jolly.who_wms_delivered_order_goods
 
--- jolly.who_wms_pur_deliver_receipt
--- jolly.who_wms_pur_deliver_goods
+-- 1.4 采购单到货表 jolly.who_wms_pur_deliver_receipt
+
+-- 1.5 采购单商品表 jolly.who_wms_pur_deliver_goods
 
 
 -- 2.质检
@@ -4019,7 +4020,7 @@ t1 AS
         ,DATEDIFF(p1.outing_stock_time, p1.pay_time) AS peihuo_days
 FROM zydb.dw_order_node_time AS p1
 WHERE p1.pay_time >= '2018-01-01'
-  AND p1.pay_time <  '2018-01-29'
+  AND p1.pay_time <  '2018-02-01'
   AND p1.order_status = 1
   AND p1.pay_status IN (1, 3)
   AND p1.depot_id IN (4, 5, 6, 14)
@@ -4318,7 +4319,7 @@ WITH
 -- 订单信息
 t01 AS
 (SELECT p1.pay_time
-        ,DATEDIFF(NOW(), p1.pay_time) AS pay_duration
+        ,DATEDIFF(CURRENT_TIMESTAMP(), p1.pay_time) AS pay_duration
         ,p1.order_id
         ,p1.order_sn
         ,p1.site_id
@@ -4456,5 +4457,301 @@ ORDER BY t01.pay_month
 ;
 
 
+-- 土耳其仓订单 =================================================================
+
+WITH
+-- who_order_info 和 who_order_user_info， 取子单的信息
+t01 AS
+(SELECT p1.order_id
+        ,p1.order_sn
+        ,p1.is_shiped
+        ,p1.depot_id
+        ,p1.site_id
+        ,p1.order_status
+        ,p1.goods_num
+        ,(p1.pay_money+p1.surplus+p1.order_amount) AS order_amount
+        ,p1.pay_status
+        ,p1.is_problems_order
+        --,p2.country_name
+        ,FROM_UNIXTIME(IF(p1.prepare_pay_time = 0, p1.pay_time, p1.prepare_pay_time)) AS pay_time
+        ,FROM_UNIXTIME(p1.no_problems_order_uptime) AS no_problems_order_uptime
+        ,FROM_UNIXTIME(p1.shipping_time) AS shipping_time
+        ,(CASE WHEN p1.pay_id = 41 THEN 'cod' ELSE 'not_cod' END) AS is_cod
+        ,(CASE WHEN p2.source_order_id IS NOT NULL THEN 1 ELSE 0 END) AS is_split
+FROM default.who_order_info AS p1
+LEFT JOIN default.who_order_user_info AS p2
+       ON p1.order_id = p2.source_order_id
+WHERE p1.depot_id IN (10)
+GROUP BY p1.order_id
+        ,p1.order_sn
+        ,p1.is_shiped
+        ,p1.depot_id
+        ,p1.site_id
+        ,p1.order_status
+        ,p1.goods_num
+        ,(p1.pay_money+p1.surplus+p1.order_amount)
+        ,p1.pay_status
+        ,p1.is_problems_order
+        --,p2.country_name
+        ,FROM_UNIXTIME(IF(p1.prepare_pay_time = 0, p1.pay_time, p1.prepare_pay_time))
+        ,FROM_UNIXTIME(p1.no_problems_order_uptime)
+        ,FROM_UNIXTIME(p1.shipping_time)
+        ,(CASE WHEN p1.pay_id = 41 THEN 'cod' ELSE 'not_cod' END)
+        ,(CASE WHEN p2.source_order_id IS NOT NULL THEN 1 ELSE 0 END)
+),
+-- 订单未配齐总数量
+t02 AS
+(SELECT order_id
+        ,SUM(num) AS total_still_need_num
+-- FROM jolly_oms.who_wms_goods_need_lock_detail
+FROM default.who_wms_goods_need_lock_detail
+GROUP BY order_id
+),
+-- 未配齐sku和数量
+t03 AS
+(SELECT p1.order_id
+        ,p1.sku_id
+        ,p1.num AS sku_still_need_num
+FROM default.who_wms_goods_need_lock_detail AS p1
+WHERE p1.num >= 1
+),
+-- JOIN得到供应商名称
+t04 AS
+(SELECT TO_DATE(t01.pay_time) AS pay_date
+        ,(CASE WHEN t01.site_id = 0 THEN 'Jollychic'
+               WHEN t01.site_id = 1 THEN 'NIMINI'
+               WHEN t01.site_id = 2 THEN 'MarkaVIP'
+               ELSE 'Others'
+           END) AS site_id
+        ,t01.order_id
+        ,t01.order_sn
+        ,t01.depot_id
+        ,t01.is_cod
+        ,t01.order_status
+        ,t01.pay_status
+        ,(CASE WHEN t01.is_problems_order = 1 THEN '是'
+               WHEN t01.is_problems_order = 2 THEN '否'
+               ELSE '其他'
+          END) AS is_problems_order
+        ,(CASE WHEN t01.is_shiped = 0 THEN '未配货'
+                      WHEN t01.is_shiped = 1 THEN '已发货'
+                      WHEN t01.is_shiped = 2 THEN '部分发货'
+                      WHEN t01.is_shiped = 3 THEN '待发货'
+                      WHEN t01.is_shiped = 4 THEN '部分匹配'
+                      WHEN t01.is_shiped = 5 THEN '完全匹配'
+                      WHEN t01.is_shiped = 6 THEN '拣货完成'
+                      WHEN t01.is_shiped = 7 THEN '待拣货'
+                      WHEN t01.is_shiped = 8 THEN '拣货中'
+                      ELSE NULL END) AS is_shiped
+        ,t01.goods_num
+        ,t01.order_amount
+        --,t01.country_name
+        ,t01.pay_time
+        ,t01.shipping_time
+        ,t02.total_still_need_num
+        ,p5.sku_id
+        ,p5.goods_number
+        ,t03.sku_still_need_num
+        ,p4.supp_name
+FROM t01
+LEFT JOIN t02
+             ON t01.order_id = t02.order_id
+LEFT JOIN jolly.who_order_goods p5
+             ON t01.order_id = p5.order_id
+LEFT JOIN t03
+             ON p5.order_id = t03.order_id AND p5.sku_id = t03.sku_id
+LEFT JOIN jolly.who_sku_relation p3
+             ON t03.sku_id = p3.rec_id
+LEFT JOIN zydb.dim_jc_goods p4
+             ON p3.goods_id = p4.goods_id
+WHERE t01.is_split = 0
+)
+
+-- 最终结果
+SELECT *
+FROM t04
+ORDER BY pay_time
+;
 
 
+-- 海外仓备货商品流转监控 ========================================================
+
+/*
+海外备货单据流转如下：
+1.先生成批发订单，4仓/5仓各一个批发订单，4仓发迪拜，5仓发沙特
+批发订单表：who_wms_wholesale_order_info
+批发订单商品表：who_wms_wholesale_order_goods
+2.根据批发订单生成采购需求
+3.供应商响应采购需求，生成采购单，发货
+4.4/5两仓收货，质检，打包，发货
+批发订单作业单表：who_wms_wholesale_picking_info
+批发订单作业单商品表：who_wms_wholesale_picking_goods
+5.发货后给目的仓生成到货单
+
+问题点：
+1.采购到货单与批发订单作业单未关联
+2.批发订单作业单未与目的仓到货单关联
+*/
+
+SELECT *
+FROM jolly.who_wms_wholesale_order_info AS p1
+WHERE p1.wholesale_order_id IN (384, 386)
+;
+
+/*
+-- 初始数量
+386 PF180202143007425USF 212468 5
+384 PF180202134301600J41 38180 4
+*/
+
+
+SELECT *
+FROM jolly.who_wms_wholesale_order_replenishment_detail AS p1
+LIMIT 10;
+
+-- 批发订单数量有修正，以SUM(p1.order_num)为准
+SELECT p1.wholesale_order_id
+        ,SUM(p1.order_org_num) AS org_goods_num
+        ,SUM(p1.order_num) AS new_goods_num
+        ,SUM(p1.send_num) AS send_num
+FROM jolly.who_wms_wholesale_order_goods AS p1
+WHERE p1.wholesale_order_id IN (384, 386)
+GROUP BY p1.wholesale_order_id
+;
+
+
+--
+WITH
+t1 AS
+(SELECT p1.wholesale_order_id
+        ,(CASE WHEN p1.wholesale_order_id = 384 THEN 'guangzhou2' ELSE 'dongguan1' END) AS guonei_depot
+        ,(CASE WHEN p1.wholesale_order_id = 384 THEN 'dubai1' ELSE 'saudi2' END) AS guowai_depot
+        ,p1.goods_id
+        ,p1.sku_id
+        ,p1.in_price
+        ,p1.shop_price
+        ,p1.order_org_num
+        ,p1.order_num
+        ,p1.send_num AS send_num1
+        ,p3.supp_name
+        ,p3.send_num AS send_num2
+        ,p3.oos_num
+        ,p3.real_oos_num
+        ,p3.in_price AS in_price2
+FROM jolly.who_wms_wholesale_order_goods AS p1
+LEFT JOIN jolly.who_wms_goods_need_lock_detail AS p2
+       ON p1.rec_id = p2.order_goods_rec_id
+LEFT JOIN jolly.who_wms_pur_goods_demand AS p3
+       ON p1.rec_id = p3.source_rec_id
+WHERE p1.wholesale_order_id = 384
+   OR p1.wholesale_order_id = 386
+)
+
+SELECT t1.guonei_depot
+        ,SUM(t1.order_num) AS order_num
+        ,SUM(CASE WHEN t1.supp_name IS NULL THEN t1.order_num ELSE 0 END) AS no_demand_num
+        ,SUM(t1.send_num1) AS send_num1
+        ,SUM(t1.send_num2) AS send_num2
+FROM t1
+GROUP BY t1.guonei_depot
+;
+
+LIMIT 10
+;
+
+
+
+
+SELECT *
+FROM jolly.who_wms_pur_goods_demand AS p1
+WHERE p1.source_rec_id >= 96344
+LIMIT 10;
+
+
+SELECT *
+FROM jolly.who_wms_wholesale_order_goods AS p1
+WHERE p1.wholesale_order_id IN (384, 386)
+LIMIT 10
+;
+
+SELECT *
+FROM jolly.who_wms_wholesale_order_goods AS p1
+WHERE p1.wholesale_order_id IN (384, 386)
+AND p1.send_num > 1
+LIMIT 10
+;
+
+
+-- picking_status:0待拣货,1拣货中,2拣货完成,3打包完成,4已出库
+
+
+SELECT *
+FROM jolly.who_wms_wholesale_picking_info AS p1
+WHERE p1.picking_time >= UNIX_TIMESTAMP('2018-02-03', 'yyyy-MM-dd')
+LIMIT 10;
+
+
+SELECT *
+FROM jolly.who_wms_wholesale_picking_goods AS p1
+LIMIT 10;
+
+
+
+
+
+-- 到货签收和质检
+
+-- 签收：jolly.who_wms_delivered_receipt_info.status 0-未登记 1-已登记 2-已分配质检 3-质检完成 4-发错仓库
+-- 质检：jolly.who_wms_delivered_order_goods
+
+WITH
+-- 到货单应到数量、实到数量、签收时间、质检数量、质检时间
+t1 AS
+(SELECT p1.depot_id
+        ,p1.delivered_order_sn
+        ,p1.total_num
+        ,p1.inspect_num
+        ,MIN(p1.start_receipt_time) AS receipt_time
+        ,MIN(p1.first_check_time) AS begin_qc_time
+        ,MAX(p1.finish_check_time) AS finish_qc_time
+FROM zydb.dw_delivered_receipt_onself AS p1
+GROUP BY p1.depot_id
+        ,p1.delivered_order_sn
+        ,p1.total_num
+        ,p1.inspect_num
+),
+t2 AS
+(SELECT t1.*
+FROM t1
+WHERE t1.begin_qc_time >= TO_DATE(DATE_SUB(CURRENT_TIMESTAMP(), 1))
+  AND t1.begin_qc_time <  TO_DATE(DATE_SUB(CURRENT_TIMESTAMP(), 0))
+)
+SELECT *
+FROM t2
+;
+
+SELECT *
+FROM jolly.who_wms_delivered_receipt_info AS p1
+LIMIT 10;
+
+SELECT *
+FROM zydb.dw_delivered_receipt_onself AS p1
+LIMIT 10;
+
+
+-- 到货签收
+-- 对应wms系统中的到货单签收界面
+SELECT p1.*
+FROM jolly.who_wms_delivered_receipt_info AS p1
+WHERE p1.tracking_no = '20782047299'
+;
+
+-- 查询实到数量少于应到数量的到货单
+SELECT p1.*
+FROM jolly.who_wms_delivered_receipt_info AS p1
+-- WHERE p1.tracking_no = '240403307499'
+WHERE p1.real_num < p1.should_num
+  AND p1.gmt_created >= UNIX_TIMESTAMP('2018-02-05', 'yyyy-MM-dd')
+  AND p1.gmt_created <  UNIX_TIMESTAMP('2018-02-06', 'yyyy-MM-dd')
+LIMIT 10
+;

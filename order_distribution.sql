@@ -7,7 +7,7 @@ sql脚本类型：impala
  */
 
 -- 1. 四仓订单配货&发货时长简报所需数据 ==========================================================================
-WITH 
+WITH
 t1 AS
 (SELECT order_id
         ,order_sn
@@ -52,7 +52,7 @@ t5 AS
         ,FROM_UNIXTIME(t2.pay_time, 'yyyy-MM-dd') AS data_date
         ,(COALESCE(t3.assign_time_cn, t4.assign_time_sa) - t2.pay_time)/3600 AS assign_duration
         ,((CASE WHEN t2.shipping_time = 0 THEN NULL ELSE t2.shipping_time END) - t2.pay_time)/3600 AS ship_duration
-FROM t2 
+FROM t2
 LEFT JOIN t3 ON t2.order_id = t3.order_id
 LEFT JOIN t4 ON t2.order_id = t4.order_id
 ),
@@ -82,7 +82,7 @@ FROM t5
 ),
 
 -- 结果表
-t100 AS 
+t100 AS
 (SELECT data_date
         ,depot_id
         ,assign_duration_class
@@ -97,7 +97,7 @@ GROUP BY data_date
         ,ship_duration_class
 )
 
-SELECT * 
+SELECT *
 FROM t100
 ORDER BY data_date
         ,depot_id
@@ -145,7 +145,7 @@ SELECT t5.order_id
         ,(CASE WHEN t5.pur_assign_time IS NOT NULL AND t5.allo_assign_time IS NULL THEN 'pur'
                    WHEN t5.pur_assign_time IS NULL AND t5.allo_assign_time IS NOT NULL THEN 'allo'
                    WHEN t5.pur_assign_time IS NOT NULL AND t5.allo_assign_time IS NOT NULL THEN 'pur AND allo'
-                   ELSE 'NOT pur AND allo' 
+                   ELSE 'NOT pur AND allo'
           END) AS order_type
         ,(CASE WHEN t5.pur_assign_time IS NOT NULL AND t5.allo_assign_time IS NULL THEN t5.pur_assign_time
                    WHEN t5.pur_assign_time IS NULL AND t5.allo_assign_time IS NOT NULL THEN t5.allo_assign_time
@@ -180,7 +180,7 @@ GROUP BY order_type
 sql脚本类型：impala
  */
 
-WITH 
+WITH
 -- 1.查询订单
 t1 AS
 (
@@ -249,7 +249,7 @@ order by pay_date;
 
 
 -- 查询一级类目的关联销售情况
-WITH 
+WITH
 -- 固定日期范围的有效订单
 t1 AS
 (SELECT order_id
@@ -270,7 +270,7 @@ WHERE p1.order_id IN (SELECT * FROM t1)
 ),
 -- 汇总，得到各订单购买的一级类目
 t3 AS
-(SELECT order_id 
+(SELECT order_id
         ,cat_name
 FROM t2
 GROUP BY order_id
@@ -281,7 +281,7 @@ FROM t3;
 
 -- 一级类目的关联销售规则提升度低，基本没有可应用的规则
 -- 下沉到二级类目来瞧一瞧：
-WITH 
+WITH
 -- 固定日期范围的有效订单
 t1 AS
 (SELECT order_id
@@ -306,7 +306,7 @@ WHERE p1.order_id IN (SELECT * FROM t1)
 ),
 -- 汇总，得到各订单购买的一级类目
 t3 AS
-(SELECT order_id 
+(SELECT order_id
         ,cat1_name
         ,cat2_name
         ,cat12_name
@@ -322,7 +322,7 @@ SELECT *
 FROM t3;
 
 -- 商品级别
-WITH 
+WITH
 -- 固定日期范围的有效订单
 t1 AS
 (SELECT order_id
@@ -335,7 +335,7 @@ WHERE p1.add_time >= unix_timestamp('2017-07-12', 'yyyy-MM-dd')
 -- 各商品的一级类目
 t2 AS
 (SELECT p1.order_id
-        ,concat_ws(' - ', p2.cat_level2_name, 
+        ,concat_ws(' - ', p2.cat_level2_name,
                                   cast(p1.goods_id AS string)) AS cat2_goods_id
         ,p2.cat_level1_name AS cat1_name
         ,p2.cat_level2_name AS cat2_name
@@ -346,7 +346,7 @@ WHERE p1.order_id IN (SELECT * FROM t1)
 ),
 -- 汇总，得到各订单购买的一级类目
 t3 AS
-(SELECT order_id 
+(SELECT order_id
         ,cat1_name
         ,cat2_name
         ,cat12_name
@@ -366,7 +366,7 @@ FROM t3;
 -- 目的：探索未命中商品和商家的特点
 
 -- 1.商品
-WITH 
+WITH
 -- 训练数据的订单发生日期（下单日期）
 t1 AS
 (SELECT order_id
@@ -437,7 +437,7 @@ FROM t5;
 -- 所有仓库订单配货和发货时间结构 ====================================
 -- 发运是以每天发运订单来计算的，而不是以每天的支付订单
 -- 1.配货 =====================================================
-WITH 
+WITH
 t1 AS
 (SELECT order_id
         ,order_sn
@@ -481,7 +481,7 @@ t5 AS
         ,t4.assign_time_sa
         ,FROM_UNIXTIME(t2.pay_time, 'yyyy-MM-dd') AS data_date
         ,(COALESCE(t3.assign_time_cn, t4.assign_time_sa) - t2.pay_time)/3600 AS duration
-FROM t2 
+FROM t2
 LEFT JOIN t3 ON t2.order_id = t3.order_id
 LEFT JOIN t4 ON t2.order_id = t4.order_id
 ),
@@ -501,7 +501,7 @@ t6 AS
 FROM t5
 ),
 -- 配货结果表
-t100 AS 
+t100 AS
 (SELECT data_date
         ,depot_id
         ,duration_class
@@ -540,7 +540,7 @@ FROM t202
 ),
 
 -- 发货结果表
-t200 AS 
+t200 AS
 (SELECT data_date
         ,depot_id
         ,duration_class
@@ -555,10 +555,10 @@ GROUP BY data_date
 
 -- 配货 + 发货 结果表
 t000 AS
-(SELECT * 
+(SELECT *
 FROM t100
-UNION ALL 
-SELECT * 
+UNION ALL
+SELECT *
 FROM t200
 )
 
@@ -574,7 +574,7 @@ ORDER BY type
 
 -- 所有仓库订单配货和发货时间结构 ====================================
 -- 以每天支付订单，统计其配货完成和发运时间
-WITH 
+WITH
 -- 支付时间、人工标非时间、打包时间、发运时间
 t1 AS
 (SELECT p1.order_id
@@ -588,7 +588,7 @@ t1 AS
         ,(CASE WHEN p1.is_shiped = 1 THEN 'shiped' ELSE 'not_shiped' END) AS is_shiped
         ,p2.rec_id
 FROM zydb.dw_order_sub_order_fact p1
-LEFT JOIN jolly.who_cod_order_check_feedback p2 
+LEFT JOIN jolly.who_cod_order_check_feedback p2
             ON p1.order_id = p2.order_id
 WHERE p1.pay_status IN (1, 3)
     AND p1.order_status = 1
@@ -628,7 +628,7 @@ t7 AS
         ,MAX(p1.gmt_created) AS pick_begin_time_cn  -- 拣货单生成时间
         ,MAX(p1.finish_time) AS pick_finish_time_cn --拣货完成时间
 FROM jolly.who_wms_picking_info P1
-INNER JOIN jolly.who_wms_picking_goods_detail p2 
+INNER JOIN jolly.who_wms_picking_goods_detail p2
                ON p1.picking_id=p2.picking_id
 GROUP BY p2.order_id
         ,P2.order_sn
@@ -640,7 +640,7 @@ t8 AS
         ,MAX(p1.gmt_created) AS pick_begin_time_sa  -- 拣货单生成时间
         ,MAX(p1.finish_time) AS pick_finish_time_sa --拣货完成时间
 FROM jolly_wms.who_wms_picking_info P1
-INNER JOIN jolly_wms.who_wms_picking_goods_detail p2 
+INNER JOIN jolly_wms.who_wms_picking_goods_detail p2
                ON p1.picking_id=p2.picking_id
 GROUP BY p2.order_id
         ,P2.order_sn
@@ -662,7 +662,7 @@ t5 AS
         ,(t2.pack_time - COALESCE(t7.pick_finish_time_cn, t8.pick_finish_time_sa))/3600 AS pack_pick_finish_duration
         ,(t2.shipping_time - t2.pack_time)/3600 AS ship_pack_duration
         ,((CASE WHEN t2.shipping_time = 0 THEN NULL ELSE t2.shipping_time END) - t2.pay_time)/3600 AS ship_pay_duration
-FROM t2 
+FROM t2
 LEFT JOIN t3 ON t2.order_id = t3.order_id
 LEFT JOIN t4 ON t2.order_id = t4.order_id
 LEFT JOIN t7 ON t2.order_id = t7.order_id
@@ -693,7 +693,7 @@ t6 AS
 FROM t5
 ),
 -- 结果表
-t100 AS 
+t100 AS
 (SELECT data_date
         ,depot_id
         ,assign_duration_class
@@ -708,7 +708,7 @@ GROUP BY data_date
         ,ship_duration_class
 )
 
-SELECT * 
+SELECT *
 FROM t100
 ORDER BY data_date
         ,depot_id

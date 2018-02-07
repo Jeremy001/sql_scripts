@@ -131,6 +131,18 @@ SELECT *
 FROM jolly.who_goods_size_property
 LIMIT 10;
 
+WITH t1 AS
+(SELECT goods_id
+        ,count(1) AS num
+FROM jolly.who_goods_size_property
+WHERE property_name = 'SizeDetails'
+GROUP BY goods_id
+)
+SELECT count(*)
+FROM t1
+--WHERE num >= 4
+;
+
 
 -- 商品属性
 -- jolly.who_sku_relation.sku_valued
@@ -516,7 +528,7 @@ t2 AS
         ,p3.material_sn    -- 打包耗材编码
         ,p3.material_name    -- 打包耗材名称
         ,t1.material_size_standard
-        ,p3.material_standard AS material_size_new
+        ,p3.material_standard AS material_size_new  -- 裁箱后的长宽高
         ,t1.height_standard
         ,CAST(SUBSTR(p3.material_standard, 7, 2) AS int) AS height_new   -- 纸箱的最终高度，若裁箱，则高度小于标准高度
         ,(t1.height_standard - CAST(SUBSTR(p3.material_standard, 7, 2) AS int)) AS height_minus      --标准尺寸-裁箱后尺寸，裁箱几厘米？

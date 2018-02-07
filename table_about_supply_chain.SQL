@@ -79,7 +79,7 @@ LEFT JOIN JOLLY.WHO_WMS_GOODS_NEED_LOCK_DETAIL B ON A.REC_ID = B.ORDER_GOODS_REC
 WHERE A.ORDER_ID = 10264765;
 
 -- 采购需求表WHO_WMS_PUR_GOODS_DEMAND
-SELECT * FROM JOLLY.WHO_WMS_PUR_GOODS_DEMAND
+SELECT * FROM jolly.who_wms_pur_goods_demand
 WHERE ORDER_ID =10264765;
 -- 都是采购的，调拨的不在此表中
 -- 发现一个奇怪的事情，ORDER_ID = 16603573的订单，采购需求表中部分商品的PUR_TYPE是供应商备货，不应该是1订单需要吗？
@@ -232,7 +232,7 @@ WHERE T1.ORDER_ID = 10264765;
 
 -- 到货签收表
 -- JOLLY.WHO_WMS_PUR_DELIVER_RECEIPT（物流单号与采购单号仍是一对多的关系）
--- ZYDB.ODS_WMS_PUR_DELIVER_RECEIPT（物流单号与采购单号是一对一的关系）
+-- zydb.ods_wms_pur_deliver_receipt（物流单号与采购单号是一对一的关系）
 -- 到货签收商品明细表 JOLLY.WHO_WMS_PUR_DELIVER_GOODS
 
 SELECT * FROM ZYDB.ODS_WMS_PUR_DELIVER_RECEIPT LIMIT 10;
