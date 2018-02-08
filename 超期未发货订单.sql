@@ -28,9 +28,9 @@ t01 AS
         ,(CASE WHEN p2.source_order_id IS NOT NULL THEN 1 ELSE 0 END) AS is_split
 FROM default.who_order_info AS p1
 LEFT JOIN default.who_order_user_info AS p2
-             ON p1.order_id = p2.source_order_id
+       ON p1.order_id = p2.source_order_id
 WHERE p1.depot_id IN (4, 5, 6, 7, 8, 14, 15)
-     AND p1.site_id = 2     -- 只查询MarkaVIP的订单
+  AND p1.site_id = 2     -- 只查询MarkaVIP的订单
 GROUP BY p1.order_id
         ,p1.order_sn
         ,p1.is_shiped

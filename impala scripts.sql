@@ -1937,7 +1937,7 @@ WITH t AS
         ,shipping_time
         ,(UNIX_TIMESTAMP(on_shelf_finish_time) - UNIX_TIMESTAMP(finish_check_time)) AS onshelf_duration
 FROM zydb.dw_order_sub_order_fact a
-LEFT JOIN zydb.dw_demAND_pur b
+LEFT JOIN zydb.dw_demand_pur b
 ON a.order_id=b.order_id
 LEFT JOIN zydb.dw_delivered_onself_info c
 ON b.pur_order_sn=c.delivered_order_sn
@@ -4829,11 +4829,28 @@ ORDER BY t2.ship_date
 -- 2. 商品数量，如孤品太多，降低命中率降低
 -- 3. 商品销售性质结构，如滞销品太多，降低命中率
 
+-- extend表有问题，暂时不可用
+
 SELECT p1.*
 FROM zydb.dw_order_fact_extend AS p1
 WHERE p1.is_split = 1
+  AND p1.country = 1876
   AND p1.pay_status IN (1, 3)
 LIMIT 10;
+
+
+SELECT SUBSTR(p1.pay_time, 1, 10) AS pay_date
+        ,SUM(p1.org_goods_num) AS total_goods_num
+        ,AVG(p1.org_goods_num) AS avg_goods_num
+FROM zydb.dw_order_fact_extend AS p1
+WHERE p1.is_split = 1
+  AND p1.country = 1876
+  AND p1.pay_status IN (1, 3)
+  AND p1.pay_time >= '2017-10-01'
+  AND p1.pay_time <  '2018-02-01'
+GROUP BY SUBSTR(p1.pay_time, 1, 10)
+ORDER BY pay_date
+;
 
 
 
@@ -4865,7 +4882,7 @@ WHERE p1.order_status = 1
   AND p1.is_shiped = 1
   AND p1.depot_id IN (4, 5, 6, 14)
   AND p1.shipping_time >= '2017-10-01'
-  AND p1.shipping_time <  '2018-01-01'
+  AND p1.shipping_time <  '2018-02-01'
   AND p1.goods_number >= 1
 GROUP BY SUBSTR(p1.shipping_time, 1, 10)
 )
@@ -4876,3 +4893,95 @@ LEFT JOIN t1
        ON t2.ship_date = t1.data_date2
 ORDER BY t2.ship_date
 ;
+
+
+-- daily数据，沙特阿拉伯母单分拆到SA仓和CN仓
+WITH
+-- 沙特阿拉伯母单信息
+t1 AS
+(SELECT SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10) AS pay_date
+        ,COUNT(p1.order_id) AS mom_order_num
+        ,SUM(p1.original_goods_number) AS mom_org_goods_num
+        ,SUM(p1.goods_number) AS mom_goods_num
+        ,AVG(p1.original_goods_number) AS avg_mom_org_goods_num
+        ,AVG(p1.goods_number) AS avg_mom_goods_num
+FROM zydb.dw_order_fact AS p1
+WHERE p1.country_name = 'Saudi Arabia'
+  AND p1.pay_status IN (1, 3)
+  AND (CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) >= '2017-10-01'
+  AND (CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END) <  '2018-02-01'
+GROUP BY SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10)
+--ORDER BY pay_date
+--LIMIT 10
+),
+-- 库存件数
+t2 AS
+(SELECT CONCAT_WS('-',
+                  SUBSTR(p1.data_date, 1, 4),
+                  SUBSTR(p1.data_date, 5, 2),
+                  SUBSTR(p1.data_date, 7, 2)
+                  ) AS data_date2
+        ,SUM(CASE WHEN p1.depot_id = 7 THEN p1.stock_num ELSE 0 END) AS sa_stock_num
+        ,SUM(CASE WHEN p1.depot_id IN (4, 5, 6, 14) THEN p1.stock_num ELSE 0 END) AS cn_stock_num
+FROM zydb.ods_who_wms_goods_stock_detail AS p1
+GROUP BY CONCAT_WS('-',
+                  SUBSTR(p1.data_date, 1, 4),
+                  SUBSTR(p1.data_date, 5, 2),
+                  SUBSTR(p1.data_date, 7, 2)
+                  )
+),
+-- 销售单数和件数
+t3 AS
+(SELECT SUBSTR(p1.pay_time, 1, 10) AS pay_date
+        ,SUM(CASE WHEN p1.depot_id = 7 THEN 1 ELSE 0 END) AS sa_order_num
+        ,SUM(CASE WHEN p1.depot_id = 7 THEN p1.goods_number ELSE 0 END) AS sa_goods_num
+        ,SUM(CASE WHEN p1.depot_id IN (4, 5, 6, 14) THEN 1 ELSE 0 END) AS cn_order_num
+        ,SUM(CASE WHEN p1.depot_id IN (4, 5, 6, 14) THEN p1.goods_number ELSE 0 END) AS cn_goods_num
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.order_status = 1
+  AND p1.pay_status IN (1, 3)
+  AND p1.country_name = 'Saudi Arabia'
+  AND p1.pay_time >= '2017-10-01'
+  AND p1.pay_time <  '2018-02-01'
+GROUP BY SUBSTR(p1.pay_time, 1, 10)
+),
+-- CN仓命中商品数
+t4 AS
+(SELECT SUBSTR(p1.pay_time, 1, 10) AS pay_date
+        ,SUM(CASE WHEN p3.order_id IS NULL THEN p2.original_goods_number ELSE 0 END) AS aim_goods_num
+FROM zydb.dw_order_node_time AS p1
+LEFT JOIN zydb.dw_order_goods_fact AS p2
+       ON p1.order_id = p2.order_id
+LEFT JOIN (SELECT DISTINCT rec_id, order_id, goods_id FROM zydb.dw_demand_pur) AS p3
+       ON p2.order_id = p3.order_id
+      AND p2.goods_id = p3.goods_id
+WHERE p1.order_status = 1
+  AND p1.pay_status IN (1, 3)
+  AND p1.depot_id IN (4, 5, 6, 14)
+  AND p1.country_name = 'Saudi Arabia'
+  AND p1.pay_time >= '2017-10-01'
+  AND p1.pay_time <  '2018-02-01'
+GROUP BY SUBSTR(p1.pay_time, 1, 10)
+)
+-- 结果表
+SELECT t1.*
+        ,t2.sa_stock_num
+        ,t2.cn_stock_num
+        ,t3.sa_order_num
+        ,t3.sa_goods_num
+        ,t3.cn_order_num
+        ,t3.cn_goods_num
+        ,t4.aim_goods_num
+FROM t1
+LEFT JOIN t2
+       ON t1.pay_date = t2.data_date2
+LEFT JOIN t3
+       ON t1.pay_date = t3.pay_date
+LEFT JOIN t4
+       ON t1.pay_date = t4.pay_date
+ORDER BY t1.pay_date
+;
+
+
+
+
