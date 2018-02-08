@@ -4755,3 +4755,124 @@ WHERE p1.real_num < p1.should_num
   AND p1.gmt_created <  UNIX_TIMESTAMP('2018-02-06', 'yyyy-MM-dd')
 LIMIT 10
 ;
+
+-- 沙特仓一单一件订单占比
+-- 沙特仓出单商品件数的订单占比
+SELECT SUBSTR(p1.shipping_time, 1, 7) AS ship_month
+        ,(CASE WHEN p1.goods_number <= 4 THEN '<=4'
+               WHEN p1.goods_number = 5 THEN '=5'
+               ELSE '>=6'
+          END) AS goods_num
+        ,COUNT(p1.order_id) AS order_num
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.order_status = 1
+  AND p1.is_shiped = 1
+  AND p1.depot_id = 7
+  AND p1.shipping_time >= '2017-06-01'
+  AND p1.shipping_time <  '2018-01-01'
+  AND p1.goods_number >= 1
+GROUP BY SUBSTR(p1.shipping_time, 1, 7)
+        ,(CASE WHEN p1.goods_number <= 4 THEN '<=4'
+               WHEN p1.goods_number = 5 THEN '=5'
+               ELSE '>=6'
+          END)
+ORDER BY ship_month
+;
+-- 沙特仓平均出单件数 ===========================================================
+WITH
+-- 库存件数
+t1 AS
+(SELECT CONCAT_WS('-',
+                  SUBSTR(p1.data_date, 1, 4),
+                  SUBSTR(p1.data_date, 5, 2),
+                  SUBSTR(p1.data_date, 7, 2)
+                  ) AS data_date2
+        ,SUM(p1.stock_num) AS total_stock_num
+FROM zydb.ods_who_wms_goods_stock_detail AS p1
+WHERE p1.depot_id = 7
+GROUP BY CONCAT_WS('-',
+                  SUBSTR(p1.data_date, 1, 4),
+                  SUBSTR(p1.data_date, 5, 2),
+                  SUBSTR(p1.data_date, 7, 2)
+                  )
+),
+-- 销售件数
+t2 AS
+(SELECT SUBSTR(p1.shipping_time, 1, 10) AS ship_date
+        ,SUM(p1.goods_number) AS total_goods_num
+        ,AVG(p1.goods_number) AS avg_goods_num
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.order_status = 1
+  AND p1.is_shiped = 1
+  AND p1.depot_id = 7
+  AND p1.shipping_time >= '2017-06-01'
+  AND p1.shipping_time <  '2018-01-01'
+  AND p1.goods_number >= 1
+GROUP BY SUBSTR(p1.shipping_time, 1, 10)
+)
+SELECT t2.*
+        ,t1.total_stock_num
+FROM t2
+LEFT JOIN t1
+       ON t2.ship_date = t1.data_date2
+ORDER BY t2.ship_date
+;
+
+
+-- 沙特阿拉伯的订单，如果不拆单全部从沙特仓出，则为沙特仓整单命中；
+-- 如果拆成沙特仓一单，国内仓一单，则沙特仓那一单为部分命中；
+-- 那么先看沙特阿拉伯的所有母单的商品命中率是多少？
+-- 再看国内子单的命中率是多少？
+
+-- 什么会影响沙特仓的命中率？ -- 商品库存
+-- 1. 类目结构，如某些类目缺失，导致类目太单一，降低命中率
+-- 2. 商品数量，如孤品太多，降低命中率降低
+-- 3. 商品销售性质结构，如滞销品太多，降低命中率
+
+SELECT p1.*
+FROM zydb.dw_order_fact_extend AS p1
+WHERE p1.is_split = 1
+  AND p1.pay_status IN (1, 3)
+LIMIT 10;
+
+
+
+-- CN三仓平均出单件数 ===========================================================
+WITH
+-- 库存件数
+t1 AS
+(SELECT CONCAT_WS('-',
+                  SUBSTR(p1.data_date, 1, 4),
+                  SUBSTR(p1.data_date, 5, 2),
+                  SUBSTR(p1.data_date, 7, 2)
+                  ) AS data_date2
+        ,SUM(p1.stock_num) AS total_stock_num
+FROM zydb.ods_who_wms_goods_stock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 6, 14)
+GROUP BY CONCAT_WS('-',
+                  SUBSTR(p1.data_date, 1, 4),
+                  SUBSTR(p1.data_date, 5, 2),
+                  SUBSTR(p1.data_date, 7, 2)
+                  )
+),
+-- 销售件数
+t2 AS
+(SELECT SUBSTR(p1.shipping_time, 1, 10) AS ship_date
+        ,SUM(p1.goods_number) AS total_goods_num
+        ,AVG(p1.goods_number) AS avg_goods_num
+FROM zydb.dw_order_node_time AS p1
+WHERE p1.order_status = 1
+  AND p1.is_shiped = 1
+  AND p1.depot_id IN (4, 5, 6, 14)
+  AND p1.shipping_time >= '2017-10-01'
+  AND p1.shipping_time <  '2018-01-01'
+  AND p1.goods_number >= 1
+GROUP BY SUBSTR(p1.shipping_time, 1, 10)
+)
+SELECT t2.*
+        ,t1.total_stock_num
+FROM t2
+LEFT JOIN t1
+       ON t2.ship_date = t1.data_date2
+ORDER BY t2.ship_date
+;
