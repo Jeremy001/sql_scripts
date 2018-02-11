@@ -109,8 +109,8 @@ FROM t1;
 SELECT *
 FROM t1
 WHERE package_type = 0            -- 打包耗材是箱子
-     AND package_volume_weight >= 0.01       -- package_volume_weight>0的订单才是计抛的订单
-     AND real_shipping_id = 40  -- Aramex(HK)
+  AND package_volume_weight >= 0.01       -- package_volume_weight>0的订单才是计抛的订单
+  AND real_shipping_id = 40  -- Aramex(HK)
 LIMIT 20;
 
 

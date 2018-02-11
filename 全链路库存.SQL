@@ -314,6 +314,21 @@ WHERE order_id NOT IN (SELECT * FROM t4101)
 GROUP BY shipping_date
 ORDER BY shipping_date;
 
+-- UAE，承运商
+SELECT shipping_name
+        ,COUNT(DISTINCT order_id) AS order_num
+        ,SUM(return_onway_num) AS return_onway_num
+        ,SUM(return_onway_cost) AS return_onway_cost
+        ,SUM(return_onway_amount) AS return_onway_amount
+FROM t4102
+WHERE country_name = 'United Arab Emirates'
+  AND order_id NOT IN (SELECT * FROM t4101)
+GROUP BY shipping_name
+ORDER BY return_onway_num DESC;
+
+
+
+
 
 -- ======================================4.2 超时默认拒收  ====================================
 -- 4.2 已发货，到达目的国超过设置天数仍未签收的，可默认是退回状态
@@ -1368,3 +1383,8 @@ WHERE t1.country_name = 'United Arab Emirates'
 GROUP BY t1.fail_refuse_date
 ORDER BY t1.fail_refuse_date DESC
 ;
+
+
+
+
+
