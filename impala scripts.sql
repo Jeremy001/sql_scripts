@@ -1978,16 +1978,12 @@ WHERE depot_id in (4, 5)
 group by depot_id;
 
 
--- HK仓出库明细
+-- HK仓出库明细 impala ==========================================================
 SELECT order_sn
-        ,depot_id
-        ,is_shiped
-        ,is_problems_order AS 是否异常订单
         ,pay_time AS 付款时间
         ,no_problems_order_uptime AS 标非时间
-        ,lock_last_modified_time AS 配货完成时间
         ,outing_stock_time AS 可拣货时间
-        ,picking_finish_time AS picking_finish_time
+        ,picking_finish_time AS 拣货完成时间
         ,order_pack_time AS 打包完成时间
         ,shipping_time AS 发运时间
 FROM zydb.dw_order_node_time
@@ -1999,6 +1995,26 @@ AND pay_status IN (1, 3)
 AND shipping_time >= '2018-01-01'
 AND shipping_time < '2018-01-08'
 ORDER BY shipping_time;
+
+
+-- HK仓出库明细 hive推送 ========================================================
+SELECT order_sn
+        ,pay_time
+        ,no_problems_order_uptime
+        ,outing_stock_time
+        ,picking_finish_time
+        ,order_pack_time
+        ,shipping_time
+FROM zydb.dw_order_node_time
+WHERE depot_id = 6
+  AND is_shiped = 1
+  AND is_problems_order IN (0, 2)
+  AND order_status = 1
+  AND pay_status IN (1, 3)
+  AND shipping_time >= TO_DATE(DATE_SUB(CURRENT_TIMESTAMP(), 7))
+  AND shipping_time < TO_DATE(DATE_SUB(CURRENT_TIMESTAMP(), 0))
+ORDER BY shipping_time
+;
 
 
 -- 寿元，对比2万个商品的销售
