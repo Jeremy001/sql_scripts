@@ -5354,3 +5354,23 @@ order by data_date
 ;
 
 
+
+select FROM_UNIXTIME(a.gmt_created, 'yyyy-MM-dd') AS gmt_date,
+        sum(case when a.gmt_created<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd')
+        and a.gmt_created>=unix_timestamp('2017-10-01','yyyy-MM-dd') then supp_num end ) unrec_goods_num_before2days,
+
+        sum(case when a.gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') and a.gmt_created<unix_timestamp('${data_date}','yyyyMMdd')  then supp_num end )unrec_goods_num_1days,
+
+        sum(case when a.gmt_created>=unix_timestamp('${data_date}','yyyyMMdd') and a.gmt_created<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') then supp_num end ) unrec_goods_num_days
+ from
+ jolly_spm.jolly_spm_pur_order_info AS a
+ full join
+ jolly_spm.jolly_spm_pur_order_goods b
+ on a.pur_order_id=b.pur_order_id
+ full join
+ zydb.dw_delivered_order_info c
+ on a.pur_order_sn=c.delivered_order_sn
+ where c.end_receipt_time is null
+group by FROM_UNIXTIME(a.gmt_created, 'yyyy-MM-dd')
+ORDER BY gmt_date DESC
+;

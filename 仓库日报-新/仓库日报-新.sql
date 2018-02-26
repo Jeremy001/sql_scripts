@@ -516,7 +516,7 @@ full join
 
 		sum(case when a.gmt_created>=unix_timestamp('${data_date}','yyyyMMdd') and a.gmt_created<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') then supp_num end ) unrec_goods_num_days
  from
- jolly_spm.jolly_spm_pur_order_info  a
+ jolly_spm.jolly_spm_pur_order_info AS a
  full join
  jolly_spm.jolly_spm_pur_order_goods b
  on a.pur_order_id=b.pur_order_id
