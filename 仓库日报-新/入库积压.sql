@@ -28,7 +28,7 @@ FROM zydb.dw_delivered_receipt_onself p1
 WHERE p1.start_receipt_time >= DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd')),1)
      AND p1.end_receipt_time <FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd'))
      AND (p1.on_shelf_start_time>=DATE_ADD(FROM_UNIXTIME(UNIX_TIMESTAMP('$[&data_date]','yyyyMMdd')),1)
-                OR p1.on_shelf_start_time IS NULL 
+                OR p1.on_shelf_start_time IS NULL
                 OR p1.on_shelf_start_time='1970-01-01 08:00:00')
      AND exp_num=0
 GROUP BY p1.delivered_order_sn
@@ -137,7 +137,7 @@ ORDER BY depot_id
 -- =======================================================
 
 -- hive hue 带日期参数 ===================================
-WITH 
+WITH
 t1 AS
 (SELECT p1.delivered_order_sn
         ,p1.depot_id
@@ -149,8 +149,8 @@ t1 AS
 FROM zydb.dw_delivered_receipt_onself p1
 WHERE p1.on_shelf_start_time >= DATE_SUB(FROM_UNIXTIME(UNIX_TIMESTAMP('${data_date}','yyyyMMdd')),1)
      AND p1.on_shelf_start_time <FROM_UNIXTIME(UNIX_TIMESTAMP('${data_date}','yyyyMMdd'))
-     AND (p1.on_shelf_finish_time>=CONCAT(TO_DATE(DATE_ADD(FROM_UNIXTIME(UNIX_TIMESTAMP('${data_date}','yyyyMMdd')),1)),' 06:00:00') 
-                OR p1.on_shelf_finish_time IS NULL 
+     AND (p1.on_shelf_finish_time>=CONCAT(TO_DATE(DATE_ADD(FROM_UNIXTIME(UNIX_TIMESTAMP('${data_date}','yyyyMMdd')),1)),' 06:00:00')
+                OR p1.on_shelf_finish_time IS NULL
                 OR p1.on_shelf_finish_time='1970-01-01 08:00:00')
      AND p1.exp_num=0
 GROUP BY p1.delivered_order_sn
@@ -174,7 +174,7 @@ ORDER BY depot_id
 
 
 -- hive  推送脚本 ===================================
-WITH 
+WITH
 t1 AS
 (SELECT p1.delivered_order_sn
         ,p1.depot_id
@@ -186,8 +186,8 @@ t1 AS
 FROM zydb.dw_delivered_receipt_onself p1
 WHERE p1.on_shelf_start_time >= FROM_UNIXTIME(UNIX_TIMESTAMP(DATE_SUB(CURRENT_DATE(), 2), 'yyyy-MM-dd'))
      AND p1.on_shelf_start_time < FROM_UNIXTIME(UNIX_TIMESTAMP(CONCAT(DATE_SUB(CURRENT_DATE(), 2), ' 20:00:00'), 'yyyy-MM-dd HH:mm:ss'))
-     AND (p1.on_shelf_finish_time>=CONCAT(DATE_SUB(CURRENT_DATE(), 1),' 06:00:00') 
-                OR p1.on_shelf_finish_time IS NULL 
+     AND (p1.on_shelf_finish_time>=CONCAT(DATE_SUB(CURRENT_DATE(), 1),' 06:00:00')
+                OR p1.on_shelf_finish_time IS NULL
                 OR p1.on_shelf_finish_time='1970-01-01 08:00:00')
      AND p1.exp_num=0
 GROUP BY p1.delivered_order_sn

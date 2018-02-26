@@ -1816,20 +1816,19 @@ GROUP BY FROM_UNIXTIME(real_pay_time, 'yyyy-MM-dd')
 ORDER BY real_pay_date;
 
 
--- 沙特仓每天每个小时发运订单数
-SELECT TO_DATE(P1.shipping_time) AS ship_date
-        ,SUBSTR(P1.shipping_time, 12, 2) AS ship_hour
+-- 沙特仓每天每个小时可拣货订单数
+SELECT TO_DATE(P1.outing_stock_time) AS outing_stock_date
+        ,SUBSTR(P1.outing_stock_time, 12, 2) AS outing_stock_hour
         ,COUNT(P1.order_id) AS order_num
-        ,SUM(p1.goods_number) AS goods_num
 FROM zydb.dw_order_node_time AS p1
 WHERE is_shiped = 1
   AND depot_id = 7
-  AND shipping_time >= '2018-01-01'
-  AND shipping_time <  '2018-02-01'
-GROUP BY TO_DATE(P1.shipping_time)
-        ,SUBSTR(P1.shipping_time, 12, 2)
-ORDER BY ship_date
-        ,ship_hour;
+  AND outing_stock_time >= '2018-01-01'
+  AND outing_stock_time <  '2018-02-01'
+GROUP BY TO_DATE(P1.outing_stock_time)
+        ,SUBSTR(P1.outing_stock_time, 12, 2)
+ORDER BY outing_stock_date
+        ,outing_stock_hour;
 
 
 -- 沙特仓每天每个小时客户下单数
