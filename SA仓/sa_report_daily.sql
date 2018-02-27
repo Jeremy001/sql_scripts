@@ -1,58 +1,65 @@
-insert overwrite zydb.rpt_sa_warehouse_report
+
+/*
+-- 内容：沙特仓日报
+-- 作者：陈龙
+*/
+
+
+INSERT OVERWRITE zydb.rpt_sa_warehouse_report
 select * from ( select '${data_date}' as data_date ) a join (
     select * from (
-        select sum(change_num) as sa_purin_goods_num 
-        from jolly_wms.who_wms_goods_stock_detail_log 
-        where change_time >= unix_timestamp('${data_date}','yyyyMMdd') 
-        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400 
-        and depot_id=7 
+        select sum(change_num) as sa_purin_goods_num
+        from jolly_wms.who_wms_goods_stock_detail_log
+        where change_time >= unix_timestamp('${data_date}','yyyyMMdd')
+        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400
+        and depot_id = 7
         and change_type in (1,2,3,4,9,11,14,15,16)
     )a join (
-        select count(distinct goods_id) as sa_purin_goodsstyle_num 
-        from jolly_wms.who_wms_goods_stock_detail_log 
-        where change_time >= unix_timestamp('${data_date}','yyyyMMdd') 
-        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400 
-        and depot_id=7 
+        select count(distinct goods_id) as sa_purin_goodsstyle_num
+        from jolly_wms.who_wms_goods_stock_detail_log
+        where change_time >= unix_timestamp('${data_date}','yyyyMMdd')
+        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400
+        and depot_id=7
         and change_type in (1,2,3,4,9,11,14,15,16)
     )b on 1=1 join (
-        select count(distinct sku_id) as sa_purin_sku_num 
-        from jolly_wms.who_wms_goods_stock_detail_log 
-        where change_time >= unix_timestamp('${data_date}','yyyyMMdd') 
-        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400 
-        and depot_id=7 
+        select count(distinct sku_id) as sa_purin_sku_num
+        from jolly_wms.who_wms_goods_stock_detail_log
+        where change_time >= unix_timestamp('${data_date}','yyyyMMdd')
+        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400
+        and depot_id=7
         and change_type in (1,2,3,4,9,11,14,15,16)
     )c on 1=1 join (
-        select sum(change_num) as sa_delivout_goods_num 
-        from jolly_wms.who_wms_goods_stock_detail_log 
-        where change_time >= unix_timestamp('${data_date}','yyyyMMdd') 
-        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400 
-        and depot_id=7 
+        select sum(change_num) as sa_delivout_goods_num
+        from jolly_wms.who_wms_goods_stock_detail_log
+        where change_time >= unix_timestamp('${data_date}','yyyyMMdd')
+        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400
+        and depot_id=7
         and change_type in  (5,6,13,17)
     )d on 1=1 join (
-        select count(distinct goods_id) as sa_delivout_goodsstyle_num 
-        from jolly_wms.who_wms_goods_stock_detail_log 
-        where change_time >= unix_timestamp('${data_date}','yyyyMMdd') 
-        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400 
-        and depot_id=7 
+        select count(distinct goods_id) as sa_delivout_goodsstyle_num
+        from jolly_wms.who_wms_goods_stock_detail_log
+        where change_time >= unix_timestamp('${data_date}','yyyyMMdd')
+        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400
+        and depot_id=7
         and change_type in  (5,6,13,17)
     )e on 1=1 join (
-        select count(distinct sku_id) as sa_delivout_sku_num 
-        from jolly_wms.who_wms_goods_stock_detail_log 
-        where change_time >= unix_timestamp('${data_date}','yyyyMMdd') 
-        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400 
-        and depot_id=7 
+        select count(distinct sku_id) as sa_delivout_sku_num
+        from jolly_wms.who_wms_goods_stock_detail_log
+        where change_time >= unix_timestamp('${data_date}','yyyyMMdd')
+        and change_time < unix_timestamp('${data_date}','yyyyMMdd')+86400
+        and depot_id=7
         and change_type in  (5,6,13,17)
     )f on 1=1 join (
-        select sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) as sa_freestock_goods_num 
-        from jolly_wms.who_wms_goods_stock_total_detail_daily 
+        select sum(total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num) as sa_freestock_goods_num
+        from jolly_wms.who_wms_goods_stock_total_detail_daily
         where depot_id=7 and ds='${data_date}'
     )g on 1=1 join (
-        select count(distinct goods_id) as sa_freestock_goodsstyle_num 
-        from jolly_wms.who_wms_goods_stock_total_detail_daily 
+        select count(distinct goods_id) as sa_freestock_goodsstyle_num
+        from jolly_wms.who_wms_goods_stock_total_detail_daily
         where depot_id=7 and ds='${data_date}'
         and total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
     )h on 1=1 join (
-        select count(distinct sku_id) as sa_freestock_sku_num 
+        select count(distinct sku_id) as sa_freestock_sku_num
         from jolly_wms.who_wms_goods_stock_total_detail_daily
         where depot_id=7 and ds='${data_date}'
         and total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num>0
@@ -111,7 +118,7 @@ select * from ( select '${data_date}' as data_date ) a join (
         from (--付款订单数
             select count(distinct a.order_id) sub_paid_orders
             from (
-                select order_id,(case when pay_id=41 then pay_time else result_pay_time end) as pay_time 
+                select order_id,(case when pay_id=41 then pay_time else result_pay_time end) as pay_time
                 from zydb.dw_order_sub_order_fact
                 where pay_status=1 and depod_id=7 and unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*10)
             )a
@@ -160,7 +167,7 @@ select * from ( select '${data_date}' as data_date ) a join (
         )a join (
             select
                 count(distinct case when unix_timestamp(shipping_time)-unix_timestamp(pay_time)>0 then order_id else null end )as total_service_orders,--参与计算订单服务时长的订单数
-                sum(case when unix_timestamp(shipping_time)-unix_timestamp(pay_time)>0 
+                sum(case when unix_timestamp(shipping_time)-unix_timestamp(pay_time)>0
                 then unix_timestamp(shipping_time)-unix_timestamp(pay_time) else null end )as total_delivery_time--总时长
             from (
                 select order_id,shipping_time,(case when pay_id=41 then pay_time else result_pay_time end) as pay_time
@@ -173,22 +180,22 @@ select * from ( select '${data_date}' as data_date ) a join (
                 sum(case when b.update_time-unix_timestamp(a.pay_time)>0 then b.update_time-unix_timestamp(a.pay_time) else null end )/86400 as avg_service_time
             from (
                 select a.order_id, a.pay_time
-                from zydb.dw_order_sub_order_fact  a 
+                from zydb.dw_order_sub_order_fact  a
                 where a.depod_id=7 and a.pay_id=41 and a.cod_check_status in (3,5) and unix_timestamp(a.pay_time)>= unix_timestamp('${data_date}','yyyyMMdd')-(86400*60)
             ) as a inner join (
                 select b.order_id,b.update_time
-                from jolly.who_order_shipping_tracking  b 
+                from jolly.who_order_shipping_tracking  b
                 where b.update_time >= unix_timestamp('${data_date}','yyyyMMdd')
                 and b.update_time < unix_timestamp('${data_date}','yyyyMMdd')+86400
             )b on a.order_id = b.order_id
-        )c on 1=1 
+        )c on 1=1
     )b on 1=1
 
     --
     --待处理&异常
     --
     join (
-        select * 
+        select *
         from (--挂起数(COD)
             select count(distinct order_id) as still_hungup_num
             from zydb.dw_order_sub_order_fact
@@ -235,14 +242,14 @@ select * from ( select '${data_date}' as data_date ) a join (
             and order_status=1
             and pay_id=41
             and depod_id=7
-        )e on 1=1 join (--超期未发select 
+        )e on 1=1 join (--超期未发select
             select count(distinct order_id)
-            from zydb.dw_order_sub_order_fact 
+            from zydb.dw_order_sub_order_fact
             where is_shiped<>1
             and unix_timestamp(add_time)>=unix_timestamp('${data_date}', 'yyyyMMdd')-15*86400
             and unix_timestamp(add_time)<unix_timestamp('${data_date}', 'yyyyMMdd')-4*86400
             and pay_status=1
-            and is_problems_order=2 
+            and is_problems_order=2
             and order_status=1
             and depod_id=7
         )f on 1=1
@@ -267,68 +274,68 @@ select * from ( select '${data_date}' as data_date ) a join (
             d.mix_CN_canl_number,
             d.mix_CN_canl_order_number
         from (--纯SA仓
-            select 
+            select
                 (b.total_SA_canl_number/a.total_SA_canl_order_number) as total_SA_canl_rate,
                 b.total_SA_canl_number,
                 a.total_SA_canl_order_number
             from (
-                select 
+                select
                     count(distinct order_id) as total_SA_canl_order_number
-                from zydb.dw_order_sub_order_fact 
-                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5) 
+                from zydb.dw_order_sub_order_fact
+                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
                 and pay_status=1 and depod_id=7 and source_order_id=0
             )a join (
                 select count(distinct case when order_status in(2,3) and is_shiped!=1 then order_id else null end)as total_SA_canl_number
-                from zydb.dw_order_sub_order_fact 
-                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5) 
+                from zydb.dw_order_sub_order_fact
+                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
                 and pay_status=1 and depod_id=7 and source_order_id=0
             )b on 1=1
         )a join (--混SA仓
-            select 
+            select
                 (b.mix_SA_canl_number/a.mix_SA_canl_order_number) as mix_SA_canl_rate,
                 b.mix_SA_canl_number,
                 a.mix_SA_canl_order_number
             from (
                 select count(distinct order_id) as mix_SA_canl_order_number
-                from zydb.dw_order_sub_order_fact 
-                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5) 
+                from zydb.dw_order_sub_order_fact
+                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
                 and pay_status=1 and depod_id=7 and source_order_id>0
             )a join (
                 select count(distinct case when order_status in(2,3) and is_shiped!=1 then order_id else null end)as mix_SA_canl_number
-                from zydb.dw_order_sub_order_fact 
-                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5) 
+                from zydb.dw_order_sub_order_fact
+                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
                 and pay_status=1 and depod_id=7 and source_order_id>0
             )b on 1=1
         )b on 1=1 join (--纯CN仓
-            select 
+            select
                 (b.total_CN_canl_number/a.total_CN_canl_order_number) as total_CN_canl_rate,
                 b.total_CN_canl_number,
                 a.total_CN_canl_order_number
             from (
                 select count(distinct order_id) as total_CN_canl_order_number
-                from zydb.dw_order_sub_order_fact 
-                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5) 
+                from zydb.dw_order_sub_order_fact
+                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
                 and pay_status=1 and depod_id!=7 and source_order_id=0
             )a join (
                 select count(distinct case when order_status in(2,3) and is_shiped!=1 then order_id else null end)as total_CN_canl_number
-                from zydb.dw_order_sub_order_fact 
-                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5) 
+                from zydb.dw_order_sub_order_fact
+                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
                 and pay_status=1 and depod_id!=7 and source_order_id=0
             )b on 1=1
         )c on 1=1 join (--纯CN仓
-            select 
+            select
                 (b.mix_CN_canl_number/a.mix_CN_canl_order_number) as mix_CN_canl_rate,
                 b.mix_CN_canl_number,
                 a.mix_CN_canl_order_number
             from (
                 select count(distinct order_id) as mix_CN_canl_order_number
-                from zydb.dw_order_sub_order_fact 
-                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5) 
+                from zydb.dw_order_sub_order_fact
+                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
                 and pay_status=1 and depod_id!=7 and source_order_id>0
             )a join (
                 select count(distinct case when order_status in(2,3) and is_shiped!=1 then order_id else null end)as mix_CN_canl_number
-                from zydb.dw_order_sub_order_fact 
-                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5) 
+                from zydb.dw_order_sub_order_fact
+                where unix_timestamp(add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) and unix_timestamp(add_time)<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
                 and pay_status=1 and depod_id!=7 and source_order_id>0
             )b on 1=1
         )d on 1=1
@@ -343,6 +350,7 @@ select * from ( select '${data_date}' as data_date ) a join (
             b.mix_SA_rec_rate,             --混SA仓签收率
             c.total_CN_rec_rate,           --全CN仓签收率
             d.mix_CN_rec_rate,             --混CN仓签收率
+
             a.total_SA_rec_number,
             a.total_SA_rec_arrival_number,
             b.mix_SA_rec_number,
@@ -352,103 +360,138 @@ select * from ( select '${data_date}' as data_date ) a join (
             d.mix_CN_rec_number,
             d.mix_CN_rec_arrival_number
         from (--纯SA仓
-            select 
+            select
                 (b.total_SA_rec_number/a.total_SA_rec_arrival_number) as total_SA_rec_rate,
                 b.total_SA_rec_number,
                 a.total_SA_rec_arrival_number
             from (
                 select count(distinct a.order_id) as total_SA_rec_arrival_number
                 from jolly.who_prs_cod_order_shipping_time as a join zydb.dw_order_sub_order_fact as b on a.order_id=b.order_id
-                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) 
+                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6)
                 and a.destination_time<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
-                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29) 
-                and b.country_name='Saudi Arabia' 
-                and b.pay_id=41 
-                and b.depod_id=7 
+                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29)
+                and b.country_name='Saudi Arabia'
+                and b.pay_id=41
+                and b.depod_id=7
                 and b.source_order_id=0
             )a join (
                 select count(distinct case when  b.cod_check_status in(3,5)then a.order_id else null end )as total_SA_rec_number
                 from jolly.who_prs_cod_order_shipping_time as a join zydb.dw_order_sub_order_fact as b on a.order_id=b.order_id
-                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) 
+                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6)
                 and a.destination_time<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
-                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29) 
-                and b.country_name='Saudi Arabia' 
-                and b.pay_id=41 
-                and b.depod_id=7 
+                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29)
+                and b.country_name='Saudi Arabia'
+                and b.pay_id=41
+                and b.depod_id=7
                 and b.source_order_id=0
             )b on 1=1
         )a join (--混SA仓
-            select 
+            select
                 (b.mix_SA_rec_number/a.mix_SA_rec_arrival_number) as mix_SA_rec_rate,
                 b.mix_SA_rec_number,
                 a.mix_SA_rec_arrival_number
             from (
                 select count(distinct a.order_id) as mix_SA_rec_arrival_number
                 from jolly.who_prs_cod_order_shipping_time as a join zydb.dw_order_sub_order_fact as b on a.order_id=b.order_id
-                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) 
+                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6)
                 and a.destination_time<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
-                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29) 
-                and b.country_name='Saudi Arabia' 
-                and b.depod_id=7 
+                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29)
+                and b.country_name='Saudi Arabia'
+                and b.depod_id=7
                 and b.source_order_id>0
             )a join (
                 select count(distinct case when  b.cod_check_status in(3,5)then a.order_id else null end )as mix_SA_rec_number
                 from jolly.who_prs_cod_order_shipping_time as a join zydb.dw_order_sub_order_fact as b on a.order_id=b.order_id
-                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) 
+                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6)
                 and a.destination_time<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
-                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29) 
-                and b.country_name='Saudi Arabia' 
-                and b.depod_id=7 
+                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29)
+                and b.country_name='Saudi Arabia'
+                and b.depod_id=7
                 and b.source_order_id>0
             )b on 1=1
         )b on 1=1 join (--纯CN仓
-            select 
+            select
                 (b.total_CN_rec_number/a.total_CN_rec_arrival_number) as total_CN_rec_rate,
                 b.total_CN_rec_number,
                 a.total_CN_rec_arrival_number
             from (
                 select count(distinct a.order_id) as total_CN_rec_arrival_number
                 from jolly.who_prs_cod_order_shipping_time as a join zydb.dw_order_sub_order_fact as b on a.order_id=b.order_id
-                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) 
+                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6)
                 and a.destination_time<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
-                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29) 
-                and b.country_name='Saudi Arabia' 
-                and b.depod_id!=7 
+                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29)
+                and b.country_name='Saudi Arabia'
+                and b.depod_id!=7
                 and b.source_order_id=0
             )a join (
                 select count(distinct case when  b.cod_check_status in(3,5)then a.order_id else null end )as total_CN_rec_number
                 from jolly.who_prs_cod_order_shipping_time as a join zydb.dw_order_sub_order_fact as b on a.order_id=b.order_id
-                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) 
+                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6)
                 and a.destination_time<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
-                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29) 
-                and b.country_name='Saudi Arabia' 
-                and b.depod_id!=7 
+                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29)
+                and b.country_name='Saudi Arabia'
+                and b.depod_id!=7
                 and b.source_order_id=0
             )b on 1=1
         )c on 1=1 join (--混CN仓
-            select 
+            select
                 (b.mix_CN_rec_number/a.mix_CN_rec_arrival_number) as mix_CN_rec_rate,
                 b.mix_CN_rec_number,
                 a.mix_CN_rec_arrival_number
             from (
                 select count(distinct a.order_id) as mix_CN_rec_arrival_number
                 from jolly.who_prs_cod_order_shipping_time as a join zydb.dw_order_sub_order_fact as b on a.order_id=b.order_id
-                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) 
+                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6)
                 and a.destination_time<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
-                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29) 
-                and b.country_name='Saudi Arabia' 
-                and b.depod_id!=7 
+                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29)
+                and b.country_name='Saudi Arabia'
+                and b.depod_id!=7
                 and b.source_order_id>0
             )a join (
                 select count(distinct case when  b.cod_check_status in(3,5)then a.order_id else null end )as mix_CN_rec_number
                 from jolly.who_prs_cod_order_shipping_time as a join zydb.dw_order_sub_order_fact as b on a.order_id=b.order_id
-                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6) 
+                where a.destination_time>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*6)
                 and a.destination_time<unix_timestamp('${data_date}','yyyyMMdd')-(86400*5)
-                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29) 
-                and b.country_name='Saudi Arabia' 
-                and b.depod_id!=7 
+                and unix_timestamp(b.add_time)>=unix_timestamp('${data_date}','yyyyMMdd')-(86400*29)
+                and b.country_name='Saudi Arabia'
+                and b.depod_id!=7
                 and b.source_order_id>0
             )b on 1=1
         )d on 1=1
     )e on 1=1
 )d on 1=1
+
+union all
+
+select * from zydb.rpt_sa_warehouse_report
+where data_date != '${data_date}';
+
+insert overwrite zydb.rpt_sa_warehouse_report_rec_num --签收数(COD)
+select
+    FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd')-(86400*1), 'yyyyMMdd') as data_date,
+    count(distinct a.order_id) as rec_num
+from (
+    select a.order_id, a.pay_time
+    from zydb.dw_order_sub_order_fact  a
+    where a.depod_id=7 and a.pay_id=41 and a.cod_check_status in (3,5) and unix_timestamp(a.pay_time)>= unix_timestamp('${data_date}','yyyyMMdd')-(86400*60)
+) as a inner join (
+    select b.order_id,b.update_time
+    from jolly.who_order_shipping_tracking  b
+    where b.update_time >= unix_timestamp('${data_date}','yyyyMMdd')-(86400*1)
+    and b.update_time < unix_timestamp('${data_date}','yyyyMMdd')+86400-(86400*1)
+)b on a.order_id = b.order_id;
+
+insert into zydb.rpt_sa_warehouse_report_rec_num --签收数(COD)
+select
+    FROM_UNIXTIME(unix_timestamp('${data_date}','yyyyMMdd')-(86400*2), 'yyyyMMdd') as data_date,
+    count(distinct a.order_id) as rec_num
+from (
+    select a.order_id, a.pay_time
+    from zydb.dw_order_sub_order_fact  a
+    where a.depod_id=7 and a.pay_id=41 and a.cod_check_status in (3,5) and unix_timestamp(a.pay_time)>= unix_timestamp('${data_date}','yyyyMMdd')-(86400*60)
+) as a inner join (
+    select b.order_id,b.update_time
+    from jolly.who_order_shipping_tracking  b
+    where b.update_time >= unix_timestamp('${data_date}','yyyyMMdd')-(86400*2)
+    and b.update_time < unix_timestamp('${data_date}','yyyyMMdd')+86400-(86400*2)
+)b on a.order_id = b.order_id;

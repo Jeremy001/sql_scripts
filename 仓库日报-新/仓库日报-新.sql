@@ -107,7 +107,7 @@ full join
 	   and a.on_shelf_start_time < date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
 	   and ((unix_timestamp(on_shelf_start_time)-unix_timestamp(start_receipt_time))/3600/24)>0
 	 group by depot_id
-)t5
+) t5
 on t1.depot_id=t5.depot_id
 full join
 
