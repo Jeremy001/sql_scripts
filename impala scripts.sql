@@ -13,7 +13,7 @@ LIMIT 10;
 
 -- 关于价格：
 -- 1.单位分别是什么？都是人民币？都是美元？
--- 2.MARKET_PRICE和IN_PRICE是什么关系？怎么大部分商品这两个价格都相等？
+-- 2.MARKET_PRICE和in_PRICE是什么关系？怎么大部分商品这两个价格都相等？
 -- 459043件商品中的444613件商品两个价格都相等
 /*
 IS_ON_SALE
@@ -393,7 +393,7 @@ LIMIT 30;
 051 ZY P帕丽达 每周五
 278 JM L龙岩市展宇贸易有限公司 每周一次
  */
--- ADMIN_ID, 采购员ID
+-- ADMin_ID, 采购员ID
 -- CANCEL_REASON, 取消合作原因代码，说明文字放在哪张表中？
 -- SUPP_DISCOUNT, 采购折扣(采购价)
 
@@ -582,7 +582,7 @@ ORDER BY CHECK_TYPE;
  */
 -- 现在几乎都是全检，卖给消费者，应该几乎都要全检才对
 
--- BUYER_ADMIN_ID
+-- BUYER_ADMin_ID
 
 -- PUR_DEMAND_PUSH_TIME, 采购需求推送时间
 SELECT CODE
@@ -676,15 +676,15 @@ GROUP BY IS_POP;
  */
 -- 看来这个字段就是一个坑呀，以后只要去IS_POP=0就OK了；
 
--- MAIN_CAT_ID，供应商主营品类
-SELECT T1.MAIN_CAT_ID
+-- MAin_CAT_ID，供应商主营品类
+SELECT T1.MAin_CAT_ID
         ,T2.CN_CAT_NAME
         ,COUNT(*) AS SUPP_NUM
 FROM JOLLY.WHO_ESOLOO_SUPPLIER T1
-LEFT JOIN JOLLY.WHO_CATEGORY T2 ON T1.MAIN_CAT_ID = T2.CAT_ID
+LEFT JOIN JOLLY.WHO_CATEGORY T2 ON T1.MAin_CAT_ID = T2.CAT_ID
 WHERE T1.IS_HIDE = 0
-    AND T1.MAIN_CAT_ID > 0
-GROUP BY T1.MAIN_CAT_ID
+    AND T1.MAin_CAT_ID > 0
+GROUP BY T1.MAin_CAT_ID
         ,T2.CN_CAT_NAME
 ORDER BY SUPP_NUM DESC;
 /*
@@ -892,7 +892,7 @@ ORDER BY change_type;
 -- Dubai仓
 -- 迪拜仓每天出入库量
 SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM-dd') AS data_date
-        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS IN_num
+        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS in_num
         ,SUM(CASE WHEN p1.change_type IN (5, 6, 12, 13, 17, 19, 20) THEN p1.change_num ELSE 0 END) AS out_num
 FROM jolly_wms.who_wms_goods_stock_detail_log p1
 WHERE p1.depot_id = 15
@@ -902,7 +902,7 @@ ORDER BY data_date DESC;
 
 -- SA仓每月出入库商品数
 SELECT FROM_UNIXTIME(p1.change_time, 'yyyy-MM') AS data_month
-        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS IN_num
+        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS in_num
         ,SUM(CASE WHEN p1.change_type IN (5, 6, 12, 13, 17, 19, 20) THEN p1.change_num ELSE 0 END) AS out_num
 FROM jolly_wms.who_wms_goods_stock_detail_log p1
 WHERE p1.change_time >= UNIX_TIMESTAMP('2017-01-01')
@@ -929,17 +929,17 @@ t1 AS
         ,SUM(CASE p1.change_type WHEN 20 THEN p1.change_num ELSE 0 END) AS out_num_FBA
         ,SUM(CASE WHEN p1.change_type IN (5, 6, 12, 13, 17, 19, 20) THEN p1.change_num ELSE 0 END) AS out_num_total
         -- 1.2 入库各类型数量
-        ,SUM(CASE p1.change_type WHEN 1 THEN p1.change_num ELSE 0 END) AS IN_num_caigou
-        ,SUM(CASE p1.change_type WHEN 2 THEN p1.change_num ELSE 0 END) AS IN_num_shouhuoyichang
-        ,SUM(CASE p1.change_type WHEN 3 THEN p1.change_num ELSE 0 END) AS IN_num_xiaoshoutuihuo
-        ,SUM(CASE p1.change_type WHEN 4 THEN p1.change_num ELSE 0 END) AS IN_num_panying
-        ,SUM(CASE p1.change_type WHEN 9 THEN p1.change_num ELSE 0 END) AS IN_num_shoudong
-        ,SUM(CASE p1.change_type WHEN 11 THEN p1.change_num ELSE 0 END) AS IN_num_FBA
-        ,SUM(CASE p1.change_type WHEN 14 THEN p1.change_num ELSE 0 END) AS IN_num_shangjiayichang
-        ,SUM(CASE p1.change_type WHEN 15 THEN p1.change_num ELSE 0 END) AS IN_num_diaobo
-        ,SUM(CASE p1.change_type WHEN 16 THEN p1.change_num ELSE 0 END) AS IN_num_pifa
-        ,SUM(CASE p1.change_type WHEN 18 THEN p1.change_num ELSE 0 END) AS IN_num_wudingdan
-        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS IN_num_total
+        ,SUM(CASE p1.change_type WHEN 1 THEN p1.change_num ELSE 0 END) AS in_num_caigou
+        ,SUM(CASE p1.change_type WHEN 2 THEN p1.change_num ELSE 0 END) AS in_num_shouhuoyichang
+        ,SUM(CASE p1.change_type WHEN 3 THEN p1.change_num ELSE 0 END) AS in_num_xiaoshoutuihuo
+        ,SUM(CASE p1.change_type WHEN 4 THEN p1.change_num ELSE 0 END) AS in_num_panying
+        ,SUM(CASE p1.change_type WHEN 9 THEN p1.change_num ELSE 0 END) AS in_num_shoudong
+        ,SUM(CASE p1.change_type WHEN 11 THEN p1.change_num ELSE 0 END) AS in_num_FBA
+        ,SUM(CASE p1.change_type WHEN 14 THEN p1.change_num ELSE 0 END) AS in_num_shangjiayichang
+        ,SUM(CASE p1.change_type WHEN 15 THEN p1.change_num ELSE 0 END) AS in_num_diaobo
+        ,SUM(CASE p1.change_type WHEN 16 THEN p1.change_num ELSE 0 END) AS in_num_pifa
+        ,SUM(CASE p1.change_type WHEN 18 THEN p1.change_num ELSE 0 END) AS in_num_wudingdan
+        ,SUM(CASE WHEN p1.change_type IN (1, 2, 3, 4, 9, 11, 14, 15, 16, 18) THEN p1.change_num ELSE 0 END) AS in_num_total
 FROM jolly.who_wms_goods_stock_detail_log AS p1
 LEFT JOIN jolly.who_wms_depot_area AS p2
        ON p1.depot_area_id = p2.depot_area_id
@@ -1540,7 +1540,7 @@ GROUP BY status;
 1   polling 344657
 2   shutdown    3189839
 3   abort   645319
-4   issEND  2350
+4   issend  2350
 5   updateall   2720
  */
 -- shipping_state 0在途中、1已揽收、2疑难、3已签收、4退签、5同城派送中、6退回（客户退回，未签收承运商退回，投递失败退回等）、7转单、8已拒收、13货丢了 等9个状态
@@ -2843,15 +2843,15 @@ ORDER BY t1.depot_id
 
 
 -- HK仓独有库存的商品在印尼市场的下单情况
--- 供应商与发货仓库对应表：jolly.who_esoloo_supplier_sEND_depot
--- 商品发货仓库对应表：jolly.who_goods_sEND_depot
+-- 供应商与发货仓库对应表：jolly.who_esoloo_supplier_send_depot
+-- 商品发货仓库对应表：jolly.who_goods_send_depot
 
 WITH
 -- 会发货到HK仓的供应商代码
 t1 AS
 (SELECT supp_id
         ,supp_code
-FROM jolly.who_esoloo_supplier_sEND_depot
+FROM jolly.who_esoloo_supplier_send_depot
 WHERE depot_id = 6
 GROUP BY supp_id
         ,supp_code
@@ -2861,7 +2861,7 @@ t2 AS
 (SELECT supp_id
         ,supp_code
         ,COUNT(depot_id) AS depot_num
-FROM jolly.who_esoloo_supplier_sEND_depot
+FROM jolly.who_esoloo_supplier_send_depot
 GROUP BY supp_id
         ,supp_code
 ),
@@ -3926,7 +3926,7 @@ GROUP BY SUBSTR(p1.shipping_time, 1, 7)
 )
 
 SELECT t1.data_month
-        ,t1.qc_duration + t2.onshelf_duration AS IN_wh_duration
+        ,t1.qc_duration + t2.onshelf_duration AS in_wh_duration
         ,t1.qc_num
         ,t2.onshelf_num
         ,t4.out_wh_duration
@@ -4737,7 +4737,7 @@ LIMIT 10;
 SELECT p1.wholesale_order_id
         ,SUM(p1.order_org_num) AS org_goods_num
         ,SUM(p1.order_num) AS new_goods_num
-        ,SUM(p1.sEND_num) AS sEND_num
+        ,SUM(p1.send_num) AS send_num
 FROM jolly.who_wms_wholesale_order_goods AS p1
 WHERE p1.wholesale_order_id IN (384, 386)
 GROUP BY p1.wholesale_order_id
@@ -4756,12 +4756,12 @@ t1 AS
         ,p1.shop_price
         ,p1.order_org_num
         ,p1.order_num
-        ,p1.sEND_num AS sEND_num1
+        ,p1.send_num AS send_num1
         ,p3.supp_name
-        ,p3.sEND_num AS sEND_num2
+        ,p3.send_num AS send_num2
         ,p3.oos_num
         ,p3.real_oos_num
-        ,p3.in_price AS IN_price2
+        ,p3.in_price AS in_price2
 FROM jolly.who_wms_wholesale_order_goods AS p1
 LEFT JOIN jolly.who_wms_goods_need_lock_detail AS p2
        ON p1.rec_id = p2.order_goods_rec_id
@@ -4774,8 +4774,8 @@ WHERE p1.wholesale_order_id = 384
 SELECT t1.guonei_depot
         ,SUM(t1.order_num) AS order_num
         ,SUM(CASE WHEN t1.supp_name IS NULL THEN t1.order_num ELSE 0 END) AS no_demAND_num
-        ,SUM(t1.sEND_num1) AS sEND_num1
-        ,SUM(t1.sEND_num2) AS sEND_num2
+        ,SUM(t1.send_num1) AS send_num1
+        ,SUM(t1.send_num2) AS send_num2
 FROM t1
 GROUP BY t1.guonei_depot
 ;
@@ -4801,7 +4801,7 @@ LIMIT 10
 SELECT *
 FROM jolly.who_wms_wholesale_order_goods AS p1
 WHERE p1.wholesale_order_id IN (384, 386)
-AND p1.sEND_num > 1
+AND p1.send_num > 1
 LIMIT 10
 ;
 
@@ -5458,5 +5458,67 @@ WHERE t1.pay_status IN (1,3)
 GROUP BY TO_DATE(CASE WHEN t1.pay_id=41 THEN t1.pay_time ELSE t1.result_pay_time END)
 ORDER BY data_date
 ;
+
+
+
+-- 沙特订单付款率
+SELECT t1.data_date
+        ,t1.order_paid_rate
+        ,t1.sa_order_paid_rate
+        ,t1.cn_order_paid_rate
+        ,t1.mix_order_paid_rate
+FROM zydb.rpt_sa_warehouse_report AS t1
+ORDER BY t1.data_date
+LIMIT 100;
+
+
+-- 问题单时间
+-- case1: if 标问题单时间<打包完成时间<问题单标非时间<发货时间,则影响时长=问题单标非时间-打包完成时间
+-- case2: if 打包完成时间<标问题单时间<问题单标非时间<发货时间,则影响时长=问题单标非时间-标问题单时间
+-- case3: if 标问题单时间<问题单标非时间<打包完成时间<发货时间,则影响时长=0
+WITH
+t1 AS
+(SELECT COUNT(*) AS total_order_num
+        ,SUM(UNIX_TIMESTAMP(t1.shipping_time) - UNIX_TIMESTAMP(t1.order_pack_time))/COUNT(*)/3600 AS avg_ship_hour
+        ,SUM(UNIX_TIMESTAMP(t1.shipping_time) - UNIX_TIMESTAMP(t1.order_pack_time))/3600 AS total_ship_hour
+        ,SUM(CASE WHEN t1.problems_order_uptime < t1.order_pack_time AND t1.order_pack_time < t1.no_problems_order_uptime
+                  THEN 1
+                  ELSE 0
+             END) AS case1_order_num
+        ,SUM(CASE WHEN t1.problems_order_uptime < t1.order_pack_time AND t1.order_pack_time < t1.no_problems_order_uptime
+                  THEN (UNIX_TIMESTAMP(t1.no_problems_order_uptime) - UNIX_TIMESTAMP(t1.order_pack_time))/3600
+                  ELSE 0
+             END) AS case1_duoyu_hour
+        ,SUM(CASE WHEN t1.order_pack_time < t1.problems_order_uptime AND t1.problems_order_uptime < t1.no_problems_order_uptime
+                  THEN 1
+                  ELSE 0
+             END) AS case2_order_num
+        ,SUM(CASE WHEN t1.order_pack_time < t1.problems_order_uptime AND t1.problems_order_uptime < t1.no_problems_order_uptime
+                  THEN (UNIX_TIMESTAMP(t1.no_problems_order_uptime) - UNIX_TIMESTAMP(t1.problems_order_uptime))/3600
+                  ELSE 0
+             END) AS case2_duoyu_hour
+        ,SUM(CASE WHEN t1.problems_order_uptime < t1.no_problems_order_uptime AND t1.no_problems_order_uptime < t1.order_pack_time
+                  THEN 1
+                  ELSE 0
+             END) AS case3_order_num
+FROM zydb.dw_order_node_time AS t1
+WHERE t1.is_shiped = 1
+  AND t1.shipping_time >= '2018-01-01'
+  AND t1.shipping_time <  '2018-02-28'
+  AND t1.order_pack_time IS NOT NULL
+  AND t1.problems_order_uptime IS NOT NULL
+  AND t1.no_problems_order_uptime IS NOT NULL
+)
+SELECT *
+FROM t1
+;
+
+
+
+
+
+
+
+
 
 
