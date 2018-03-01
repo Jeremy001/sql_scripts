@@ -3,7 +3,7 @@
 作者：Steven王世鑫
 */
 
-insert overwrite   rpt_depot_order_tmp_kpi
+insert overwrite rpt_depot_order_tmp_kpi
 Select
 p1.site_id,
 p1.add_time,

@@ -5472,13 +5472,15 @@ ORDER BY t1.data_date
 LIMIT 100;
 
 
--- 问题单时间
+-- 问题单时间 ===================================================================
+
 -- case1: if 标问题单时间<打包完成时间<问题单标非时间<发货时间,则影响时长=问题单标非时间-打包完成时间
 -- case2: if 打包完成时间<标问题单时间<问题单标非时间<发货时间,则影响时长=问题单标非时间-标问题单时间
 -- case3: if 标问题单时间<问题单标非时间<打包完成时间<发货时间,则影响时长=0
 WITH
 t1 AS
-(SELECT COUNT(*) AS total_order_num
+(SELECT SUBSTR(shipping_time, 1, 10) AS ship_date
+        ,COUNT(*) AS total_order_num
         ,SUM(UNIX_TIMESTAMP(t1.shipping_time) - UNIX_TIMESTAMP(t1.order_pack_time))/COUNT(*)/3600 AS avg_ship_hour
         ,SUM(UNIX_TIMESTAMP(t1.shipping_time) - UNIX_TIMESTAMP(t1.order_pack_time))/3600 AS total_ship_hour
         ,SUM(CASE WHEN t1.problems_order_uptime < t1.order_pack_time AND t1.order_pack_time < t1.no_problems_order_uptime
@@ -5508,12 +5510,62 @@ WHERE t1.is_shiped = 1
   AND t1.order_pack_time IS NOT NULL
   AND t1.problems_order_uptime IS NOT NULL
   AND t1.no_problems_order_uptime IS NOT NULL
+GROUP BY SUBSTR(shipping_time, 1, 10)
 )
 SELECT *
 FROM t1
+ORDER BY ship_date DESC
 ;
 
 
+/*
+-- 智能补货平台：补货提前期参数设置 ===============================================
+补货提前期LT
+√ 订单反应时长：LT0(订单反应时长)：是指已签收商品从客户下单付款至采购订单推送至商家的时间
+√ 备货时长：供应商备货时长：从采购需求推送到供应商至供应商发货的时长
+√ 国内运输时长：供应商发货至仓库签收的时长
+√ 国内仓操作时长：LT2(仓库作业时长)：是指已发货包裹从商品签收至货品分拣直至包裹可提货状态的时间
+× 国际运输时长(Sea)
+× 国际运输时长(Air)
+× 国际通关时长
+× 本地运输时长
+√ 海外仓操作时长：备货目的仓质检上架时长，个人认为不需要，这个时长比较短，可忽略。
+*/
+
+
+-- 仓储：每月出入库平均时长
+-- 20171024-20171104这一段时间，打包时长异常，出库时长重新取值
+WITH
+-- 1.入库时效
+t1 AS
+(SELECT SUBSTR(CAST(t1.data_date AS STRING), 1, 6) AS data_month
+        ,AVG(t1.receipt_quality_duration) AS qc_duration
+        ,AVG(t1.quality_onshelf_duration) AS onshelf_duration
+        ,AVG(t1.receipt_onself_duration) AS in_wh_duration
+FROM zydb.rpt_depot_daily_report_new AS t1
+WHERE t1.depot_id IN (5, 14)
+GROUP BY SUBSTR(CAST(t1.data_date AS STRING), 1, 6)
+),
+-- 2.出库时效
+t2 AS
+(SELECT SUBSTR(REGEXP_REPLACE(t1.shipping_time, '-', ''), 1, 6) AS data_month
+        ,AVG((UNIX_TIMESTAMP(t1.picking_finish_time) - UNIX_TIMESTAMP(t1.outing_stock_time))/3600) AS pick_duration
+        ,AVG((UNIX_TIMESTAMP(t1.order_pack_time) - UNIX_TIMESTAMP(t1.picking_finish_time))/3600) AS pack_duration
+        ,AVG((UNIX_TIMESTAMP(t1.shipping_time) - UNIX_TIMESTAMP(t1.order_pack_time))/3600) AS ship_duration
+FROM zydb.dw_order_node_time AS t1
+WHERE t1.depot_id IN (5, 14)
+GROUP BY SUBSTR(REGEXP_REPLACE(t1.shipping_time, '-', ''), 1, 6)
+)
+-- 结果，汇总
+SELECT t1.*
+        ,t2.pick_duration
+        ,t2.pack_duration
+        ,t2.ship_duration
+        ,(t2.pick_duration + t2.pack_duration + t2.ship_duration) AS out_wh_duration
+FROM t1
+LEFT JOIN t2 ON t1.data_month = t2.data_month
+ORDER BY t1.data_month
+;
 
 
 
