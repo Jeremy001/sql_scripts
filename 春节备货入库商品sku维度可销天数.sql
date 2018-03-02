@@ -14,7 +14,7 @@ ws3.sku_id
 ,ws.sku_color
 ,ws.sku_size
 ,nvl(ws1.arg_num,0)  arg_num
-,NVL(ws6.pred_goods_num) AS pred_goods_num
+,ws6.pred_goods_num
 ,nvl(ws4.onway_num,0)+nvl(ws5.free_stock_num,0) AS stock_num
 ,(nvl(ws4.onway_num,0)+nvl(ws5.free_stock_num,0))/ws1.arg_num AS can_sale_days
 from

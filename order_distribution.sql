@@ -11,19 +11,27 @@ WITH
 t1 AS
 (SELECT order_id
         ,order_sn
-        ,depod_id AS depot_id
+        ,(CASE WHEN depod_id = 4 THEN 'GZ2'
+               WHEN depod_id IN (5, 14) THEN 'DG1'
+               WHEN depod_id = 6 THEN 'HK1'
+               WHEN depod_id = 7 THEN 'SA1'
+               WHEN depod_id = 8 THEN 'US1'
+               WHEN depod_id = 10 THEN 'TR1'
+               WHEN depod_id = 13 THEN 'JP1'
+               WHEN depod_id = 15 THEN 'UAE1'
+               ELSE 'Others' END) AS depot_id
         ,unix_timestamp((CASE WHEN pay_id = 41 THEN pay_time ELSE result_pay_time END), 'yyyy-MM-dd HH:mm:ss') AS pay_time     -- 支付时间
         ,unix_timestamp(shipping_time) AS shipping_time
         ,(CASE WHEN is_shiped = 1 THEN 'shiped' ELSE 'not_shiped' END) AS is_shiped
 FROM zydb.dw_order_sub_order_fact
 WHERE pay_status IN (1, 3)
     AND order_status = 1
-    AND depod_id IN (4, 5, 6, 7, 14)
+    AND depod_id IN (4, 5, 6, 7, 8, 10, 13, 14, 15)
 ),
 t2 AS
 (SELECT *
 FROM t1
-WHERE pay_time >= unix_timestamp('2016-01-01', 'yyyy-MM-dd')
+WHERE pay_time >= unix_timestamp('2017-05-01', 'yyyy-MM-dd')
     AND pay_time <= unix_timestamp(FROM_UNIXTIME(unix_timestamp(), 'yyyy-MM-dd'))
 ),
 
