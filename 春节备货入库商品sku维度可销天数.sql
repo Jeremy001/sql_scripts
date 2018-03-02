@@ -14,6 +14,7 @@ ws3.sku_id
 ,ws.sku_color
 ,ws.sku_size
 ,nvl(ws1.arg_num,0)  arg_num
+,NVL(ws6.pred_goods_num) AS pred_goods_num
 ,nvl(ws4.onway_num,0)+nvl(ws5.free_stock_num,0) AS stock_num
 ,(nvl(ws4.onway_num,0)+nvl(ws5.free_stock_num,0))/ws1.arg_num AS can_sale_days
 from
@@ -168,4 +169,12 @@ left join
         group by sku_id
 )ws5
 on ws3.sku_id=ws5.sku_id
+LEFT JOIN
+(SELECT t1.sku_id
+        ,SUM(t1.goods_number) AS pred_goods_num
+FROM zybiro.beryl_sku_predict_temp0111 AS t1
+WHERE t1.data_date >= '2018-03-01'
+GROUP BY t1.sku_id
+) AS ws6
+ON ws3.sku_id = ws6.sku_id
 ;
