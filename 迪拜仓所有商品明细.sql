@@ -12,7 +12,7 @@ where
 ws.data_date=from_timestamp(date_sub(now(),1),'yyyyMMdd')
 and
 ws.depot_id=15
-group by 
+group by
 ws.goods_id;
 
 
@@ -55,7 +55,7 @@ from
 	,e.is_on_sale
 	from
 	(
-		SELECT 
+		SELECT
 			ws1.cate_level1_name
 			,ws1.cate_level2_name
 			,ws1.cate_level3_name
@@ -74,15 +74,15 @@ from
 			,ws.sku_id
 			,sum(ws.total_stock_num-ws.total_allocate_lock_num-ws.total_order_lock_num-ws.total_return_lock_num) free_num_all
 			,sum(case when ws.depot_id=15 then ws.total_stock_num-ws.total_allocate_lock_num-ws.total_order_lock_num-ws.total_return_lock_num else 0 end) free_num
-		FROM 
+		FROM
 		zydb.ods_who_wms_goods_stock_total_detail ws
-		left join 
+		left join
 		zydb.dim_goods ws1
 		on ws.goods_id=ws1.goods_id
-		left join 
+		left join
 		zybiro.blue_basic_season_info ws2
 		on ws1.goods_season=ws2.goods_season
-		left join 
+		left join
 		jolly.who_goods ws3
 		on ws1.goods_id=ws3.goods_id
 		where data_date=from_timestamp(date_sub(now(),1),'yyyyMMdd')
@@ -95,9 +95,9 @@ from
 		,ws1.goods_id
 		,ws1.goods_name
 		,ws2.season
-		,case when ws1.is_auto_offsale=1 then 'Yes' else 'No' end 
-		,case when ws3.is_delete =1 then 'Yes' ELSE 'No' end 
-		,case when ws3.list_not_show=1 then 'Yes' else 'No' end 
+		,case when ws1.is_auto_offsale=1 then 'Yes' else 'No' end
+		,case when ws3.is_delete =1 then 'Yes' ELSE 'No' end
+		,case when ws3.list_not_show=1 then 'Yes' else 'No' end
 		,ws1.last_sold_out_reason
 		,ws1.is_forever_offsale
 		,ws1.first_on_sale_time
@@ -108,43 +108,43 @@ from
 	left join
 	(
 		/*阿联酋迪拜仓库商品明细*/
-		select 
+		select
 		goods_id
 		,sku_id
 		,sum(case when depot_coverage_area_id=1 then status end)   status
 		,sum(case when depot_coverage_area_id=1 then is_stock end) is_stock
 		from  jolly.who_sku_depot_coverage_area_status
-		group by  
+		group by
 		goods_id
 		,sku_id
 	) b
 	on a.sku_id=b.sku_id
-	left join 
+	left join
 	(
-		SELECT 
+		SELECT
 		goods_id
 		,sku_id
-		,sum(free_stock_in_depot)free_num_china 
-		FROM zydb.dpd_blue_sku_detail_num 
-		where data_date=from_timestamp(date_sub(now(),1),'yyyyMMdd') 
+		,sum(free_stock_in_depot)free_num_china
+		FROM zydb.dpd_blue_sku_detail_num
+		where data_date=from_timestamp(date_sub(now(),1),'yyyyMMdd')
 		and depot_id in (4,5,6)
 		group by
 		goods_id
 		,sku_id
 	)c
 	on a.sku_id=c.sku_id
-	left join 
+	left join
 	jolly.who_sku_relation d
 	on a.sku_id=d.rec_id
-	left join 
+	left join
    (
-	select 
+	select
 	goods_id
-	,ws.in_price     
+	,ws.in_price
 	,ws.shop_price_1    shop_price
 	,ws.prst_price_1    promote_price
 	,ws.is_jc_on_sale   is_on_sale
-	from zydb.dim_goods_extend ws 
+	from zydb.dim_goods_extend ws
 	where data_date=from_timestamp(date_sub(now(),1),'yyyyMMdd')
    )e
    on a.goods_id=e.goods_id
@@ -201,12 +201,12 @@ from
 	zydb.rpt_sum_goods_daily ws
 	where
 	ws.data_date=from_timestamp(date_sub(now(),1),'yyyyMMdd')
-	and 
+	and
 	ws.site_id in (400,600,700,800,900)
 	group by
 	ws.goods_id
 )b
-left join 
+left join
 (
 	select
 	b.goods_id
@@ -226,13 +226,13 @@ left join
 	b.goods_id
 )c
 on b.goods_id=c.goods_id
-left join 
+left join
 (
-	SELECT 
+	SELECT
 	goods_id
 	,sku_adq_flag
-	,zx_level 
-	FROM zybiro.t_yf_stock_monitor_v1_12 
+	,zx_level
+	FROM zybiro.t_yf_stock_monitor_v1_12
 	where ds=from_timestamp(date_sub(now(),1),'yyyyMMdd')
 	group by
 	goods_id
@@ -286,7 +286,7 @@ data_date                 string
 
 
 insert overwrite table zybiro.blue_uae_goods_detail_partition partition(ds=from_timestamp(date_sub(now(),1),'yyyyMMdd'))
-select 
+select
 from_timestamp(date_sub(now(),1),'yyyy-MM-dd') data_date
 ,ws.goods_id
 ,ws.free_num
@@ -326,12 +326,12 @@ from_timestamp(date_sub(now(),1),'yyyy-MM-dd') data_date
 ,ws.goods_name
 from
 zybiro.blue_uae_goods_detail_part1 ws
-left join 
+left join
 zybiro.blue_uae_goods_detail_part2 ws1
 on ws.goods_id=ws1.goods_id
 where
 ws.goods_id
-in 
+in
 (
 select
 distinct
@@ -365,7 +365,7 @@ select from_timestamp(date_sub(now(),1),'yyyyMMdd') data_date
 ,sum(case when from_unixtime(change_time,'yyyyMMdd')=from_timestamp(date_sub(now(),1),'yyyyMMdd') and change_type=3 then change_num else 0 end) returns_num
 ,sum(case when from_unixtime(change_time,'yyyyMMdd')=from_timestamp(date_sub(now(),1),'yyyyMMdd') and change_type=5 then change_num else 0 end) out_num
 ,sum(case when change_type in(1,2,3,4,9)                                                                            then change_num else 0 end) acc_in_stock
-from jolly_wms.who_wms_goods_stock_detail_log 
+from jolly_wms.who_wms_goods_stock_detail_log
 where  depot_id=15
 group by from_timestamp(date_sub(now(),1),'yyyyMMdd');
 
@@ -383,8 +383,8 @@ select
 	and from_timestamp(case when a.pay_id=41 then a.pay_time else a.result_pay_time end,'yyyyMMdd')=from_timestamp(date_sub(now(),1),'yyyyMMdd')
 	group by
 	from_timestamp(case when a.pay_id=41 then a.pay_time else a.result_pay_time end,'yyyyMMdd');
-	
-	
+
+
 insert overwrite table zybiro.blue_uae_goods_detail_order
 select
 	from_timestamp(case when a.pay_id=41 then a.pay_time else a.result_pay_time end,'yyyyMMdd') data_date
@@ -403,7 +403,7 @@ select
 
 create table zybiro.blue_uae_goods_overall_partition
 (
-data_date          string  
+data_date          string
 ,depot              string
 ,sadepot_sales_num  bigint
 ,num_to_all         string
@@ -468,23 +468,23 @@ from
 
 	from
 	zybiro.blue_uae_goods_detail_partition ws
-	cross join 
+	cross join
 	(select cast(config_value as float)config_value from jolly.who_system_config where rec_id=1) ws1
 	where
 	ws.ds=from_timestamp(date_sub(now(),1),'yyyyMMdd')
 	group by
 	ws.data_date
 )ws
-left join 
+left join
 zybiro.blue_uae_goods_detail_part4 ws1
 on from_timestamp(ws.data_date,'yyyyMMdd')=ws1.data_date
-left join 
+left join
 zybiro.blue_uae_goods_detail_part5 ws2
 on from_timestamp(ws.data_date,'yyyyMMdd')=ws2.data_date
-left join 
+left join
 zybiro.blue_uae_goods_detail_uv ws3
 on from_timestamp(ws.data_date,'yyyyMMdd')=ws3.data_date
-left join 
+left join
 zybiro.blue_uae_goods_detail_order ws4
 on from_timestamp(ws.data_date,'yyyyMMdd')=ws4.data_date
 

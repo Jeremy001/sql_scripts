@@ -4605,7 +4605,7 @@ t01 AS
 FROM default.who_order_info AS p1
 LEFT JOIN default.who_order_user_info AS p2
        ON p1.order_id = p2.source_order_id
-WHERE p1.depot_id IN (10)
+WHERE p1.depot_id IN (8, 10, 13)
 GROUP BY p1.order_id
         ,p1.order_sn
         ,p1.is_shiped
