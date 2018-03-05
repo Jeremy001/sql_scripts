@@ -1,6 +1,6 @@
 /*
 内容：打包数据挖掘项目
-时间：20171129
+时间：20180305
 作者：Neo王政鸣
 */
 
@@ -684,4 +684,49 @@ GROUP BY p1.recom_material_id1
                ELSE 'Others'
           END)
 ORDER BY p1.recom_material_id1
+;
+
+
+-- 打包员抛重订单比例排名 ========================================================
+WITH
+-- 各打包员订单明细
+t1 AS
+(SELECT b.customer_order_id AS order_id
+        ,(CASE WHEN p1.depod_id = 4 THEN 4 ELSE 5 END) AS depot_id
+        ,CONCAT_WS('-', CAST(p3.order_pack_admin_id AS STRING), p4.user_name) AS pack_user
+        ,FROM_UNIXTIME(b.shipped_time, 'yyyy-MM') AS ship_month
+        ,a.total_volume
+        ,
+        ,a.total_volume_weight
+        ,a.total_actual_weight
+        ,(CASE WHEN (CEIL(a.total_volume_weight * 2) / 2) > (CEIL(a.total_actual_weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
+FROM jolly_tms_center.tms_order_package AS a
+INNER JOIN jolly_tms_center.tms_order_info AS b
+        ON a.tms_order_id=b.tms_order_id
+INNER JOIN zydb.dw_order_sub_order_fact p1
+        ON b.customer_order_id = p1.order_id
+INNER JOIN jolly.who_shipping p2
+        ON p1.real_shipping_id = p2.shipping_id
+INNER JOIN jolly.who_order_info AS p3
+        ON b.customer_order_id = p3.order_id
+INNER JOIN jolly.who_rbac_user AS p4
+        ON p3.order_pack_admin_id = p4.user_id
+WHERE b.shipped_time >= unix_timestamp('2017-10-01')
+  AND b.shipped_time < unix_timestamp('2018-03-01')
+  AND p1.order_status = 1
+  AND p1.is_shiped = 1
+  AND p1.depod_id IN (4, 5, 14)
+  AND a.total_volume_weight >= 0.00001
+)
+-- 汇总各打包员抛重订单比例
+SELECT t1.depot_id
+        ,t1.pack_user
+        ,COUNT(t1.order_id) AS order_num
+        ,SUM(t1.is_paozhong) AS paozhong_order_num
+        ,SUM(t1.is_paozhong) / COUNT(t1.order_id) AS paozhong_order_rate
+FROM t1
+GROUP BY t1.depot_id
+        ,t1.pack_user
+ORDER BY t1.depot_id
+        ,paozhong_order_rate
 ;

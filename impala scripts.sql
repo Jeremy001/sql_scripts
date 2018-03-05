@@ -4581,7 +4581,7 @@ ORDER BY t01.pay_month
 ;
 
 
--- 土耳其仓订单 =================================================================
+-- 美国土耳其日本三仓订单明细 =================================================================
 
 WITH
 -- who_order_info 和 who_order_user_info， 取子单的信息
@@ -4742,6 +4742,8 @@ FROM jolly.who_wms_wholesale_order_goods AS p1
 WHERE p1.wholesale_order_id IN (384, 386)
 GROUP BY p1.wholesale_order_id
 ;
+
+
 
 
 --
@@ -5322,7 +5324,6 @@ ORDER BY stock_date
 
 
 
-
 -- HK仓整单命中订单比例
 WITH
 -- 下单数
@@ -5532,6 +5533,25 @@ ORDER BY ship_date DESC
 × 海外仓操作时长：备货目的仓的质检上架时长，个人认为不需要，这个时长比较短，可忽略。
 */
 
+WITH
+-- 1.订单反应时长、商家备货时长、国内运输时长
+t1 AS
+(SELECT SUBSTR(p1.order_pay_date, 1, 7) AS data_month
+        ,SUM((UNIX_TIMESTAMP(p1.demand_push_time) - UNIX_TIMESTAMP(p1.order_pay_time))/3600) / SUM(p1.goods_number) AS lt0_order_response_time
+        ,SUM((UNIX_TIMESTAMP(p1.pur_send_time) - UNIX_TIMESTAMP(p1.demand_push_time))/3600) / SUM(p1.send_num) AS supp_prepare_time
+        ,SUM((UNIX_TIMESTAMP(p1.receipt_time) - UNIX_TIMESTAMP(p1.pur_send_time))/3600) / SUM(p1.send_num) AS country_ship_time
+FROM zybiro.neo_pur_lock_detail AS p1
+WHERE p1.depot_id IN (4, 5, 14)
+  AND p1.order_pay_date < '2018-01-09'
+GROUP BY SUBSTR(p1.order_pay_date, 1, 7)
+)
+SELECT *
+FROM t1
+ORDER BY data_month
+;
+
+
+-- 智能补货平台：补货提前期参数设置 ===============================================
 
 -- 仓储：每月出入库平均时长
 -- 20171024-20171104这一段时间，打包时长异常，出库时长重新取值
