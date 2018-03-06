@@ -688,35 +688,86 @@ ORDER BY p1.recom_material_id1
 
 
 -- 打包员抛重订单比例排名 ========================================================
+-- 问题：打包员裁箱后不录入裁箱后的高度，因此无法计算准确的裁箱比例和抛重比例的计算
+-- 换一个计算思路：对比package_weight和express_paper_weight，只要后者更高就认为抛重了
 WITH
--- 各打包员订单明细
+-- 明细数据
 t1 AS
-(SELECT b.customer_order_id AS order_id
-        ,(CASE WHEN p1.depod_id = 4 THEN 4 ELSE 5 END) AS depot_id
-        ,CONCAT_WS('-', CAST(p3.order_pack_admin_id AS STRING), p4.user_name) AS pack_user
-        ,FROM_UNIXTIME(b.shipped_time, 'yyyy-MM') AS ship_month
-        ,a.total_volume
-        ,
-        ,a.total_volume_weight
-        ,a.total_actual_weight
-        ,(CASE WHEN (CEIL(a.total_volume_weight * 2) / 2) > (CEIL(a.total_actual_weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
-FROM jolly_tms_center.tms_order_package AS a
-INNER JOIN jolly_tms_center.tms_order_info AS b
-        ON a.tms_order_id=b.tms_order_id
-INNER JOIN zydb.dw_order_sub_order_fact p1
-        ON b.customer_order_id = p1.order_id
-INNER JOIN jolly.who_shipping p2
-        ON p1.real_shipping_id = p2.shipping_id
-INNER JOIN jolly.who_order_info AS p3
-        ON b.customer_order_id = p3.order_id
-INNER JOIN jolly.who_rbac_user AS p4
-        ON p3.order_pack_admin_id = p4.user_id
-WHERE b.shipped_time >= unix_timestamp('2017-10-01')
-  AND b.shipped_time < unix_timestamp('2018-03-01')
+(SELECT p1.order_id    -- 订单id
+        ,(CASE WHEN p1.depot_id = 4 THEN 4 ELSE 5 END) AS depot_id
+        ,CONCAT_WS('-', CAST(p1.order_pack_admin_id AS STRING), p2.user_name) AS pack_user
+        ,p3.material_id    -- 打包耗材ID
+        ,p3.material_name    -- 打包耗材名称
+        ,p4.standard AS std_size    -- 打包耗材标准尺寸规格
+        ,CAST(SUBSTR(p4.standard, 7, 2) AS int) AS std_height    -- 打包耗材标准高度
+        ,p4.volume AS std_volume    -- 打包耗材标准体积
+        ,p3.material_standard AS last_size   -- 打包耗材最终尺寸规格
+        ,CAST(SUBSTR(p3.material_standard, 7, 2) AS int) AS last_height    -- 打包耗材最终高度(若最终高度小于标准高度，则发生了裁箱)
+        ,CAST(SUBSTR(p3.material_standard, 1, 2) AS int) * CAST(SUBSTR(p3.material_standard, 4, 2) AS int) * CAST(SUBSTR(p3.material_standard, 7, 2) AS int) AS last_volume   -- 打包耗材最终体积
+        ,p5.total_packages    -- 包裹数量
+        ,p5.package_weight    -- 包裹重量
+FROM jolly.who_order_info AS p1
+LEFT JOIN jolly.who_rbac_user AS p2
+       ON p1.order_pack_admin_id = p2.user_id
+LEFT JOIN jolly.who_wms_order_package AS p3
+       ON p1.order_id = p3.order_id
+LEFT JOIN jolly.who_wms_material AS p4
+       ON p3.material_id = p4.rec_id
+LEFT JOIN jolly.who_wms_order_shipping_info p5
+       ON p1.order_id = p5.order_id
+WHERE p1.is_shiped = 1
   AND p1.order_status = 1
-  AND p1.is_shiped = 1
-  AND p1.depod_id IN (4, 5, 14)
-  AND a.total_volume_weight >= 0.00001
+  AND p1.depot_id IN (4, 5, 14)
+  AND p1.shipping_time >= UNIX_TIMESTAMP('2017-01-01')
+),
+-- 计算体积重，是否抛重，是否裁箱等
+t2 AS
+(SELECT t1.*
+        ,(t1.last_volume/5000) AS volume_weight
+        ,(CASE WHEN (CEIL((t1.last_volume/5000) * 2) / 2) > (CEIL(t1.package_weight * 2) / 2) THEN 1 ELSE 0 END) AS is_paozhong
+        ,(CASE WHEN t1.last_height < t1.std_height THEN 1 ELSE 0 END) AS is_caixiang
+FROM t1
+WHERE t1.std_volume >= 0.0001
+  AND t1.total_packages = 1
+  AND LENGTH(t1.last_size) = 8
+)
+-- 汇总各打包员抛重订单比例
+SELECT t2.depot_id
+        ,t2.pack_user
+        ,COUNT(t2.order_id) AS order_num
+        ,SUM(t2.is_paozhong) AS paozhong_order_num
+        ,SUM(t2.is_paozhong) / COUNT(t2.order_id) AS paozhong_order_rate
+        ,SUM(t2.is_caixiang) AS caixiang_order_num
+        ,SUM(t2.is_caixiang) / COUNT(t2.order_id) AS caixiang_order_rate
+FROM t2
+GROUP BY t2.depot_id
+        ,t2.pack_user
+ORDER BY t2.depot_id
+        ,order_num DESC
+;
+
+
+
+-- 思路二：对比package_weight和express_paper_weight，只要后者更高就认为抛重了
+WITH
+-- 明细数据
+t1 AS
+(SELECT p1.order_id    -- 订单id
+        ,(CASE WHEN p1.depot_id = 4 THEN 4 ELSE 5 END) AS depot_id
+        ,CONCAT_WS('-', CAST(p1.order_pack_admin_id AS STRING), p2.user_name) AS pack_user
+        ,p5.total_packages    -- 包裹数量
+        ,p5.package_weight    -- 包裹重量
+        ,p5.express_paper_weight
+        ,(CASE WHEN p5.express_paper_weight > p5.package_weight THEN 1 ELSE 0 END) AS is_paozhong
+FROM jolly.who_order_info AS p1
+LEFT JOIN jolly.who_rbac_user AS p2
+       ON p1.order_pack_admin_id = p2.user_id
+LEFT JOIN jolly.who_wms_order_shipping_info p5
+       ON p1.order_id = p5.order_id
+WHERE p1.is_shiped = 1
+  AND p1.order_status = 1
+  AND p1.depot_id IN (4, 5, 14)
+  AND p1.shipping_time >= UNIX_TIMESTAMP('2017-01-01')
 )
 -- 汇总各打包员抛重订单比例
 SELECT t1.depot_id
@@ -728,5 +779,5 @@ FROM t1
 GROUP BY t1.depot_id
         ,t1.pack_user
 ORDER BY t1.depot_id
-        ,paozhong_order_rate
+        ,order_num DESC
 ;
