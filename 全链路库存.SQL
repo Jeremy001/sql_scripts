@@ -562,7 +562,7 @@ FROM t000;*/
 -- 发货在途待签收订单
 t301 AS
 (SELECT p1.order_id
-        ,p2.depot_id
+        ,p2.depod_id AS depot_id
         ,p5.region_name AS country_name
         ,(CASE WHEN p2.real_shipping_id IN (40, 200) THEN 'Aramex'
                WHEN p2.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
@@ -573,16 +573,17 @@ t301 AS
         ,DATEDIFF(NOW(), FROM_UNIXTIME(p2.shipping_time, 'yyyy-MM-dd')) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
-FROM jolly.who_order_shipping_tracking p1
-RIGHT JOIN jolly.who_order_info p2
-             ON p1.order_id = p2.order_id AND P2.depot_id IN (4, 5, 6, 7) AND p2.order_status = 1
+FROM zydb.dw_order_sub_order_fact AS p2
+LEFT JOIN jolly.who_order_shipping_tracking AS p1
+       ON p1.order_id = p2.order_id
 LEFT JOIN t401
-             ON t401.order_id = p1.order_id
+       ON t401.order_id = p1.order_id
 LEFT JOIN jolly.who_order_user_info p4
-             ON p1.order_id = p4.order_id
+       ON p1.order_id = p4.order_id
 LEFT JOIN jolly.who_region p5
-             ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
+       ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
 WHERE p1.shipping_state NOT IN (3, 6, 8, 13)    -- 不是已签收、已退回、已拒收和已丢失中的任何一项，就是还在途的
+  AND P2.depod_id IN (4, 5, 6, 7) AND p2.order_status = 1
 GROUP BY p1.order_id
         ,p2.depot_id
         ,p5.region_name

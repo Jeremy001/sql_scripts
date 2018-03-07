@@ -832,10 +832,9 @@ full join
 --	and gmt_created<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd')
 --	group by depot_id
      select p1.depot_id,
-     count(distinct P1.returned_Order_Id) pick_exp_orders_num --拣货异常订单
+     count(distinct P1.returned_order_id) pick_exp_orders_num --拣货异常订单
      From jolly.who_wms_returned_order_info  P1
-	 left join
-	 zydb.dw_order_sub_order_fact b
+	 left join zydb.dw_order_sub_order_fact b
 	 on P1.returned_order_id=b.order_id
 	 where b.is_problems_order =2
      and p1.returned_time>=unix_timestamp(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),'yyyy-MM-dd')

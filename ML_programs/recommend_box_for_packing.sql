@@ -755,6 +755,7 @@ t1 AS
 (SELECT p1.order_id    -- 订单id
         ,(CASE WHEN p1.depot_id = 4 THEN 4 ELSE 5 END) AS depot_id
         ,CONCAT_WS('-', CAST(p1.order_pack_admin_id AS STRING), p2.user_name) AS pack_user
+        ,p2.is_deleted
         ,p5.total_packages    -- 包裹数量
         ,p5.package_weight    -- 包裹重量
         ,p5.express_paper_weight
@@ -772,12 +773,35 @@ WHERE p1.is_shiped = 1
 -- 汇总各打包员抛重订单比例
 SELECT t1.depot_id
         ,t1.pack_user
+        ,t1.is_deleted
         ,COUNT(t1.order_id) AS order_num
         ,SUM(t1.is_paozhong) AS paozhong_order_num
         ,SUM(t1.is_paozhong) / COUNT(t1.order_id) AS paozhong_order_rate
 FROM t1
 GROUP BY t1.depot_id
         ,t1.pack_user
+        ,t1.is_deleted
 ORDER BY t1.depot_id
         ,order_num DESC
 ;
+
+
+-- 核查商品重量
+WITH
+t1 AS
+(SELECT p1.goods_id
+        ,p1.goods_weight AS goods_weight_1
+        ,p2.goods_weight AS goods_weight_2
+        ,(CASE WHEN p1.goods_weight = 0 OR p1.goods_weight IS NULL THEN p2.goods_weight ELSE p1.goods_weight END) AS weight_system
+FROM jolly.who_goods AS p1
+LEFT JOIN jolly.who_product_pool AS p2
+       ON p1.goods_id = p2.goods_id
+)
+SELECT t2.goods_id
+        ,t2.goods_weight AS weight_crane
+        ,t1.weight_system
+        ,ABS()
+FROM zybiro.neo_goods_weight_2 AS t2
+LEFT JOIN t1
+       ON t1.goods_id = t2.goods_id
+LIMIT 100;

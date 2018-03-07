@@ -3191,9 +3191,9 @@ WITH
 -- 2017年类目销售结构
 t1 AS
 (SELECT p3.cate_level1_name
-        ,p3.cate_level2_name
-        ,p3.cate_level3_name
-        ,p3.cate_level4_name
+        --,p3.cate_level2_name
+        --,p3.cate_level3_name
+        --,p3.cate_level4_name
         ,SUM(p2.goods_number) AS sales_goods_num
 FROM zydb.dw_order_node_time p1
 INNER JOIN jolly.who_order_goods p2
@@ -3202,14 +3202,21 @@ LEFT JOIN zydb.dim_goods p3
        ON p2.goods_id = p3.goods_id
 WHERE p1.order_status = 1
   --AND p1.is_shiped = 1
-  AND p1.depot_id IN (5, 14)
+  --AND p1.depot_id IN (5, 14)
   AND p1.pay_time >= '2017-01-01'
   AND p1.pay_time <  '2018-01-01'
+  AND p1.pay_status IN (1, 3)
 GROUP BY p3.cate_level1_name
-        ,p3.cate_level2_name
-        ,p3.cate_level3_name
-        ,p3.cate_level4_name
-),
+        --,p3.cate_level2_name
+        --,p3.cate_level3_name
+        --,p3.cate_level4_name
+)
+SELECT *
+FROM t1
+ORDER BY sales_goods_num DESC
+;
+
+,
 -- 当前库存结构
 t2 AS
 (SELECT p2.cate_level1_name
@@ -5588,9 +5595,23 @@ ORDER BY t1.data_month
 ;
 
 
-
-
-
+-- 到货签收的状态和时间不一致
+SELECT a.depot_id
+        ,a.pur_order_id
+        ,a.pur_order_sn
+        ,FROM_UNIXTIME(a.gmt_created) AS create_time
+        ,FROM_UNIXTIME(a.send_time) AS send_time
+        ,a.check_status
+        ,c.end_receipt_time
+FROM jolly_spm.jolly_spm_pur_order_info AS a
+FULL JOIN zydb.dw_delivered_order_info c
+       ON a.pur_order_sn = c.delivered_order_sn
+WHERE c.end_receipt_time IS NULL
+  AND a.depot_id = 4
+  AND a.send_time >= UNIX_TIMESTAMP('2018-01-01')
+  AND a.send_time <  UNIX_TIMESTAMP('2018-03-04')
+LIMIT 100
+;
 
 
 
