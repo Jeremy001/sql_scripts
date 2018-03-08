@@ -805,3 +805,15 @@ FROM zybiro.neo_goods_weight_2 AS t2
 LEFT JOIN t1
        ON t1.goods_id = t2.goods_id
 LIMIT 100;
+
+-- 包裹数量的订单数分布
+SELECT p6.total_packages
+        ,count(p6.order_id)
+FROM jolly.who_wms_order_shipping_info p6
+INNER JOIN zydb.dw_order_sub_order_fact p1
+        ON p6.order_id = p1.order_id
+WHERE p6.total_packages >= 1
+  AND p1.shipping_time >= '2017-12-01'
+GROUP BY p6.total_packages
+ORDER BY p6.total_packages
+;
