@@ -127,10 +127,9 @@ LEFT JOIN t204 ON t203.depot_id = t204.depot_id
 t401 AS
 (SELECT order_id
         ,FROM_UNIXTIME(destination_time, 'yyyy-MM-dd') AS destination_date
-        ,DATEDIFF(NOW(), FROM_UNIXTIME(destination_time)) AS destination_days
+        ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(destination_time)) AS destination_days
 FROM jolly.who_prs_cod_order_shipping_time
 ),
-
 -- 4.1 拒收和投递失败的退货在途
 -- 有已入库的退货商品的订单列表
 t4101 AS
@@ -148,13 +147,11 @@ GROUP BY p1.returned_order_id
 t4102 AS
 (SELECT p1.order_id
         ,p1.order_sn
-        ,p1.order_status
         ,p1.invoice_no
-        ,p1.depot_id AS ship_depot_id
         ,(CASE WHEN p1.cod_check_status = 4 THEN '4投递失败' ELSE '6已拒收' END) AS cod_status
-        ,FROM_UNIXTIME(CASE WHEN p1.prepare_pay_time = 0 THEN p1.pay_time ELSE p1.prepare_pay_time END, 'yyyy-MM-dd') AS pay_date
-        ,FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd') AS shipping_date
-        ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd')) AS shiped_days
+        ,SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10) AS pay_date
+        ,TO_DATE(p1.shipping_time) AS shipping_date
+        ,DATEDIFF(CURRENT_TIMESTAMP(), p1.shipping_time) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
         ,(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 'Aramex'
@@ -164,39 +161,39 @@ t4102 AS
                ELSE 'Others'
           END) AS shipping_name
         ,p4.region_name AS country_name
-        ,p5.shipping_state
-        ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END) AS return_depot_id
-        --,'拒收或投递失败' AS return_type
+        ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END) AS depot_id
+        ,'拒收或投递失败' AS return_type
         ,SUM(NVL(p2.goods_send_num, 0)) AS return_onway_num
         ,SUM(NVL(p2.goods_send_num, 0) * NVL(p2.in_price, 0)) AS return_onway_cost
         ,SUM(NVL(p2.goods_send_num, 0) * NVL(p2.goods_price, 0) * 6.6775) AS return_onway_amount
-FROM jolly.who_order_info p1
-LEFT JOIN jolly.who_order_goods p2
-            ON p1.order_id = p2.order_id
-LEFT JOIN jolly.who_order_user_info p3
-            ON p1.order_id = p3.order_id
+FROM zydb.dw_order_sub_order_fact AS p1
+LEFT JOIN jolly.who_order_goods AS p2
+       ON p1.order_id = p2.order_id
+LEFT JOIN (SELECT * FROM jolly.who_order_user_info
+           UNION All
+           SELECT * FROM jolly.who_order_user_info_history) AS p3
+       ON p1.order_id = p3.order_id
 LEFT JOIN (SELECT region_id, region_name
            FROM jolly.who_region
            WHERE region_type = 0
-             AND region_status = 1) p4
+             AND region_status = 1) AS p4
        ON p3.country = p4.region_id
-LEFT JOIN jolly.who_order_shipping_tracking p5
+LEFT JOIN jolly.who_order_shipping_tracking AS p5
        ON p1.order_id = p5.order_id
-LEFT JOIN t401 ON p1.order_id = t401.order_id
-WHERE p1.shipping_time < UNIX_TIMESTAMP(TO_DATE(CURRENT_TIMESTAMP()), 'yyyy-MM-dd')
+LEFT JOIN t401
+       ON p1.order_id = t401.order_id
+WHERE p1.shipping_time < TO_DATE(CURRENT_TIMESTAMP())
   AND p1.pay_id = 41
   AND p1.is_shiped = 1
-  AND p1.cod_check_status IN (4, 6)
+  AND p1.cod_check_status in (4, 6)
   AND p5.shipping_state IN (3, 6, 8, 13)    -- 与在途待签收区分，避免重复计算
 GROUP BY p1.order_id
         ,p1.order_sn
-        ,p1.order_status
         ,p1.invoice_no
-        ,p1.depot_id
         ,(CASE WHEN p1.cod_check_status = 4 THEN '4投递失败' ELSE '6已拒收' END)
-        ,FROM_UNIXTIME(CASE WHEN p1.prepare_pay_time = 0 THEN p1.pay_time ELSE p1.prepare_pay_time END, 'yyyy-MM-dd')
-        ,FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd')
-        ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd'))
+        ,SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10)
+        ,TO_DATE(p1.shipping_time)
+        ,DATEDIFF(CURRENT_TIMESTAMP(), p1.shipping_time)
         ,t401.destination_date
         ,t401.destination_days
         ,(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 'Aramex'
@@ -206,16 +203,17 @@ GROUP BY p1.order_id
                ELSE 'Others'
           END)
         ,p4.region_name
-        ,p5.shipping_state
         ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END)
+        ,'拒收或投递失败'
 ),
 t400 AS
 (SELECT depot_id
-        ,SUM(return_onway_num) AS return_onway_num
-        ,SUM(return_onway_cost) AS return_onway_cost
-        ,SUM(return_onway_amount) AS return_onway_amount
+        ,SUM(NVL(return_onway_num, 0)) AS return_onway_num
+        ,SUM(NVL(return_onway_cost, 0)) AS return_onway_cost
+        ,SUM(NVL(return_onway_amount, 0)) AS return_onway_amount
 FROM t4102
-WHERE order_id NOT IN (SELECT * FROM t4101)
+LEFT JOIN t4101 ON t4102.order_id = t4101.returned_order_id
+WHERE t4101.returned_order_id IS NULL
 GROUP BY depot_id
 ),
 

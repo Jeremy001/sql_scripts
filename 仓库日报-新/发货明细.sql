@@ -7,7 +7,7 @@
  */
 
 -- impala 带日期参数 =====================================
-WITH t1 AS 
+WITH t1 AS
 (SELECT depot_id
         ,order_sn
         ,is_shiped

@@ -93,11 +93,11 @@ t4101 AS
 (SELECT p1.returned_order_id
 FROM jolly.who_wms_returned_order_goods p1
 INNER JOIN jolly.who_wms_returned_order_info p2
-                 ON p1.returned_rec_id = p2.returned_rec_id
+        ON p1.returned_rec_id = p2.returned_rec_id
 WHERE p1.returned_stock_num > 0
-     AND p1.stock_end_time > 0
-     AND p1.stock_end_time < UNIX_TIMESTAMP(TO_DATE(CURRENT_TIMESTAMP()), 'yyyy-MM-dd')
-     AND p2.returned_order_status = 1
+  AND p1.stock_end_time > 0
+  AND p1.stock_end_time < UNIX_TIMESTAMP(TO_DATE(CURRENT_TIMESTAMP()), 'yyyy-MM-dd')
+  AND p2.returned_order_status = 1
 GROUP BY p1.returned_order_id
 ),
 -- 拒收和投递失败的订单
@@ -106,9 +106,9 @@ t4102 AS
         ,p1.order_sn
         ,p1.invoice_no
         ,(CASE WHEN p1.cod_check_status = 4 THEN '4投递失败' ELSE '6已拒收' END) AS cod_status
-        ,FROM_UNIXTIME(CASE WHEN p1.prepare_pay_time = 0 THEN p1.pay_time ELSE p1.prepare_pay_time END, 'yyyy-MM-dd') AS pay_date
-        ,FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd') AS shipping_date
-        ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd')) AS shiped_days
+        ,SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10) AS pay_date
+        ,TO_DATE(p1.shipping_time) AS shipping_date
+        ,DATEDIFF(CURRENT_TIMESTAMP(), p1.shipping_time) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
         ,(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 'Aramex'
@@ -120,34 +120,37 @@ t4102 AS
         ,p4.region_name AS country_name
         ,(CASE WHEN p4.region_name = 'Saudi Arabia' THEN 7 ELSE 6 END) AS depot_id
         ,'拒收或投递失败' AS return_type
-        ,SUM(NVL(p2.goods_send_num, 0)) AS return_onway_num
-        ,SUM(NVL(p2.goods_send_num, 0) * NVL(p2.in_price, 0)) AS return_onway_cost
-        ,SUM(NVL(p2.goods_send_num, 0) * NVL(p2.goods_price, 0) * 6.6775) AS return_onway_amount
-FROM jolly.who_order_info p1
-LEFT JOIN jolly.who_order_goods p2
-            ON p1.order_id = p2.order_id
-LEFT JOIN jolly.who_order_user_info p3
-            ON p1.order_id = p3.order_id
+        ,SUM(NVL(p2.goods_number, 0)) AS return_onway_num
+        ,SUM(NVL(p2.goods_number, 0) * NVL(p2.in_price, 0)) AS return_onway_cost
+        ,SUM(NVL(p2.goods_number, 0) * NVL(p2.goods_price, 0) * 6.6775) AS return_onway_amount
+FROM zydb.dw_order_sub_order_fact AS p1
+LEFT JOIN zydb.dw_order_goods_fact AS p2
+       ON p1.order_id = p2.order_id
+LEFT JOIN (SELECT * FROM jolly.who_order_user_info
+           UNION All
+           SELECT * FROM jolly.who_order_user_info_history) AS p3
+       ON p1.order_id = p3.order_id
 LEFT JOIN (SELECT region_id, region_name
-                    FROM jolly.who_region
-                    WHERE region_type = 0
-                    AND region_status = 1) p4
-            ON p3.country = p4.region_id
-LEFT JOIN jolly.who_order_shipping_tracking p5
-             ON p1.order_id = p5.order_id
-LEFT JOIN t401 ON p1.order_id = t401.order_id
-WHERE p1.shipping_time < UNIX_TIMESTAMP(TO_DATE(CURRENT_TIMESTAMP()), 'yyyy-MM-dd')
-    AND p1.pay_id = 41
-    AND p1.is_shiped = 1
-    AND p1.cod_check_status in (4, 6)
-    AND p5.shipping_state IN (3, 6, 8, 13)    -- 与在途待签收区分，避免重复计算
+           FROM jolly.who_region
+           WHERE region_type = 0
+             AND region_status = 1) AS p4
+       ON p3.country = p4.region_id
+LEFT JOIN jolly.who_order_shipping_tracking AS p5
+       ON p1.order_id = p5.order_id
+LEFT JOIN t401
+       ON p1.order_id = t401.order_id
+WHERE p1.shipping_time < TO_DATE(CURRENT_TIMESTAMP())
+  AND p1.pay_id = 41
+  AND p1.is_shiped = 1
+  AND p1.cod_check_status in (4, 6)
+  AND p5.shipping_state IN (3, 6, 8, 13)    -- 与在途待签收区分，避免重复计算
 GROUP BY p1.order_id
         ,p1.order_sn
         ,p1.invoice_no
         ,(CASE WHEN p1.cod_check_status = 4 THEN '4投递失败' ELSE '6已拒收' END)
-        ,FROM_UNIXTIME(CASE WHEN p1.prepare_pay_time = 0 THEN p1.pay_time ELSE p1.prepare_pay_time END, 'yyyy-MM-dd')
-        ,FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd')
-        ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p1.shipping_time, 'yyyy-MM-dd'))
+        ,SUBSTR(CASE WHEN p1.pay_id = 41 THEN p1.pay_time ELSE p1.result_pay_time END, 1, 10)
+        ,TO_DATE(p1.shipping_time)
+        ,DATEDIFF(CURRENT_TIMESTAMP(), p1.shipping_time)
         ,t401.destination_date
         ,t401.destination_days
         ,(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 'Aramex'
@@ -174,7 +177,7 @@ GROUP BY depot_id
 -- 发货在途待签收订单
 t301 AS
 (SELECT p1.order_id
-        ,p2.depot_id
+        ,p2.depod_id AS depot_id
         ,p5.region_name AS country_name
         ,(CASE WHEN p2.real_shipping_id IN (40, 200) THEN 'Aramex'
                WHEN p2.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
@@ -182,21 +185,23 @@ t301 AS
                WHEN P2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
                ELSE 'Others'
           END) AS shipping_name
-        ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p2.shipping_time, 'yyyy-MM-dd')) AS shiped_days
+        ,DATEDIFF(CURRENT_TIMESTAMP(), p2.shipping_time) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
-FROM jolly.who_order_shipping_tracking p1
-RIGHT JOIN jolly.who_order_info p2
-             ON p1.order_id = p2.order_id
+FROM zydb.dw_order_sub_order_fact AS p2
+LEFT JOIN jolly.who_order_shipping_tracking AS p1
+       ON p1.order_id = p2.order_id
 LEFT JOIN t401
-             ON t401.order_id = p1.order_id
-LEFT JOIN jolly.who_order_user_info p4
-             ON p1.order_id = p4.order_id
+       ON t401.order_id = p1.order_id
+LEFT JOIN (SELECT * FROM jolly.who_order_user_info
+           UNION All
+           SELECT * FROM jolly.who_order_user_info_history) AS p4
+       ON p1.order_id = p4.order_id
 LEFT JOIN jolly.who_region p5
-             ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
+       ON p4.country = p5.region_id AND p5.region_type = 0 AND p5.region_status = 1
 WHERE p1.shipping_state NOT IN (3, 6, 8, 13)    -- 不是已签收、已退回、已拒收和已丢失中的任何一项，就是还在途的
 GROUP BY p1.order_id
-        ,p2.depot_id
+        ,p2.depod_id
         ,p5.region_name
         ,(CASE WHEN p2.real_shipping_id IN (40, 200) THEN 'Aramex'
                WHEN p2.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
@@ -204,7 +209,7 @@ GROUP BY p1.order_id
                WHEN P2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
                ELSE 'Others'
           END)
-        ,DATEDIFF(CURRENT_TIMESTAMP(), FROM_UNIXTIME(p2.shipping_time, 'yyyy-MM-dd'))
+        ,DATEDIFF(CURRENT_TIMESTAMP(), p2.shipping_time)
         ,t401.destination_date
         ,t401.destination_days
 ),
@@ -216,12 +221,12 @@ t302 AS
         ,t301.shiped_days
         ,t301.destination_days
         ,COUNT(DISTINCT t301.order_id) AS order_num
-        ,SUM(NVL(p3.goods_send_num, 0)) AS deliver_onway_num
-        ,SUM(NVL(p3.goods_send_num, 0) * NVL(p3.in_price, 0)) AS deliver_onway_cost     -- 成本金额，人民币
-        ,SUM(NVL(p3.goods_send_num, 0) * NVL(p3.goods_price, 0) * 6.6775) AS deliver_onway_amount    -- 销售金额，* 6.6775，转成人民币
+        ,SUM(NVL(p3.goods_number, 0)) AS deliver_onway_num
+        ,SUM(NVL(p3.goods_number, 0) * NVL(p3.in_price, 0)) AS deliver_onway_cost     -- 成本金额，人民币
+        ,SUM(NVL(p3.goods_number, 0) * NVL(p3.goods_price, 0) * 6.6775) AS deliver_onway_amount    -- 销售金额，* 6.6775，转成人民币
 FROM t301
-LEFT JOIN jolly.who_order_goods p3
-             ON t301.order_id = p3.order_id
+LEFT JOIN zydb.dw_order_goods_fact p3
+       ON t301.order_id = p3.order_id
 WHERE t301.country_name IS NOT NULL
 GROUP BY t301.depot_id
         ,t301.country_name
