@@ -107,35 +107,35 @@ left join
         from
                  (select
                   b.sku_id sku_id ,
-                     sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=14 then
+                     sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=14 then
                      b.goods_number *15 else 0 end)  num_15,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=13 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=13 then
                     b.goods_number *14 else 0 end) num_14,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=12 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=12 then
                     b.goods_number *13 else 0 end) num_13,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=11 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=11 then
                     b.goods_number *12 else 0 end) num_12,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=10 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=10 then
                     b.goods_number *11 else 0 end) num_11,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=9 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=9 then
                     b.goods_number *10 else 0 end) num_10,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=8 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=8 then
                     b.goods_number *9 else 0 end) num_9,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=7 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=7 then
                     b.goods_number *8 else 0 end) num_8,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=6 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=6 then
                     b.goods_number *7 else 0 end ) num_7,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=5 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=5 then
                     b.goods_number *6 else 0 end)  num_6,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=4 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end ))=4 then
                     b.goods_number *5 else 0 end ) num_5,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=3 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=3 then
                     b.goods_number *4 else 0 end)  num_4,
-                   sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=2 then
+                   sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=2 then
                     b.goods_number *3 else 0 end) num_3,
-                     sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=1 then
+                     sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=1 then
                     b.goods_number *2 else 0 end) num_2,
-                       sum(case when datediff( '2018-02-28' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=0 then
+                       sum(case when datediff( '2018-03-08' ,TO_DATE (case when c.pay_id=41 then c.pay_time else c.result_pay_time end) )=0 then
                     b.goods_number *1 else 0 end) num_1
                   from
                  zydb.dw_order_goods_fact b
@@ -165,7 +165,7 @@ left join
         sum(free_stock_num) free_stock_num
         from
         zybiro.beryl_chunjiebeihuorucang_instockfree_num_sku
-        where date_id='2018-02-28'
+        where date_id='2018-03-08'
         group by sku_id
 )ws5
 on ws3.sku_id=ws5.sku_id

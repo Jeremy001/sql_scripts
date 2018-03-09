@@ -784,10 +784,10 @@ full join
 	from
 	(
 		--质检积压
-			select a.depot_id,sum(a.delivered_num - a.checked_num) no_check_num
+			select a.depot_id,sum(a.delivered_num) no_check_num
 			from
 			(
-				select distinct a.depot_id,delivered_num,checked_num,delivered_order_sn
+				select distinct a.depot_id, sku_id, delivered_num,checked_num,delivered_order_sn
 				from zydb.dw_delivered_receipt_onself a
 				where start_receipt_time >= date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
 				and end_receipt_time < from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
