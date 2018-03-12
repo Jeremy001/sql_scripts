@@ -112,10 +112,12 @@ t4102 AS
         ,DATEDIFF(CURRENT_TIMESTAMP(), p1.shipping_time) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
-        ,(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 'Aramex'
-               WHEN p1.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
+        ,(CASE WHEN p1.real_shipping_id IN (40, 200, 263, 264) THEN 'Aramex'
+               WHEN p1.real_shipping_id IN (170, 201, 257, 266) THEN 'fetchr'
                WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA'
                WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
+               WHEN P1.real_shipping_id IN (131) THEN 'EMS'
+               WHEN P1.real_shipping_id IN (175) THEN 'PostaPlus'
                ELSE 'Others'
           END) AS shipping_name
         ,p4.region_name AS country_name
@@ -154,10 +156,12 @@ GROUP BY p1.order_id
         ,DATEDIFF(CURRENT_TIMESTAMP(), p1.shipping_time)
         ,t401.destination_date
         ,t401.destination_days
-        ,(CASE WHEN p1.real_shipping_id IN (40, 200) THEN 'Aramex'
-               WHEN p1.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
+        ,(CASE WHEN p1.real_shipping_id IN (40, 200, 263, 264) THEN 'Aramex'
+               WHEN p1.real_shipping_id IN (170, 201, 257, 266) THEN 'fetchr'
                WHEN P1.real_shipping_id IN (168, 171) THEN 'SMSA'
                WHEN P1.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
+               WHEN P1.real_shipping_id IN (131) THEN 'EMS'
+               WHEN P1.real_shipping_id IN (175) THEN 'PostaPlus'
                ELSE 'Others'
           END)
         ,p4.region_name
@@ -180,10 +184,12 @@ t301 AS
 (SELECT p1.order_id
         ,p2.depod_id AS depot_id
         ,p5.region_name AS country_name
-        ,(CASE WHEN p2.real_shipping_id IN (40, 200) THEN 'Aramex'
-               WHEN p2.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
+        ,(CASE WHEN P2.real_shipping_id IN (40, 200, 263, 264) THEN 'Aramex'
+               WHEN P2.real_shipping_id IN (170, 201, 257, 266) THEN 'fetchr'
                WHEN P2.real_shipping_id IN (168, 171) THEN 'SMSA'
                WHEN P2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
+               WHEN P2.real_shipping_id IN (131) THEN 'EMS'
+               WHEN P2.real_shipping_id IN (175) THEN 'PostaPlus'
                ELSE 'Others'
           END) AS shipping_name
         ,DATEDIFF(CURRENT_TIMESTAMP(), p2.shipping_time) AS shiped_days
@@ -204,10 +210,12 @@ WHERE p1.shipping_state NOT IN (3, 6, 8, 13)    -- 不是已签收、已退回�
 GROUP BY p1.order_id
         ,p2.depod_id
         ,p5.region_name
-        ,(CASE WHEN p2.real_shipping_id IN (40, 200) THEN 'Aramex'
-               WHEN p2.real_shipping_id IN (170, 201, 257) THEN 'fetchr'
+        ,(CASE WHEN P2.real_shipping_id IN (40, 200, 263, 264) THEN 'Aramex'
+               WHEN P2.real_shipping_id IN (170, 201, 257, 266) THEN 'fetchr'
                WHEN P2.real_shipping_id IN (168, 171) THEN 'SMSA'
                WHEN P2.real_shipping_id IN (172, 174, 176) THEN 'Naqel'
+               WHEN P2.real_shipping_id IN (131) THEN 'EMS'
+               WHEN P2.real_shipping_id IN (175) THEN 'PostaPlus'
                ELSE 'Others'
           END)
         ,DATEDIFF(CURRENT_TIMESTAMP(), p2.shipping_time)

@@ -340,8 +340,14 @@ GROUP BY key_id
     ,value_name
 ;
 
-
-
+-- 物流承运商信息表
+SELECT *
+FROM jolly.who_shipping
+;
+-- 物流承运商top10
+SELECT *
+FROM zydb.dw_order_sub_order_fact AS p1
+LIMIT 10;
 
 
 
