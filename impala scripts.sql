@@ -3202,7 +3202,7 @@ t1 AS
         --,p3.cate_level4_name
         ,SUM(p2.goods_number) AS sales_goods_num
 FROM zydb.dw_order_node_time p1
-INNER JOIN jolly.who_order_goods p2
+INNER JOIN zydb.dw_order_goods_fact p2
         ON p1.order_id = p2.order_id
 LEFT JOIN zydb.dim_goods p3
        ON p2.goods_id = p3.goods_id
