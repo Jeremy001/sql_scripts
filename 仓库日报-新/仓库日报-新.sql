@@ -39,10 +39,9 @@ full join
 		from
 		(
 			  select count(order_id) order_count,depod_id
-			   from zydb.dw_order_sub_order_fact
+			   from zydb.dw_order_sub_order_fact a
 			  where
-			  depod_id in(4,5,6,7,14)
-			  and case when pay_id=41 then pay_time  else result_pay_time end >=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
+			  case when pay_id=41 then pay_time  else result_pay_time end >=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
 			  and
 			  case when pay_id=41 then pay_time else result_pay_time end <date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
 			  and pay_status in(1,3)
@@ -56,7 +55,7 @@ full join
 (
 --仓库到货签收商品件数
   select    sum(should_num) receipt_goods_num,depot_id
-  from jolly.who_wms_delivered_receipt_info
+  from jolly.who_wms_delivered_receipt_info a
   where gmt_created >=unix_timestamp('${data_date}','yyyyMMdd')
   and gmt_created<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd')
   group by depot_id
@@ -81,7 +80,7 @@ full join
 	  )b
 	  on a.on_shelf_id=b.on_shelf_id
 	  and a.is_new=b.is_new
-		 where  b.on_shelf_finish_time >=unix_timestamp('${data_date}','yyyyMMdd')
+    where  b.on_shelf_finish_time >=unix_timestamp('${data_date}','yyyyMMdd')
 	  and b.on_shelf_finish_time < unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd')
 	group by a.depot_id
 
@@ -107,7 +106,7 @@ full join
 	   and a.on_shelf_start_time < date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
 	   and ((unix_timestamp(on_shelf_start_time)-unix_timestamp(start_receipt_time))/3600/24)>0
 	 group by depot_id
-) t5
+)t5
 on t1.depot_id=t5.depot_id
 full join
 
@@ -215,7 +214,7 @@ full join
 (
 --提货订单数
 	select depod_id depot_id,count(*) pickup_orders from
-	zydb.dw_order_shipping_tracking_node a
+	zydb.dw_order_node_time a
 	left join
 	zydb.dw_order_sub_order_fact b
 	on a.order_id=b.order_id
@@ -232,7 +231,7 @@ full join
 	 from
 	zydb.dw_order_sub_order_fact a
 	left join
-	zydb.dw_order_shipping_tracking_node  b
+	zydb.dw_order_node_time  b
 	on a.order_id=b.order_id
 	where lading_time>=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
 	and lading_time<date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
@@ -516,7 +515,7 @@ full join
 
 		sum(case when a.gmt_created>=unix_timestamp('${data_date}','yyyyMMdd') and a.gmt_created<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') then supp_num end ) unrec_goods_num_days
  from
- jolly_spm.jolly_spm_pur_order_info AS a
+ jolly_spm.jolly_spm_pur_order_info  a
  full join
  jolly_spm.jolly_spm_pur_order_goods b
  on a.pur_order_id=b.pur_order_id
@@ -524,8 +523,9 @@ full join
  zydb.dw_delivered_order_info c
  on a.pur_order_sn=c.delivered_order_sn
 
- where c.end_receipt_time is null
-group by  a.depot_id
+ where nvl(c.end_receipt_time,start_onself_time) is null
+ group by  a.depot_id
+
 ) t1
 on t0.depot_id=t1.depot_id
 full join
@@ -787,13 +787,13 @@ full join
 			select a.depot_id,sum(a.delivered_num) no_check_num
 			from
 			(
-				select distinct a.depot_id, sku_id, delivered_num,checked_num,delivered_order_sn
+				select distinct a.depot_id,delivered_num,checked_num,delivered_order_sn,sku_id
 				from zydb.dw_delivered_receipt_onself a
-				where start_receipt_time >= date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
-				and end_receipt_time < from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
-				and (on_shelf_start_time >= date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
+				where start_receipt_time>=date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
+				and end_receipt_time <from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))
+				and (on_shelf_start_time>=date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1)
 					or on_shelf_start_time is null
-					or on_shelf_start_time ='1970-01-01 08:00:00')
+					or on_shelf_start_time='1970-01-01 08:00:00')
 				and a.exp_num=0
 			)a
 			left join
@@ -832,9 +832,10 @@ full join
 --	and gmt_created<unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd')
 --	group by depot_id
      select p1.depot_id,
-     count(distinct P1.returned_order_id) pick_exp_orders_num --拣货异常订单
+     count(distinct P1.returned_Order_Id) pick_exp_orders_num --拣货异常订单
      From jolly.who_wms_returned_order_info  P1
-	 left join zydb.dw_order_sub_order_fact b
+	 left join
+	 zydb.dw_order_sub_order_fact b
 	 on P1.returned_order_id=b.order_id
 	 where b.is_problems_order =2
      and p1.returned_time>=unix_timestamp(to_date(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd'))),'yyyy-MM-dd')
@@ -981,8 +982,9 @@ on t1.depot_id=t3.depot_id
 full join
 zydb.rpt_depot_daily_report_new_tmp4 t4
 on t1.depot_id=t4.depot_id
+left join zydb.dim_dw_depot t5 on t1.depot_id=t5.depot_id
 where
-coalesce(t1.depot_id,t2.depot_id,t3.depot_id,t4.depot_id) in(4,5,6,7)
+t5.status=1
 
 union all
 

@@ -19,16 +19,22 @@ WITH t1 AS
         ,SUM(p1.checked_num) AS qc_num
         ,SUM(p1.delivered_num - p1.checked_num) AS didnt_qc_num
         ,MAX(p1.on_shelf_start_time) AS qc_finish_time
-FROM zydb.dw_delivered_receipt_onself p1
-WHERE start_receipt_time >= FROM_UNIXTIME(UNIX_TIMESTAMP(DATE_SUB(CURRENT_DATE(), 2), 'yyyy-MM-dd'))
-  AND end_receipt_time < FROM_UNIXTIME(UNIX_TIMESTAMP(DATE_SUB(CURRENT_DATE(), 1), 'yyyy-MM-dd'))
-  AND (on_shelf_start_time >= FROM_UNIXTIME(UNIX_TIMESTAMP(CURRENT_DATE(), 'yyyy-MM-dd'))
-       OR on_shelf_start_time IS NULL
-       OR on_shelf_start_time='1970-01-01 08:00:00')
-  AND exp_num=0
+FROM zydb.dw_delivered_receipt_onself AS p1
+LEFT JOIN jolly.who_wms_delivered_order_exp_goods AS p2
+       ON p1.delivered_order_sn = p2.delivered_order_sn
+WHERE p1.start_receipt_time >= FROM_UNIXTIME(UNIX_TIMESTAMP(DATE_SUB(CURRENT_DATE(), 2), 'yyyy-MM-dd'))
+  AND p1.end_receipt_time < FROM_UNIXTIME(UNIX_TIMESTAMP(DATE_SUB(CURRENT_DATE(), 1), 'yyyy-MM-dd'))
+  AND (p1.on_shelf_start_time >= FROM_UNIXTIME(UNIX_TIMESTAMP(DATE_SUB(CURRENT_DATE(), 0), 'yyyy-MM-dd'))
+       OR p1.on_shelf_start_time IS NULL
+       OR p1.on_shelf_start_time='1970-01-01 08:00:00')
+  AND p1.exp_num=0
+  AND p2.delivered_order_sn IS NULL
 GROUP BY p1.delivered_order_sn
         ,p1.depot_id
 )
 -- 查询明细
-SELECT * FROM t1
+SELECT *
+FROM t1
+ORDER BY t1.depot_id
+        ,t1.delivered_order_sn
 ;
