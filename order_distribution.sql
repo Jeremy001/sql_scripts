@@ -24,6 +24,7 @@ t1 AS
         ,unix_timestamp((CASE WHEN pay_id = 41 THEN pay_time ELSE result_pay_time END), 'yyyy-MM-dd HH:mm:ss') AS pay_time     -- 支付时间
         ,unix_timestamp(shipping_time) AS shipping_time
         ,(CASE WHEN is_shiped = 1 THEN 'shiped' ELSE 'not_shiped' END) AS is_shiped
+        ,goods_number
 FROM zydb.dw_order_sub_order_fact
 WHERE pay_status IN (1, 3)
     AND order_status = 1
@@ -70,22 +71,22 @@ LEFT JOIN t4 ON t2.order_id = t4.order_id
 t6 AS
 (SELECT t5.*
         ,(CASE WHEN assign_duration IS NULL THEN 'No'
-                     WHEN assign_duration <= 24 THEN '<=24h'
-                     WHEN assign_duration <= 48 THEN '24-48h'
-                     WHEN assign_duration <= 72 THEN '48-72h'
-                     WHEN assign_duration <= 96 THEN '72-96h'
-                     WHEN assign_duration <= 120 THEN '96-120h'
-                     WHEN assign_duration <= 144 THEN '120-144h'
-                     ELSE '144+h'
+               WHEN assign_duration <= 24 THEN '<=24h'
+               WHEN assign_duration <= 48 THEN '24-48h'
+               WHEN assign_duration <= 72 THEN '48-72h'
+               WHEN assign_duration <= 96 THEN '72-96h'
+               WHEN assign_duration <= 120 THEN '96-120h'
+               WHEN assign_duration <= 144 THEN '120-144h'
+               ELSE '144+h'
           END) AS assign_duration_class
         ,(CASE WHEN ship_duration IS NULL THEN 'No'
-                     WHEN ship_duration <= 24 THEN '<=24h'
-                     WHEN ship_duration <= 48 THEN '24-48h'
-                     WHEN ship_duration <= 72 THEN '48-72h'
-                     WHEN ship_duration <= 96 THEN '72-96h'
-                     WHEN ship_duration <= 120 THEN '96-120h'
-                     WHEN ship_duration <= 144 THEN '120-144h'
-                     ELSE '144+h'
+               WHEN ship_duration <= 24 THEN '<=24h'
+               WHEN ship_duration <= 48 THEN '24-48h'
+               WHEN ship_duration <= 72 THEN '48-72h'
+               WHEN ship_duration <= 96 THEN '72-96h'
+               WHEN ship_duration <= 120 THEN '96-120h'
+               WHEN ship_duration <= 144 THEN '120-144h'
+               ELSE '144+h'
           END) AS ship_duration_class
 FROM t5
 ),
@@ -97,6 +98,7 @@ t100 AS
         ,assign_duration_class
         ,ship_duration_class
         ,COUNT(order_id) AS order_num
+        ,SUM(goods_number) AS goods_num
         ,SUM(assign_duration) AS assign_duration
         ,SUM(ship_duration) AS ship_duration
 FROM t6

@@ -386,8 +386,7 @@ ORDER BY month;
 
 -- 汇总每一天的数据
 SELECT t1.data_date
-        ,SUM(t1.purchase_onway_num) AS purchase_onway_num
-        ,SUM(t1.purchase_onway_num + t1.instock_num + t1.deliver_onway_num + t1.return_onway_num) AS total_num
+        ,SUM(t1.deliver_onway_num) AS deliver_onway_num
 FROM zybiro.neo_all_chain_stock_daily AS t1
 GROUP BY t1.data_date
 ORDER BY t1.data_date DESC

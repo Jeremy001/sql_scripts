@@ -403,6 +403,16 @@ LIMIT 30;
 -- CANCEL_REASON, 取消合作原因代码，说明文字放在哪张表中？
 -- SUPP_DISCOUNT, 采购折扣(采购价)
 
+-- 采购价，销售价
+SELECT p1.sku_id
+        ,p2.prop_price AS sell_price_dollar
+        ,ROUND(p2.in_price / 6.329, 2) AS purchase_price_dollar
+FROM zybiro.neo_malik_sku AS p1
+LEFT JOIN jolly.who_sku_relation AS p2
+       ON p1.sku_id = p2.rec_id
+;
+
+
 -- CREDIT_RANK, 信用等级，什么鬼？供应商在我方的信用等级吗？
 -- 咳，不用看了，这个字段根本没用起来
 SELECT CREDIT_RANK
@@ -4730,6 +4740,9 @@ ORDER BY pay_time
 2.批发订单作业单未与目的仓到货单关联
 */
 
+
+
+
 SELECT *
 FROM jolly.who_wms_wholesale_order_info AS p1
 WHERE p1.wholesale_order_id IN (384, 386)
@@ -5618,6 +5631,10 @@ WHERE c.end_receipt_time IS NULL
   AND a.send_time <  UNIX_TIMESTAMP('2018-03-04')
 LIMIT 100
 ;
+
+-- 智能补货
+-- 提货单：手工录入各个节点的处理时间，需开发提供数据字典
+-- 包裹号与箱号会关联吗？
 
 
 
