@@ -1255,12 +1255,13 @@ SELECT FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd') AS data_date
         ,SUM(p2.order_total_amount) AS receive_amount
 FROM jolly.who_order_shipping_tracking p1
 LEFT JOIN zydb.dw_order_sub_order_fact p2
-             ON p1.order_id = p2.order_id
-          AND p1.update_time > UNIX_TIMESTAMP(p2.shipping_time)
+       ON p1.order_id = p2.order_id
+      AND p1.update_time > UNIX_TIMESTAMP(p2.shipping_time)
 WHERE p1.shipping_state=3
-     AND p1.update_time >= UNIX_TIMESTAMP('2017-08-01')
-     AND p1.update_time < UNIX_TIMESTAMP(TO_DATE(NOW()))
+     AND p1.update_time >= UNIX_TIMESTAMP('2018-03-01')
+     AND p1.update_time <  UNIX_TIMESTAMP(TO_DATE(NOW()))
 GROUP BY FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd')
+ORDER BY data_date DESC
 ;
 
 -- 每天销售数量
