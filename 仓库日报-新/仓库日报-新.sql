@@ -561,7 +561,7 @@ full join
 
 		    count(distinct case when case when pay_id=41 then to_date(pay_time) else to_date(result_pay_time) end =to_date(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1))  then   a.order_id end) unprepare_order_num_1days
 	from
-	zydb.dw_order_sub_order_fact  a
+	zydb.dw_order_sub_order_fact a
 	left join
 	(
 	  select order_id,rec_id from jolly.who_wms_outing_stock_detail
@@ -571,8 +571,8 @@ full join
 	  select order_id,rec_id from jolly_wms.who_wms_outing_stock_detail
 	) b
 	on a.order_id=b.order_id
-	where pay_status in (1,3)
-	and  is_problems_order != 1
+	where a.pay_status in (1,3)
+	and a.is_problems_order != 1
 	and b.rec_id is null
 	and a.add_time>'2017-08-01'
 	group by a.depod_id

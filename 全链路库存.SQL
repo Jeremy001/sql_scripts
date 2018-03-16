@@ -1251,8 +1251,9 @@ LIMIT 10;
 
 -- 每天签收数量
 SELECT FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd') AS data_date
-        ,SUM(p2.goods_number) AS receive_num
-        ,SUM(p2.order_total_amount) AS receive_amount
+        ,COUNT(DISTINCT p2.order_id) AS receive_order_num
+        ,SUM(p2.goods_number) AS receive_goods_num
+        ,SUM(p2.order_total_amount) AS receive_goods_amount
 FROM jolly.who_order_shipping_tracking p1
 LEFT JOIN zydb.dw_order_sub_order_fact p2
        ON p1.order_id = p2.order_id

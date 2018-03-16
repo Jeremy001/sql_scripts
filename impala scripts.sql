@@ -4726,8 +4726,8 @@ ORDER BY pay_time
 /*
 海外备货单据流转如下：
 1.先生成批发订单，4仓/5仓各一个批发订单，4仓发迪拜，5仓发沙特
-批发订单表：who_wms_wholesale_order_info
-批发订单商品表：who_wms_wholesale_order_goods
+批发订单表：who_wholesale_order_info
+批发订单商品表：who_wholesale_order_goods
 2.根据批发订单生成采购需求
 3.供应商响应采购需求，生成采购单，发货
 4.4/5两仓收货，质检，打包，发货
@@ -4744,7 +4744,7 @@ ORDER BY pay_time
 
 
 SELECT *
-FROM jolly.who_wms_wholesale_order_info AS p1
+FROM jolly.who_wholesale_order_info AS p1
 WHERE p1.wholesale_order_id IN (384, 386)
 ;
 
@@ -4764,7 +4764,7 @@ SELECT p1.wholesale_order_id
         ,SUM(p1.order_org_num) AS org_goods_num
         ,SUM(p1.order_num) AS new_goods_num
         ,SUM(p1.send_num) AS send_num
-FROM jolly.who_wms_wholesale_order_goods AS p1
+FROM jolly.who_wholesale_order_goods AS p1
 WHERE p1.wholesale_order_id IN (384, 386)
 GROUP BY p1.wholesale_order_id
 ;
@@ -4790,7 +4790,7 @@ t1 AS
         ,p3.oos_num
         ,p3.real_oos_num
         ,p3.in_price AS in_price2
-FROM jolly.who_wms_wholesale_order_goods AS p1
+FROM jolly.who_wholesale_order_goods AS p1
 LEFT JOIN jolly.who_wms_goods_need_lock_detail AS p2
        ON p1.rec_id = p2.order_goods_rec_id
 LEFT JOIN jolly.who_wms_pur_goods_demAND AS p3
@@ -4821,13 +4821,13 @@ LIMIT 10;
 
 
 SELECT *
-FROM jolly.who_wms_wholesale_order_goods AS p1
+FROM jolly.who_wholesale_order_goods AS p1
 WHERE p1.wholesale_order_id IN (384, 386)
 LIMIT 10
 ;
 
 SELECT *
-FROM jolly.who_wms_wholesale_order_goods AS p1
+FROM jolly.who_wholesale_order_goods AS p1
 WHERE p1.wholesale_order_id IN (384, 386)
 AND p1.send_num > 1
 LIMIT 10
