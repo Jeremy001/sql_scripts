@@ -5637,9 +5637,21 @@ LIMIT 100
 -- 包裹号与箱号会关联吗？
 
 
-
-
-
+-- 部分订单的签收人、是否首单、是否签收
+-- 注意：用hive跑
+SELECT p1.order_sn
+        ,p3.consignee
+        ,(CASE WHEN p3.is_first_order = 0 THEN '否' ELSE '是' END) AS is_first_order
+        ,p2.order_status
+        ,(CASE WHEN p4.shipping_state = 3 THEN '已签收' ELSE '其他' END) AS is_qianshou
+FROM zybiro.neo_wangjie_order_sn AS p1
+LEFT JOIN dw.dw_order_sub_order_fact AS p2
+       ON p1.order_sn = p2.order_sn
+LEFT JOIN jolly.who_order_user_info AS p3
+       ON p2.order_id = p3.order_id
+LEFT JOIN jolly.who_order_shipping_tracking AS p4
+       ON p2.order_id = p4.order_id
+;
 
 
 
