@@ -126,8 +126,8 @@ t4102 AS
         ,SUM(NVL(p2.goods_number, 0)) AS return_onway_num
         ,SUM(NVL(p2.goods_number, 0) * NVL(p2.in_price, 0)) AS return_onway_cost
         ,SUM(NVL(p2.goods_number, 0) * NVL(p2.goods_price, 0) * 6.6775) AS return_onway_amount
-FROM zydb.dw_order_sub_order_fact AS p1
-LEFT JOIN zydb.dw_order_goods_fact AS p2
+FROM dw.dw_order_sub_order_fact AS p1
+LEFT JOIN dw.dw_order_goods_fact AS p2
        ON p1.order_id = p2.order_id
 LEFT JOIN (SELECT * FROM jolly.who_order_user_info
            UNION All
@@ -195,7 +195,7 @@ t301 AS
         ,DATEDIFF(CURRENT_TIMESTAMP(), p2.shipping_time) AS shiped_days
         ,t401.destination_date
         ,t401.destination_days
-FROM zydb.dw_order_sub_order_fact AS p2
+FROM dw.dw_order_sub_order_fact AS p2
 LEFT JOIN jolly.who_order_shipping_tracking AS p1
        ON p1.order_id = p2.order_id
 LEFT JOIN t401
@@ -384,10 +384,38 @@ ORDER BY month;
 
 
 
--- 汇总每一天的数据
-SELECT t1.data_date
-        ,SUM(t1.deliver_onway_num) AS deliver_onway_num
+-- 汇总每天全链路库存和签收量
+WITH
+-- 1.每天各环节库存
+t1 AS
+(SELECT t1.data_date
+        ,SUM(purchase_onway_num) AS purchase_onway_num
+        ,SUM(instock_num) AS instock_num
+        ,SUM(deliver_onway_num) AS deliver_onway_num
+        ,SUM(return_onway_num) AS return_onway_num
 FROM zybiro.neo_all_chain_stock_daily AS t1
+WHERE t1.data_date >= '2018-03-01'
 GROUP BY t1.data_date
+),
+-- 2.每天签收数量
+t2 AS
+(SELECT FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd') AS data_date
+        ,COUNT(DISTINCT p2.order_id) AS receive_order_num
+        ,SUM(p2.goods_number) AS receive_goods_num
+FROM jolly.who_order_shipping_tracking p1
+LEFT JOIN dw.dw_order_sub_order_fact p2
+       ON p1.order_id = p2.order_id
+      AND p1.update_time > UNIX_TIMESTAMP(p2.shipping_time)
+WHERE p1.shipping_state=3
+  AND p1.update_time >= UNIX_TIMESTAMP('2018-03-01')
+  AND p1.update_time <  UNIX_TIMESTAMP(TO_DATE(NOW()))
+GROUP BY FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd')
+)
+SELECT t1.*
+        ,t2.receive_order_num
+        ,t2.receive_goods_num
+FROM t1
+LEFT JOIN t2
+       ON t1.data_date = t2.data_date
 ORDER BY t1.data_date DESC
 ;

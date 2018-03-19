@@ -82,23 +82,23 @@ WITH
 t1 AS
 (SELECT p1.sku_id
         ,SUM(p1.total_stock_num - p1.total_order_lock_num - p1.total_allocate_lock_num - p1.total_return_lock_num) AS free_stock_num
-FROM zydb.ods_who_wms_goods_stock_total_detail AS p1
+FROM ods.ods_who_wms_goods_stock_total_detail AS p1
 WHERE p1.depot_id = 7
-  AND p1.data_date = '20180314'
+  AND p1.data_date = '20180318'
 GROUP BY p1.sku_id
 ),
 -- 近1周在沙特仓的销售件数
 t2 AS
 (SELECT p2.sku_id
         ,SUM(p2.goods_number) AS sales_num
-FROM zydb.dw_order_node_time AS p1
-LEFT JOIN zydb.dw_order_goods_fact AS p2
+FROM dw.dw_order_node_time AS p1
+LEFT JOIN dw.dw_order_goods_fact AS p2
        ON p1.order_id = p2.order_id
 WHERE p1.order_status = 1
   AND p1.depot_id = 7
   AND p1.pay_status IN (1, 3)
-  AND p1.pay_time >= '2018-03-08'
-  AND p1.pay_time <  '2018-03-15'
+  AND p1.pay_time >= '2018-03-12'
+  AND p1.pay_time <  '2018-03-19'
 GROUP BY p2.sku_id
 ),
 -- JOIN得到结果
@@ -112,6 +112,6 @@ FULL OUTER JOIN t2
 WHERE t1.free_stock_num >= 1
    OR t2.sales_num >= 1
 )
-SELECT COUNT(*)
+SELECT *
 FROM t3
 ;
