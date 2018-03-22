@@ -110,14 +110,14 @@ FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1;
 -- 2014，还是不少。
 
--- GOODS_SEASON 产品季节: 1.春 2.夏 3.秋 4.冬 5.春夏 6.春秋 7.春冬 8.夏秋 9.夏冬 10.秋冬
-SELECT GOODS_SEASON
+-- goods_season 产品季节: 1.春 2.夏 3.秋 4.冬 5.春夏 6.春秋 7.春冬 8.夏秋 9.夏冬 10.秋冬
+SELECT goods_season
         ,COUNT(GOODS_ID)
 FROM JOLLY.WHO_GOODS
 WHERE IS_ON_SALE = 1
-GROUP BY GOODS_SEASON
-ORDER BY GOODS_SEASON;
--- 问题：0代表秋冬还是10代表秋冬？怎么目前在售的商品中，近一半的GOODS_SEASON是0呢？
+GROUP BY goods_season
+ORDER BY goods_season;
+-- 问题：0代表秋冬还是10代表秋冬？怎么目前在售的商品中，近一半的goods_season是0呢？
 -- 有0也有10，不过10的商品特别少；
 
 -- IS_STOCK 是否卖库存:0 非卖库存 1卖库存 2deals 4 sku卖库存
@@ -2001,7 +2001,7 @@ SELECT order_sn
         ,picking_finish_time AS 拣货完成时间
         ,order_pack_time AS 打包完成时间
         ,shipping_time AS 发运时间
-FROM zydb.dw_order_node_time
+FROM dw.dw_order_node_time
 WHERE depot_id = 6
 AND is_shiped = 1
 AND is_problems_order IN (0, 2)
@@ -3657,17 +3657,17 @@ WITH t1 AS
 (SELECT j.cat_level1_name
         ,j.cat_level2_name
         ,j.cat_level3_name
-        ,(CASE WHEN j.goods_seASon = 1 THEN '春'
-                      WHEN j.goods_seASon = 2 THEN '夏'
-                      WHEN j.goods_seASon = 3 THEN '秋'
-                      WHEN j.goods_seASon = 4 THEN '冬'
-                      WHEN j.goods_seASon = 5 THEN '春夏'
-                      WHEN j.goods_seASon = 6 THEN '春秋'
-                      WHEN j.goods_seASon = 7 THEN '春冬'
-                      WHEN j.goods_seASon = 8 THEN '夏秋'
-                      WHEN j.goods_seASon = 9 THEN '夏冬'
-                      WHEN j.goods_seASon = 10 THEN '秋冬'
-                      ELSE '其他' END) AS good_seASon
+        ,(CASE WHEN j.goods_season = 1 THEN '春'
+                      WHEN j.goods_season = 2 THEN '夏'
+                      WHEN j.goods_season = 3 THEN '秋'
+                      WHEN j.goods_season = 4 THEN '冬'
+                      WHEN j.goods_season = 5 THEN '春夏'
+                      WHEN j.goods_season = 6 THEN '春秋'
+                      WHEN j.goods_season = 7 THEN '春冬'
+                      WHEN j.goods_season = 8 THEN '夏秋'
+                      WHEN j.goods_season = 9 THEN '夏冬'
+                      WHEN j.goods_season = 10 THEN '秋冬'
+                      ELSE '其他' END) AS good_season
         ,SUM(e.stock_num) AS stock_num
 FROM jolly_wms.who_wms_depot_shelf_area a
          ,jolly_wms.who_wms_depot_shelf b
@@ -3684,16 +3684,16 @@ WHERE a.depot_shelf_id = b.shelf_id
 GROUP BY j.cat_level1_name
         ,j.cat_level2_name
         ,j.cat_level3_name
-        ,(CASE WHEN j.goods_seASon = 1 THEN '春'
-                      WHEN j.goods_seASon = 2 THEN '夏'
-                      WHEN j.goods_seASon = 3 THEN '秋'
-                      WHEN j.goods_seASon = 4 THEN '冬'
-                      WHEN j.goods_seASon = 5 THEN '春夏'
-                      WHEN j.goods_seASon = 6 THEN '春秋'
-                      WHEN j.goods_seASon = 7 THEN '春冬'
-                      WHEN j.goods_seASon = 8 THEN '夏秋'
-                      WHEN j.goods_seASon = 9 THEN '夏冬'
-                      WHEN j.goods_seASon = 10 THEN '秋冬'
+        ,(CASE WHEN j.goods_season = 1 THEN '春'
+                      WHEN j.goods_season = 2 THEN '夏'
+                      WHEN j.goods_season = 3 THEN '秋'
+                      WHEN j.goods_season = 4 THEN '冬'
+                      WHEN j.goods_season = 5 THEN '春夏'
+                      WHEN j.goods_season = 6 THEN '春秋'
+                      WHEN j.goods_season = 7 THEN '春冬'
+                      WHEN j.goods_season = 8 THEN '夏秋'
+                      WHEN j.goods_season = 9 THEN '夏冬'
+                      WHEN j.goods_season = 10 THEN '秋冬'
                       ELSE '其他' END)
 )
 SELECT *
@@ -3709,17 +3709,17 @@ WITH t1 AS
         ,p1.supp_name
         ,p1.zx_type_old
         ,p1.zx_level_old
-        ,(CASE WHEN p2.goods_seASon = 1 THEN '春'
-                      WHEN p2.goods_seASon = 2 THEN '夏'
-                      WHEN p2.goods_seASon = 3 THEN '秋'
-                      WHEN p2.goods_seASon = 4 THEN '冬'
-                      WHEN p2.goods_seASon = 5 THEN '春夏'
-                      WHEN p2.goods_seASon = 6 THEN '春秋'
-                      WHEN p2.goods_seASon = 7 THEN '春冬'
-                      WHEN p2.goods_seASon = 8 THEN '夏秋'
-                      WHEN p2.goods_seASon = 9 THEN '夏冬'
-                      WHEN p2.goods_seASon = 10 THEN '秋冬'
-                      ELSE '其他' END) AS good_seASon
+        ,(CASE WHEN p2.goods_season = 1 THEN '春'
+                      WHEN p2.goods_season = 2 THEN '夏'
+                      WHEN p2.goods_season = 3 THEN '秋'
+                      WHEN p2.goods_season = 4 THEN '冬'
+                      WHEN p2.goods_season = 5 THEN '春夏'
+                      WHEN p2.goods_season = 6 THEN '春秋'
+                      WHEN p2.goods_season = 7 THEN '春冬'
+                      WHEN p2.goods_season = 8 THEN '夏秋'
+                      WHEN p2.goods_season = 9 THEN '夏冬'
+                      WHEN p2.goods_season = 10 THEN '秋冬'
+                      ELSE '其他' END) AS good_season
         ,COUNT(p1.goods_id) AS goods_COUNT
         ,SUM(p1.fre_stk_cnt_07) AS free_stock_num
 FROM zybiro.t_yf_stock_monitor_v1_12 p1
@@ -3731,16 +3731,16 @@ GROUP BY p1.cat1_name
         ,p1.supp_name
         ,p1.zx_type_old
         ,p1.zx_level_old
-        ,(CASE WHEN p2.goods_seASon = 1 THEN '春'
-                      WHEN p2.goods_seASon = 2 THEN '夏'
-                      WHEN p2.goods_seASon = 3 THEN '秋'
-                      WHEN p2.goods_seASon = 4 THEN '冬'
-                      WHEN p2.goods_seASon = 5 THEN '春夏'
-                      WHEN p2.goods_seASon = 6 THEN '春秋'
-                      WHEN p2.goods_seASon = 7 THEN '春冬'
-                      WHEN p2.goods_seASon = 8 THEN '夏秋'
-                      WHEN p2.goods_seASon = 9 THEN '夏冬'
-                      WHEN p2.goods_seASon = 10 THEN '秋冬'
+        ,(CASE WHEN p2.goods_season = 1 THEN '春'
+                      WHEN p2.goods_season = 2 THEN '夏'
+                      WHEN p2.goods_season = 3 THEN '秋'
+                      WHEN p2.goods_season = 4 THEN '冬'
+                      WHEN p2.goods_season = 5 THEN '春夏'
+                      WHEN p2.goods_season = 6 THEN '春秋'
+                      WHEN p2.goods_season = 7 THEN '春冬'
+                      WHEN p2.goods_season = 8 THEN '夏秋'
+                      WHEN p2.goods_season = 9 THEN '夏冬'
+                      WHEN p2.goods_season = 10 THEN '秋冬'
                       ELSE '其他' END)
 )
 SELECT *
@@ -5655,6 +5655,42 @@ LEFT JOIN jolly.who_order_shipping_tracking AS p4
 
 
 
+-- 海外备货商品的属性
+-- 把sku列表导入到zybiro.stephen_oversea_sale_prediction表中
+SELECT p1.*
+        ,p2.goods_id
+        ,p3.cate_level1_name
+        ,p3.cate_level2_name
+        ,p3.supp_name
+        ,(CASE WHEN p3.goods_season = 1 THEN '春'
+               WHEN p3.goods_season = 2 THEN '夏'
+               WHEN p3.goods_season = 3 THEN '秋'
+               WHEN p3.goods_season = 4 THEN '冬'
+               WHEN p3.goods_season = 5 THEN '春夏'
+               WHEN p3.goods_season = 6 THEN '春秋'
+               WHEN p3.goods_season = 7 THEN '春冬'
+               WHEN p3.goods_season = 8 THEN '夏秋'
+               WHEN p3.goods_season = 9 THEN '夏冬'
+               WHEN p3.goods_season = 10 THEN '秋冬'
+               ELSE '其他'
+          END) AS good_season
+FROM zybiro.stephen_oversea_sale_prediction AS p1
+LEFT JOIN jolly.who_sku_relation p2
+       ON p1.sku_id = p2.rec_id
+LEFT JOIN zydb.dim_goods p3
+       ON p2.goods_id = p3.goods_id
+;
 
 
-
+SELECT SUM(p2.goods_number) AS sale_goods_num
+        ,SUM(p2.goods_number * p3.in_price) AS in_amount
+        ,SUM(p2.goods_number * p3.shop_price) AS sale_amount
+FROM dw.dw_order_node_time AS p1
+LEFT JOIN dw.dw_order_goods_fact AS p2
+       ON p1.order_id = p2.order_id
+LEFT JOIN jolly.who_goods AS p3
+       ON p2.goods_id = p3.goods_id
+WHERE p1.order_status = 1
+  AND p1.pay_status IN (1, 3)
+  AND p3.provider_code = '3C8'
+;

@@ -1265,6 +1265,7 @@ GROUP BY FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd')
 ORDER BY data_date DESC
 ;
 
+
 -- 每天销售数量
 -- zydb.dw_order_sub_order_fact
 SELECT p1.depod_id AS depot_id

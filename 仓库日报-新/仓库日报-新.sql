@@ -3,7 +3,7 @@ set mapreduce.map.memory.mb=6120;
 set mapreduce.reduce.memory.mb=12000;
 set hive.exec.parallel=true;
 
---·ÖÅä¶©µ¥Á¿¡¢µ¥Á¿Õ¼±È
+--Â·Ã–Ã…Ã¤Â¶Â©ÂµÂ¥ÃÂ¿Â¡Â¢ÂµÂ¥ÃÂ¿Ã•Â¼Â±Ãˆ
 insert overwrite table zydb.rpt_depot_daily_report_new_tmp1
 select
   t0.depot_id,
@@ -25,7 +25,7 @@ select
   shipped_goods_num,
   package_duration,
   shipping_duration,
-  picking_duration+package_duration+shipping_duration picking_shiping_duration,     --³ö¿âÊ±³¤
+  picking_duration+package_duration+shipping_duration picking_shiping_duration,     --Â³Ã¶Â¿Ã¢ÃŠÂ±Â³Â¤
   pickup_orders,
   pickup_time
  from
@@ -53,7 +53,7 @@ full join
 on t0.depot_id=t1.depot_id
 full join
 (
---²Ö¿âµ½»õÇ©ÊÕÉÌÆ·¼þÊý
+--Â²Ã–Â¿Ã¢ÂµÂ½Â»ÃµÃ‡Â©ÃŠÃ•Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½
   select    sum(should_num) receipt_goods_num,depot_id
   from jolly.who_wms_delivered_receipt_info a
   where gmt_created >=unix_timestamp('${data_date}','yyyyMMdd')
@@ -63,7 +63,7 @@ full join
 on t1.depot_id=t2.depot_id
 full join
 (
---ÖÊ¼ìÍê³ÉÉÌÆ·¼þÊý  --ÉÏ¼ÜÉÌÆ·¼þÊý
+--Ã–ÃŠÂ¼Ã¬ÃÃªÂ³Ã‰Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½  --Ã‰ÃÂ¼ÃœÃ‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½
 
 	select a.depot_id,sum(on_shelf_num) onshelf_goods
 	from
@@ -88,7 +88,7 @@ full join
 on t1.depot_id=t3.depot_id
 full join
 (
-	--ÖÊ¼ìÒì³£ÉÌÆ·¼þÊý
+	--Ã–ÃŠÂ¼Ã¬Ã’Ã¬Â³Â£Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½
 	select depot_id,sum(exp_num) exp_check_goods_num from
 	jolly.who_wms_delivered_order_exp_goods a
 	where a.gmt_created >=unix_timestamp('${data_date}','yyyyMMdd')
@@ -98,7 +98,7 @@ full join
 on t1.depot_id=t4.depot_id
 full join
 (
-	--ÖÊ¼ìÊ±³¤
+	--Ã–ÃŠÂ¼Ã¬ÃŠÂ±Â³Â¤
 	select depot_id,
        sum(((unix_timestamp(on_shelf_start_time)-unix_timestamp(start_receipt_time))/3600/24)*num)/sum(num)*24  as receipt_quality_duration
 	from zydb.dw_delivered_receipt_onself a
@@ -111,7 +111,7 @@ on t1.depot_id=t5.depot_id
 full join
 
 (
-	--ÉÏ¼ÜÊ±³¤
+	--Ã‰ÃÂ¼ÃœÃŠÂ±Â³Â¤
     	select depot_id,
     	  sum((unix_timestamp(on_shelf_finish_time)-unix_timestamp(on_shelf_start_time))*on_shelf_num)/sum(on_shelf_num)/3600 quality_onshelf_duration
     	from
@@ -135,7 +135,7 @@ on t1.depot_id=t6.depot_id
 full join
 
 (
-	--¼ð»õ¶©µ¥Êý (µ«²»Ò»¶¨Íê³É£¬ºóÃæÓÐÒ»¸öÒÑÍê³ÉµÄ¼ÆËã) --¼ð»õÉÌÆ·¼þÊý
+	--Â¼Ã°Â»ÃµÂ¶Â©ÂµÂ¥ÃŠÃ½ (ÂµÂ«Â²Â»Ã’Â»Â¶Â¨ÃÃªÂ³Ã‰Â£Â¬ÂºÃ³ÃƒÃ¦Ã“ÃÃ’Â»Â¸Ã¶Ã’Ã‘ÃÃªÂ³Ã‰ÂµÃ„Â¼Ã†Ã‹Ã£) --Â¼Ã°Â»ÃµÃ‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½
 	select a.depot_id ,count(distinct order_sn) picked_order_num
 	from
 	(
@@ -162,7 +162,7 @@ on t1.depot_id=t7.depot_id
 full join
 
 (
---¼ð»õÊ±³¤
+--Â¼Ã°Â»ÃµÃŠÂ±Â³Â¤
     select depot_id,
     	sum(unix_timestamp(picking_finish_time) -unix_timestamp(outing_stock_time))/count(*)/3600 picking_duration
     	from  zydb.dw_order_node_time
@@ -173,7 +173,7 @@ on t1.depot_id=t8.depot_id
 full join
 
 (
-	--´ò°ü¶©µ¥Êý --´ò°üÉÌÆ·¼þÊý --·¢»õ¶©µ¥Êý  --·¢»õÉÌÆ·¼þÊý
+	--Â´Ã²Â°Ã¼Â¶Â©ÂµÂ¥ÃŠÃ½ --Â´Ã²Â°Ã¼Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½ --Â·Â¢Â»ÃµÂ¶Â©ÂµÂ¥ÃŠÃ½  --Â·Â¢Â»ÃµÃ‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½
 	select  depod_id depot_id,
 			sum(case when order_pack_time>=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')) and order_pack_time<date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1) then 1 end) packed_order_num,
 			sum(case when order_pack_time>=from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')) and order_pack_time<date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1) then original_goods_number  end) packed_goods_num,
@@ -187,7 +187,7 @@ on t1.depot_id=t9.depot_id
 full join
 
 (
-	--´ò°üÊ±³¤
+	--Â´Ã²Â°Ã¼ÃŠÂ±Â³Â¤
    	select depot_id,
     	sum(unix_timestamp(order_pack_time) -unix_timestamp(picking_finish_time))/count(*)/3600 package_duration
     	from  zydb.dw_order_node_time
@@ -199,7 +199,7 @@ on t1.depot_id=t10.depot_id
 full join
 
 (
---·¢»õÊ±³¤
+--Â·Â¢Â»ÃµÃŠÂ±Â³Â¤
     	select depot_id,
     	sum(unix_timestamp(shipping_time) -unix_timestamp(order_pack_time))/count(*)/3600 shipping_duration
     	from  zydb.dw_order_node_time
@@ -212,7 +212,7 @@ full join
 
 
 (
---Ìá»õ¶©µ¥Êý
+--ÃŒÃ¡Â»ÃµÂ¶Â©ÂµÂ¥ÃŠÃ½
 	select depod_id depot_id,count(*) pickup_orders from
 	zydb.dw_order_node_time a
 	left join
@@ -226,7 +226,7 @@ on t1.depot_id=t12.depot_id
 full join
 
 (
-	--Ìá»õÊ±³¤
+	--ÃŒÃ¡Â»ÃµÃŠÂ±Â³Â¤
 	select depod_id depot_id,sum(unix_timestamp(b.lading_time)-unix_timestamp(a.shipping_time))/3600/count(*) pickup_time
 	 from
 	zydb.dw_order_sub_order_fact a
@@ -241,7 +241,7 @@ on t1.depot_id=t13.depot_id
 full join
 
 (
-	--¼ñ»õÉÌÆ·Êý
+	--Â¼Ã±Â»ÃµÃ‰ÃŒÃ†Â·ÃŠÃ½
 	select  depot_id,sum(picking_total_num) picked_goods_num
     from
     (
@@ -256,7 +256,7 @@ full join
 on t1.depot_id=t14.depot_id
 full join
 (
---ÖÊ¼ìÉÌÆ·Êý
+--Ã–ÃŠÂ¼Ã¬Ã‰ÃŒÃ†Â·ÃŠÃ½
 	select a.depot_id,sum(checked_num) check_goods_num
 	from
 	(
@@ -278,7 +278,7 @@ set mapreduce.map.memory.mb=6120;
 set mapreduce.reduce.memory.mb=12000;
 set hive.exec.parallel=true;
 
----------------½øÏú´æ
+---------------Â½Ã¸ÃÃºÂ´Ã¦
 
 insert overwrite table zydb.rpt_depot_daily_report_new_tmp2
 select
@@ -304,7 +304,7 @@ select
 zydb.dim_dw_depot t0
 full join
 (
-	--²É¹ºÈë¿âÊý  µ÷²¦Èë¿âÊý
+	--Â²Ã‰Â¹ÂºÃˆÃ«Â¿Ã¢ÃŠÃ½  ÂµÃ·Â²Â¦ÃˆÃ«Â¿Ã¢ÃŠÃ½
 	select  b.depot_id,
 			nvl(sum(case when source_type in(1,2,4) then a.on_shelf_num end),0) pur_onself_goods_num,
 			nvl(sum(case when source_type=3 then a.on_shelf_num end),0) allocate_onself_goods_num
@@ -326,7 +326,7 @@ on t0.depot_id=t1.depot_id
 full join
 
 (
---ÏúÊÛÍË»õÈë¿âÊý   ÏúÊÛÍË»õÈë¿â¶©µ¥Êý
+--ÃÃºÃŠÃ›ÃÃ‹Â»ÃµÃˆÃ«Â¿Ã¢ÃŠÃ½   ÃÃºÃŠÃ›ÃÃ‹Â»ÃµÃˆÃ«Â¿Ã¢Â¶Â©ÂµÂ¥ÃŠÃ½
 
 	select depot_id,sum(nvl(change_num,0))  return_onself_goods_num,
 		   0 return_onself_order_num
@@ -340,14 +340,14 @@ full join
 on t0.depot_id=t2.depot_id
 full join
 (
-	--ÆäËûÈë¿âÊý(ÅÌÓ®¡¢ÊÖ¹¤)
-	--ÆäËû³ö¿âÊý
-	--ÅÌÓ¯\ÅÌ¿÷	ÉÌÆ·¼þÊý
+	--Ã†Ã¤Ã‹Ã»ÃˆÃ«Â¿Ã¢ÃŠÃ½(Ã…ÃŒÃ“Â®Â¡Â¢ÃŠÃ–Â¹Â¤)
+	--Ã†Ã¤Ã‹Ã»Â³Ã¶Â¿Ã¢ÃŠÃ½
+	--Ã…ÃŒÃ“Â¯\Ã…ÃŒÂ¿Ã·	Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½
 	select  a.depot_id depot_id,
 			nvl(sum(case when change_type in(4,9) then change_num end ),0)  other_onself_goods_num,
 			nvl(sum(case when change_type in(6,10) then change_num end ),0)  other_out_goods_num,
-			sum(case when change_type=4 then change_num end) inven_profit_goods_num,   --ÅÌÓ¯
-			sum(case when change_type=6 then change_num end) inven_loss_goods_num  --ÅÌ¿÷
+			sum(case when change_type=4 then change_num end) inven_profit_goods_num,   --Ã…ÃŒÃ“Â¯
+			sum(case when change_type=6 then change_num end) inven_loss_goods_num  --Ã…ÃŒÂ¿Ã·
 	from
 	 (
 		 select depot_id,change_type,change_num,change_time from  jolly.who_wms_goods_stock_detail_log a
@@ -362,7 +362,7 @@ on t0.depot_id=t3.depot_id
 full join
 
 (
-	--ÏúÊÛ³ö¿âÉÌÆ·Êý
+	--ÃÃºÃŠÃ›Â³Ã¶Â¿Ã¢Ã‰ÃŒÃ†Â·ÃŠÃ½
 	select depod_id depot_id,nvl(sum(goods_send_num),0)  sale_out_goods_num
 	from zydb.dw_order_sub_order_fact a
 	full join
@@ -378,7 +378,7 @@ on t0.depot_id=t4.depot_id
 full join
 
 (
-	--ÏúÊÛ³ö¿âµ¥Êý
+	--ÃÃºÃŠÃ›Â³Ã¶Â¿Ã¢ÂµÂ¥ÃŠÃ½
 	select depod_id depot_id,count(*)  sale_out_order_num
 	from zydb.dw_order_sub_order_fact a
 	where
@@ -391,7 +391,7 @@ on t0.depot_id=t5.depot_id
 full join
 
 (
-	--µ÷²¦³ö¿âÊý
+	--ÂµÃ·Â²Â¦Â³Ã¶Â¿Ã¢ÃŠÃ½
 	select  a.from_depot_id depot_id,
 				nvl(sum(total_num),0) allocate_out_goods_num
 	from jolly.who_wms_allocate_out_info a
@@ -402,7 +402,7 @@ full join
 on t0.depot_id=t6.depot_id
 full join
 (
-	--µ÷²¦³ö¿âµ¥Êý
+	--ÂµÃ·Â²Â¦Â³Ã¶Â¿Ã¢ÂµÂ¥ÃŠÃ½
 	select  a.from_depot_id depot_id,
 				count(distinct allocate_out_id)  allocate_out_order_num
 	from jolly.who_wms_allocate_out_info a
@@ -414,7 +414,7 @@ on t0.depot_id=t7.depot_id
 full join
 
 (
-	--¹©Ó¦ÉÌÍË»õ³ö¿âÉÌÆ·Êý
+	--Â¹Â©Ã“Â¦Ã‰ÃŒÃÃ‹Â»ÃµÂ³Ã¶Â¿Ã¢Ã‰ÃŒÃ†Â·ÃŠÃ½
 	select  a.depot_id,
 				nvl(sum(returned_num),0)  supp_return_out_goods_num
 	from  jolly.who_wms_pur_returned_info a
@@ -429,7 +429,7 @@ full join
 on t0.depot_id=t8.depot_id
 full join
 (
-	--×Ü¿â´æÊý
+	--Ã—ÃœÂ¿Ã¢Â´Ã¦ÃŠÃ½
 	select  a.depot_id,
 				sum(stock_num) total_stock
 	from  zydb.ods_who_wms_goods_stock_detail a
@@ -440,7 +440,7 @@ on t0.depot_id=t9.depot_id
 full join
 
 (
---×ÔÓÉ¿â´æÊý
+--Ã—Ã”Ã“Ã‰Â¿Ã¢Â´Ã¦ÃŠÃ½
 select a.depot_id,
       sum(  a.total_stock_num-a.total_order_lock_num-a.total_allocate_lock_num-a.total_return_lock_num)    free_stock
   from
@@ -452,7 +452,7 @@ on t0.depot_id=t10.depot_id
 
 full join
 (
-	--¹©Ó¦ÉÌÍË»õ³ö¿âÊý
+	--Â¹Â©Ã“Â¦Ã‰ÃŒÃÃ‹Â»ÃµÂ³Ã¶Â¿Ã¢ÃŠÃ½
 	select
 		depot_id,
 		nvl(count(distinct returned_order_id),0) supp_return_num
@@ -470,7 +470,7 @@ on t0.depot_id=t11.depot_id
 set mapreduce.map.memory.mb=6120;
 set mapreduce.reduce.memory.mb=12000;
 set hive.exec.parallel=true;
----------------´ý´¦ÀíÁ¿
+---------------Â´Ã½Â´Â¦Ã€Ã­ÃÂ¿
 
 insert overwrite table zydb.rpt_depot_daily_report_new_tmp3
 select
@@ -504,9 +504,9 @@ select
 zydb.dim_dw_depot t0
 full join
 (
---´óÓÚ2Ìì¹©Ó¦ÉÌ·¢»õÎ´µ½»õ
---£¨1ÌìÇ°¹©Ó¦ÉÌ·¢»õÎ´µ½»õ£©Î´µ½»õÉÌÆ·Êý
---£¨µ±Ìì¹©Ó¦ÉÌ·¢»õÎ´µ½»õ£©Î´µ½»õÉÌÆ·Êý
+--Â´Ã³Ã“Ãš2ÃŒÃ¬Â¹Â©Ã“Â¦Ã‰ÃŒÂ·Â¢Â»ÃµÃŽÂ´ÂµÂ½Â»Ãµ
+--Â£Â¨1ÃŒÃ¬Ã‡Â°Â¹Â©Ã“Â¦Ã‰ÃŒÂ·Â¢Â»ÃµÃŽÂ´ÂµÂ½Â»ÃµÂ£Â©ÃŽÂ´ÂµÂ½Â»ÃµÃ‰ÃŒÃ†Â·ÃŠÃ½
+--Â£Â¨ÂµÂ±ÃŒÃ¬Â¹Â©Ã“Â¦Ã‰ÃŒÂ·Â¢Â»ÃµÃŽÂ´ÂµÂ½Â»ÃµÂ£Â©ÃŽÂ´ÂµÂ½Â»ÃµÃ‰ÃŒÃ†Â·ÃŠÃ½
  select a.depot_id,
         sum(case when a.gmt_created<unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2),'yyyy-MM-dd')
 		and a.gmt_created>=unix_timestamp('2017-10-01','yyyy-MM-dd') then supp_num end ) unrec_goods_num_before2days,
@@ -531,8 +531,8 @@ on t0.depot_id=t1.depot_id
 full join
 
 (
-	--£¨1ÌìÇ°¹©Ó¦ÉÌ·¢»õÎ´µ½»õ£©¹©Ó¦ÉÌ·¢»õÉÌÆ·Êý
-	--£¨µ±Ìì¹©Ó¦ÉÌ·¢»õÎ´µ½»õ£©¹©Ó¦ÉÌ·¢»õÉÌÆ·Êý
+	--Â£Â¨1ÃŒÃ¬Ã‡Â°Â¹Â©Ã“Â¦Ã‰ÃŒÂ·Â¢Â»ÃµÃŽÂ´ÂµÂ½Â»ÃµÂ£Â©Â¹Â©Ã“Â¦Ã‰ÃŒÂ·Â¢Â»ÃµÃ‰ÃŒÃ†Â·ÃŠÃ½
+	--Â£Â¨ÂµÂ±ÃŒÃ¬Â¹Â©Ã“Â¦Ã‰ÃŒÂ·Â¢Â»ÃµÃŽÂ´ÂµÂ½Â»ÃµÂ£Â©Â¹Â©Ã“Â¦Ã‰ÃŒÂ·Â¢Â»ÃµÃ‰ÃŒÃ†Â·ÃŠÃ½
 	 select depot_id,
 			sum(case when a.gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd') and a.gmt_created<unix_timestamp('${data_date}','yyyyMMdd')  then supp_num end ) send_goods_num_1days,
 
@@ -548,10 +548,10 @@ on t0.depot_id=t2.depot_id
 full join
 
 (
-	--´óÓÚ3Ìì¸¶¿î¶©µ¥Î´Åä»õÍê³É¶©µ¥Êý
-	--£¨3ÌìÇ°¸¶¿î¶©µ¥²Ö¿âÎ´Åä»õÍê³É£©Î´Åä»õÍê³É¸¶¿î¶©µ¥Êý
-	--£¨2ÌìÇ°¸¶¿î¶©µ¥²Ö¿âÎ´Åä»õÍê³É£©Î´Åä»õÍê³É¸¶¿î¶©µ¥Êý
-	--£¨1ÌìÇ°¸¶¿î¶©µ¥²Ö¿âÎ´Åä»õÍê³É£©Î´Åä»õÍê³É¸¶¿î¶©µ¥Êý
+	--Â´Ã³Ã“Ãš3ÃŒÃ¬Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨3ÃŒÃ¬Ã‡Â°Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥Â²Ã–Â¿Ã¢ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â£Â©ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨2ÃŒÃ¬Ã‡Â°Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥Â²Ã–Â¿Ã¢ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â£Â©ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨1ÃŒÃ¬Ã‡Â°Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥Â²Ã–Â¿Ã¢ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â£Â©ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥ÃŠÃ½
 	select  a.depod_id depot_id,
 			count(distinct case when case when pay_id=41 then to_date(pay_time) else to_date(result_pay_time) end <date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3)   then   a.order_id end) unprepare_order_num_before3days,
 
@@ -581,9 +581,9 @@ on t0.depot_id=t3.depot_id
 full join
 
 (
-	--£¨3ÌìÇ°¸¶¿î¶©µ¥²Ö¿âÎ´Åä»õÍê³É£©¸¶¿î¶©µ¥Êý
-	--£¨2ÌìÇ°¸¶¿î¶©µ¥²Ö¿âÎ´Åä»õÍê³É£©¸¶¿î¶©µ¥Êý
-	--£¨1ÌìÇ°¸¶¿î¶©µ¥²Ö¿âÎ´Åä»õÍê³É£©¸¶¿î¶©µ¥Êý
+	--Â£Â¨3ÃŒÃ¬Ã‡Â°Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥Â²Ã–Â¿Ã¢ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â£Â©Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨2ÃŒÃ¬Ã‡Â°Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥Â²Ã–Â¿Ã¢ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â£Â©Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨1ÃŒÃ¬Ã‡Â°Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥Â²Ã–Â¿Ã¢ÃŽÂ´Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â£Â©Â¸Â¶Â¿Ã®Â¶Â©ÂµÂ¥ÃŠÃ½
 	select a.depod_id depot_id,
 		   count( case when case when pay_id=41 then to_date(pay_time) else to_date(result_pay_time) end =to_date(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3))  then   a.order_id end) pay_order_num_3days,
 		   count( case when case when pay_id=41 then to_date(pay_time) else to_date(result_pay_time) end =to_date(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),2))  then   a.order_id end) pay_order_num_2days,
@@ -596,7 +596,7 @@ on t0.depot_id=t4.depot_id
 full join
 
 (
-	-- ´óÓÚ3ÌìÅä»õÍê³É²Ö¿âÎ´·¢»õ¶©µ¥Êý
+	-- Â´Ã³Ã“Ãš3ÃŒÃ¬Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ¶Â©ÂµÂ¥ÃŠÃ½
 		select a.depod_id depot_id,count(distinct a.order_id)  unshipping_prepare_order_num
 	from zydb.dw_order_sub_order_fact a
 	left join
@@ -606,7 +606,7 @@ full join
       (
     	  select order_id,gmt_created from  jolly.who_wms_outing_stock_detail
     	  union all
-    	  select order_id,gmt_created from  jolly_wms.who_wms_outing_stock_detail --É³ÌØ
+    	  select order_id,gmt_created from  jolly_wms.who_wms_outing_stock_detail --Ã‰Â³ÃŒÃ˜
       )a
       group by order_id
 	)b
@@ -623,9 +623,9 @@ on t0.depot_id=t5.depot_id
 full join
 
 (
-	--£¨3ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Åä»õÍê³É¶©µ¥Êý
-	--£¨2ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Åä»õÍê³É¶©µ¥Êý
-	--£¨1ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Åä»õÍê³É¶©µ¥Êý
+	--Â£Â¨3ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨2ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨1ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â¶Â©ÂµÂ¥ÃŠÃ½
 	select depot_id,
 		   count(distinct case when
 		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') and
@@ -651,9 +651,9 @@ on t0.depot_id=t6.depot_id
 full join
 
 (
-	--£¨3ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Åä»õÍê³ÉÉÌÆ·Êý
-	--£¨2ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Åä»õÍê³ÉÉÌÆ·Êý
-	--£¨1ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Åä»õÍê³ÉÉÌÆ·Êý
+	--Â£Â¨3ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Ã‰ÃŒÃ†Â·ÃŠÃ½
+	--Â£Â¨2ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Ã‰ÃŒÃ†Â·ÃŠÃ½
+	--Â£Â¨1ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Ã‰ÃŒÃ†Â·ÃŠÃ½
 	select depot_id,
 		   sum( case when
 		   last_modified_time>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') and
@@ -675,9 +675,9 @@ on t0.depot_id=t7.depot_id
 full join
 
 (
-	--£¨3ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Î´·¢»õ¶©µ¥Êý
-	--£¨2ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Î´·¢»õ¶©µ¥Êý
-	--£¨1ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Î´·¢»õ¶©µ¥Êý
+	--Â£Â¨3ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©ÃŽÂ´Â·Â¢Â»ÃµÂ¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨2ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©ÃŽÂ´Â·Â¢Â»ÃµÂ¶Â©ÂµÂ¥ÃŠÃ½
+	--Â£Â¨1ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©ÃŽÂ´Â·Â¢Â»ÃµÂ¶Â©ÂµÂ¥ÃŠÃ½
 	select a.depod_id depot_id,
 		   count(distinct case when
 		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') and
@@ -708,9 +708,9 @@ on t0.depot_id=t8.depot_id
 full join
 
 (
-	--£¨3ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Î´·¢»õÉÌÆ·Êý
-	--£¨2ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Î´·¢»õÉÌÆ·Êý
-	--£¨1ÌìÇ°Åä»õÍê³É²Ö¿âÎ´·¢»õ£©Î´·¢»õÉÌÆ·Êý
+	--Â£Â¨3ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©ÃŽÂ´Â·Â¢Â»ÃµÃ‰ÃŒÃ†Â·ÃŠÃ½
+	--Â£Â¨2ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©ÃŽÂ´Â·Â¢Â»ÃµÃ‰ÃŒÃ†Â·ÃŠÃ½
+	--Â£Â¨1ÃŒÃ¬Ã‡Â°Ã…Ã¤Â»ÃµÃÃªÂ³Ã‰Â²Ã–Â¿Ã¢ÃŽÂ´Â·Â¢Â»ÃµÂ£Â©ÃŽÂ´Â·Â¢Â»ÃµÃ‰ÃŒÃ†Â·ÃŠÃ½
 	select a.depod_id depot_id,
 		   sum( case when
 		   gmt_created>=unix_timestamp(date_sub(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),3),'yyyy-MM-dd') and
@@ -746,7 +746,7 @@ on t0.depot_id=t9.depot_id
 set mapreduce.map.memory.mb=6120;
 set mapreduce.reduce.memory.mb=12000;
 set hive.exec.parallel=true;
-----------------------»ýÑ¹Òì³£
+----------------------Â»Ã½Ã‘Â¹Ã’Ã¬Â³Â£
 
 insert overwrite table zydb.rpt_depot_daily_report_new_tmp4
 select
@@ -761,7 +761,7 @@ select
 zydb.dim_dw_depot t0
 full join
 (
---µ½»õÒì³£ÉÌÆ·¼þÊý
+--ÂµÂ½Â»ÃµÃ’Ã¬Â³Â£Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½
 select depot_id,
        sum(exp_num)  exp_goods_num
  from
@@ -779,11 +779,11 @@ on t0.depot_id=t1.depot_id
 full join
 
 (
-	--Èë¿â»ýÑ¹ÉÌÆ·¼þÊý	--µ±Ìì00:00µ½24:00²Ö¿âÇ©ÊÕÎïÁ÷°ü¹üÖÐÖÁ´ÎÈÕ24:00ÈÔÎ´ÖÊ¼ìµÄÉÌÆ·¼þÊý+µ±Ìì00:00µ½20:00ÖÊ¼ìÍê³ÉÉÌÆ·ÖÐÖÁ´ÎÈÕ6:00ÈÔÎ´Íê³ÉÉÏ¼ÜµÄÉÌÆ·¼þÊý£¨ÖÊ¼ì»ýÑ¹+ÉÏ¼Ü»ýÑ¹£©
+	--ÃˆÃ«Â¿Ã¢Â»Ã½Ã‘Â¹Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½	--ÂµÂ±ÃŒÃ¬00:00ÂµÂ½24:00Â²Ã–Â¿Ã¢Ã‡Â©ÃŠÃ•ÃŽÃ¯ÃÃ·Â°Ã¼Â¹Ã¼Ã–ÃÃ–ÃÂ´ÃŽÃˆÃ•24:00ÃˆÃ”ÃŽÂ´Ã–ÃŠÂ¼Ã¬ÂµÃ„Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½+ÂµÂ±ÃŒÃ¬00:00ÂµÂ½20:00Ã–ÃŠÂ¼Ã¬ÃÃªÂ³Ã‰Ã‰ÃŒÃ†Â·Ã–ÃÃ–ÃÂ´ÃŽÃˆÃ•6:00ÃˆÃ”ÃŽÂ´ÃÃªÂ³Ã‰Ã‰ÃÂ¼ÃœÂµÃ„Ã‰ÃŒÃ†Â·Â¼Ã¾ÃŠÃ½Â£Â¨Ã–ÃŠÂ¼Ã¬Â»Ã½Ã‘Â¹+Ã‰ÃÂ¼ÃœÂ»Ã½Ã‘Â¹Â£Â©
 	select nvl(a.depot_id,b.depot_id) depot_id,nvl(no_check_num,0)+nvl(no_onself,0)  in_overstock_goods_num
 	from
 	(
-		--ÖÊ¼ì»ýÑ¹
+		--Ã–ÃŠÂ¼Ã¬Â»Ã½Ã‘Â¹
 			select a.depot_id,sum(a.delivered_num) no_check_num
 			from
 			(
@@ -804,7 +804,7 @@ full join
 	)a
 	full join
 	(
-		--ÉÏ¼Ü»ýÑ¹
+		--Ã‰ÃÂ¼ÃœÂ»Ã½Ã‘Â¹
 		select a.depot_id,sum(num-on_shelf_num) no_onself
 		from zydb.dw_delivered_receipt_onself  a
 		left join
@@ -825,14 +825,14 @@ on t0.depot_id=t2.depot_id
 full join
 
 (
-	--¼ð»õÒì³£¶©µ¥Êý
+	--Â¼Ã°Â»ÃµÃ’Ã¬Â³Â£Â¶Â©ÂµÂ¥ÃŠÃ½
 	select depot_id,count(distinct order_id) pick_exp_orders_num
 	from jolly.who_wms_picking_exception_detail
 	where gmt_created >= unix_timestamp('${data_date}','yyyyMMdd')
 	and gmt_created < unix_timestamp(date_add(from_unixtime(unix_timestamp('${data_date}','yyyyMMdd')),1),'yyyy-MM-dd')
 	group by depot_id
 /*   select p1.depot_id,
-     count(distinct P1.returned_Order_Id) pick_exp_orders_num --¼ð»õÒì³£¶©µ¥
+     count(distinct P1.returned_Order_Id) pick_exp_orders_num --Â¼Ã°Â»ÃµÃ’Ã¬Â³Â£Â¶Â©ÂµÂ¥
      From jolly.who_wms_returned_order_info  P1
 	 left join
 	 zydb.dw_order_sub_order_fact b
@@ -848,7 +848,7 @@ on t0.depot_id=t3.depot_id
 full join
 
 (
-	--¼ð»õÍê³É¶©µ¥Êý µ±Ìì00:00ÖÁ24:00¼ð»õÍê³ÉµÄ¶©µ¥Êý
+	--Â¼Ã°Â»ÃµÃÃªÂ³Ã‰Â¶Â©ÂµÂ¥ÃŠÃ½ ÂµÂ±ÃŒÃ¬00:00Ã–Ã24:00Â¼Ã°Â»ÃµÃÃªÂ³Ã‰ÂµÃ„Â¶Â©ÂµÂ¥ÃŠÃ½
 	select a.depot_id,count(distinct a.order_sn)  picked_orders
 	from
 	(
@@ -879,8 +879,8 @@ on t0.depot_id=t4.depot_id
 full join
 
 (
-	--³ö¿â»ýÑ¹¶©µ¥Êý
-	--µ±Ìì00:00µ½18:00¿É¼ð»õ¶©µ¥ÖÐÖÁµ±Ìì24:00²Ö¿âÈÔÎ´·¢»õµÄ¶©µ¥Êý£¨¼ð»õ»ýÑ¹¶©µ¥Êý+´ò°ü»ýÑ¹¶©µ¥Êý+·¢»õ»ýÑ¹¶©µ¥Êý
+	--Â³Ã¶Â¿Ã¢Â»Ã½Ã‘Â¹Â¶Â©ÂµÂ¥ÃŠÃ½
+	--ÂµÂ±ÃŒÃ¬00:00ÂµÂ½18:00Â¿Ã‰Â¼Ã°Â»ÃµÂ¶Â©ÂµÂ¥Ã–ÃÃ–ÃÂµÂ±ÃŒÃ¬24:00Â²Ã–Â¿Ã¢ÃˆÃ”ÃŽÂ´Â·Â¢Â»ÃµÂµÃ„Â¶Â©ÂµÂ¥ÃŠÃ½Â£Â¨Â¼Ã°Â»ÃµÂ»Ã½Ã‘Â¹Â¶Â©ÂµÂ¥ÃŠÃ½+Â´Ã²Â°Ã¼Â»Ã½Ã‘Â¹Â¶Â©ÂµÂ¥ÃŠÃ½+Â·Â¢Â»ÃµÂ»Ã½Ã‘Â¹Â¶Â©ÂµÂ¥ÃŠÃ½
 
 	select depot_id,count(order_id) out_overstock_orders_num
 	 from zydb.dw_order_node_time
@@ -899,7 +899,7 @@ on t0.depot_id=t5.depot_id
 
 
 
----²Ö¿âÈÕ±¨
+---Â²Ã–Â¿Ã¢ÃˆÃ•Â±Â¨
 insert overwrite table zydb.rpt_depot_daily_report_new
 select
   ${data_date} data_date,
