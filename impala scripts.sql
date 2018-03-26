@@ -1156,15 +1156,14 @@ GROUP BY depot_id;
 
 
 
------------------ 各仓库 总库存 和 自由库存，历史和当前值取法
-国内仓，求总库存表：   (hadoop) zydb.ods_who_wms_goods_stock_detail
-stock_num          (可以查：当前最新和历史每天快照)
+----------------- 各仓库总库存和自由库存，历史和当前值取法
+-- 1. 求总库存：
+-- zydb.ods_who_wms_goods_stock_detail.stock_num (当前最新和历史每天快照)
 
-国内仓， 求自由库存：  (hadoop) zydb.ods_who_wms_goods_stock_total_detail ( data FROM 201704)  (可以查：当前最新和历史每天快照)
---ZYDB.ODS_WHO_WMS_GOODS_STOCK_TOTAL_DETAIL表中20170813 - 20170822的库存数据可能不太准确
-free_num = total_stock_num-total_order_lock_num-total_allocate_lock_num-total_return_lock_num
-
-或  jolly.who_wms_goods_stock_total_detail             (可以查：当前最新)
+-- 2.求自由库存：
+-- 2.1 zydb.ods_who_wms_goods_stock_total_detail (data FROM 201704) (当前最新和历史每天快照)，表中20170813-20170822的库存数据可能不太准确
+-- 2.2 jolly.who_wms_goods_stock_total_detail (当前最新)
+-- free_num = total_stock_num - total_order_lock_num - total_allocate_lock_num - total_return_lock_num
 
 *******************************
 沙特仓，求总库存: (hadoop)   jolly_wms.who_wms_goods_stock_detail    stock_num     (可以查：当前最新)  --无法求沙特历史某天快照总库存
@@ -5694,3 +5693,14 @@ WHERE p1.order_status = 1
   AND p1.pay_status IN (1, 3)
   AND p3.provider_code = '3C8'
 ;
+
+
+SELECT *
+FROM jolly.who_wms_on_shelf_info AS p1
+WHERE p1.check_sn IS NOT NULL
+ORDER BY p1.gmt_created DESC
+LIMIT 10;
+
+
+
+

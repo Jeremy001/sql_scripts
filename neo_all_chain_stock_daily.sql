@@ -393,11 +393,12 @@ t1 AS
         ,SUM(instock_num) AS instock_num
         ,SUM(deliver_onway_num) AS deliver_onway_num
         ,SUM(return_onway_num) AS return_onway_num
-FROM zybiro.neo_all_chain_stock_daily AS t1
-WHERE t1.data_date >= '2018-03-01'
+FROM zybiro.stephen_all_chain_stock_daily AS t1
+WHERE t1.data_date >= '2018-03-08'
 GROUP BY t1.data_date
 ),
 -- 2.每天签收数量
+-- 注意p1表中update_time有脏数据，部分记录的update_time是未来的年月日
 t2 AS
 (SELECT FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd') AS data_date
         ,COUNT(DISTINCT p2.order_id) AS receive_order_num
@@ -405,10 +406,8 @@ t2 AS
 FROM jolly.who_order_shipping_tracking p1
 LEFT JOIN dw.dw_order_sub_order_fact p2
        ON p1.order_id = p2.order_id
-      AND p1.update_time > UNIX_TIMESTAMP(p2.shipping_time)
 WHERE p1.shipping_state=3
-  AND p1.update_time >= UNIX_TIMESTAMP('2018-03-01')
-  AND p1.update_time <  UNIX_TIMESTAMP(TO_DATE(NOW()))
+  AND p1.update_time >= UNIX_TIMESTAMP('2018-03-08')
 GROUP BY FROM_UNIXTIME(p1.update_time, 'yyyy-MM-dd')
 )
 SELECT t1.*
@@ -418,4 +417,13 @@ FROM t1
 LEFT JOIN t2
        ON t1.data_date = t2.data_date
 ORDER BY t1.data_date DESC
+;
+
+
+
+SELECT SUM(t2.receive_order_num) AS receive_order_num
+        ,SUM(t2.receive_goods_num) AS receive_goods_num
+        ,SUM(CASE WHEN t2.data_date >= '2018-03-31' THEN t2.receive_order_num ELSE 0 END) AS order_num_2
+        ,SUM(CASE WHEN t2.data_date >= '2018-03-31' THEN t2.receive_goods_num ELSE 0 END) AS goods_num_2
+FROM t2
 ;
